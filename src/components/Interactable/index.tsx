@@ -1,5 +1,5 @@
 import { Outlines } from '@react-three/drei'
-import { Children, cloneElement, isValidElement, useCallback, useEffect, useRef, type FC } from 'react'
+import { Children, cloneElement, isValidElement, useEffect, useRef, type FC } from 'react'
 import type { Group } from 'three'
 import { useXRift } from '../../contexts/XRiftContext'
 import type { Props } from './types'
@@ -17,10 +17,6 @@ export const Interactable: FC<Props> = ({
   const { currentTarget } = useXRift()
   const groupRef = useRef<Group>(null)
 
-  const handleInteract = useCallback((objectId: string) => {
-    onInteract(objectId)
-  }, [onInteract])
-
   // userDataにインタラクション情報を設定 & レイヤー設定
   useEffect(() => {
     const object = groupRef.current
@@ -30,7 +26,7 @@ export const Interactable: FC<Props> = ({
     const interactableData = {
       id,
       type,
-      onInteract: handleInteract,
+      onInteract,
       interactionText,
       enabled,
     }
@@ -57,7 +53,7 @@ export const Interactable: FC<Props> = ({
         child.layers.disable(INTERACTABLE_LAYER)
       })
     }
-  }, [id, type, handleInteract, interactionText, enabled])
+  }, [id, type, onInteract, interactionText, enabled])
 
   // 現在のターゲットかどうかで視覚的フィードバックを提供
   const isTargeted = currentTarget !== null && currentTarget.uuid === groupRef.current?.uuid
