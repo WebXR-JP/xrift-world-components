@@ -1,6 +1,6 @@
 {
   "name": "@xrift/world-components",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Shared components and utilities for Xrift worlds",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -29,10 +29,10 @@
   },
   "homepage": "https://github.com/WebXR-JP/xrift-world-components#readme",
   "peerDependencies": {
-    "@react-three/drei": "^9.0.0",
-    "@react-three/fiber": "^8.0.0",
+    "@react-three/drei": "^10.0.0",
+    "@react-three/fiber": "^9.0.0",
     "react": "^18.0.0 || ^19.0.0",
-    "three": "^0.150.0"
+    "three": "^0.170.0"
   },
   "devDependencies": {
     "@react-three/drei": "^10.7.6",
