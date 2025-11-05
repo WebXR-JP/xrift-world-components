@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext } from 'react'
+import { createContext, type ReactNode, useCallback, useContext, useState } from 'react'
 import type { Object3D } from 'three'
 
 export interface XRiftContextValue {
@@ -12,6 +12,19 @@ export interface XRiftContextValue {
    * xrift-frontend側のRaycastDetectorが設定する
    */
   currentTarget: Object3D | null
+  /**
+   * インタラクト可能なオブジェクトのセット
+   * レイキャストのパフォーマンス最適化のために使用
+   */
+  interactableObjects: Set<Object3D>
+  /**
+   * インタラクト可能なオブジェクトを登録
+   */
+  registerInteractable: (object: Object3D) => void
+  /**
+   * インタラクト可能なオブジェクトの登録を解除
+   */
+  unregisterInteractable: (object: Object3D) => void
   // 将来的に追加可能な値
   // worldId?: string
   // instanceId?: string
@@ -36,11 +49,27 @@ interface Props {
  * 必要な情報を注入するために使用
  */
 export const XRiftProvider = ({ baseUrl, currentTarget = null, children }: Props) => {
+  // インタラクト可能なオブジェクトの管理
+  const [interactableObjects] = useState(() => new Set<Object3D>())
+
+  // オブジェクトの登録
+  const registerInteractable = useCallback((object: Object3D) => {
+    interactableObjects.add(object)
+  }, [interactableObjects])
+
+  // オブジェクトの登録解除
+  const unregisterInteractable = useCallback((object: Object3D) => {
+    interactableObjects.delete(object)
+  }, [interactableObjects])
+
   return (
     <XRiftContext.Provider
       value={{
         baseUrl,
         currentTarget,
+        interactableObjects,
+        registerInteractable,
+        unregisterInteractable,
       }}
     >
       {children}
