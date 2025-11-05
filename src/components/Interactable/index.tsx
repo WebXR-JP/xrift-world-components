@@ -14,10 +14,10 @@ export const Interactable: FC<Props> = ({
   enabled = true,
   children,
 }) => {
-  const { currentTarget } = useXRift()
+  const { currentTarget, registerInteractable, unregisterInteractable } = useXRift()
   const groupRef = useRef<Group>(null)
 
-  // userDataにインタラクション情報を設定 & レイヤー設定
+  // userDataにインタラクション情報を設定 & レイヤー設定 & オブジェクト登録
   useEffect(() => {
     const object = groupRef.current
     if (!object) return
@@ -38,8 +38,14 @@ export const Interactable: FC<Props> = ({
       child.layers.enable(INTERACTABLE_LAYER)
     })
 
+    // インタラクト可能オブジェクトとして登録
+    registerInteractable(object)
+
     // クリーンアップ: userDataからインタラクション情報を削除
     return () => {
+      // 登録解除
+      unregisterInteractable(object)
+
       if (object.userData) {
         delete object.userData.id
         delete object.userData.type
@@ -53,7 +59,7 @@ export const Interactable: FC<Props> = ({
         child.layers.disable(INTERACTABLE_LAYER)
       })
     }
-  }, [id, type, onInteract, interactionText, enabled])
+  }, [id, type, onInteract, interactionText, enabled, registerInteractable, unregisterInteractable])
 
   // 現在のターゲットかどうかで視覚的フィードバックを提供
   const isTargeted = currentTarget !== null && currentTarget.uuid === groupRef.current?.uuid
