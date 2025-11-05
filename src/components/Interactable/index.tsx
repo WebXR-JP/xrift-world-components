@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState, type FC } from 'react'
+import { useEffect, useRef, type FC } from 'react'
 import { Outlines } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
 import type { Group, Object3D } from 'three'
 import { useXRift } from '../../contexts/XRiftContext'
 import type { Props } from './types'
@@ -16,7 +15,6 @@ export const Interactable: FC<Props> = ({
 }) => {
   const { registerInteractable, unregisterInteractable } = useXRift()
   const groupRef = useRef<Group>(null)
-  const [isHovered, setIsHovered] = useState(false)
 
   // インタラクタブルオブジェクトとして登録
   useEffect(() => {
@@ -45,16 +43,22 @@ export const Interactable: FC<Props> = ({
     })
   }, [enabled])
 
-  // ホバー状態の管理
-  useFrame(() => {
-    // ここでは単純化のため、XRiftContext経由でホバー状態を取得する想定
-    // 実際の実装はxrift-frontend側のRaycastDetectorが担当
-  })
-
   return (
-    <group ref={groupRef}>
+    <group
+      ref={groupRef}
+      onPointerOver={(e) => {
+        if (!enabled) return
+        e.stopPropagation()
+        document.body.style.cursor = 'pointer'
+      }}
+      onPointerOut={(e) => {
+        if (!enabled) return
+        e.stopPropagation()
+        document.body.style.cursor = 'auto'
+      }}
+    >
       {children}
-      {enabled && isHovered && (
+      {enabled && (
         <Outlines
           thickness={0.05}
           color="yellow"
