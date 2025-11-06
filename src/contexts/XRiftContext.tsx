@@ -1,5 +1,6 @@
 import { createContext, type ReactNode, useCallback, useContext, useState } from 'react'
 import type { Object3D } from 'three'
+import { InstanceStateProvider, type InstanceStateContextValue } from './InstanceStateContext'
 
 export interface XRiftContextValue {
   /**
@@ -40,6 +41,11 @@ export const XRiftContext = createContext<XRiftContextValue | null>(null)
 interface Props {
   baseUrl: string
   currentTarget?: Object3D | null
+  /**
+   * インスタンス状態管理の実装（オプション）
+   * 指定しない場合はデフォルト実装（ローカルstate）が使用される
+   */
+  instanceStateImplementation?: InstanceStateContextValue
   children: ReactNode
 }
 
@@ -48,7 +54,12 @@ interface Props {
  * Module Federationで動的にロードされたワールドコンポーネントに
  * 必要な情報を注入するために使用
  */
-export const XRiftProvider = ({ baseUrl, currentTarget = null, children }: Props) => {
+export const XRiftProvider = ({
+  baseUrl,
+  currentTarget = null,
+  instanceStateImplementation,
+  children
+}: Props) => {
   // インタラクト可能なオブジェクトの管理
   const [interactableObjects] = useState(() => new Set<Object3D>())
 
@@ -72,7 +83,9 @@ export const XRiftProvider = ({ baseUrl, currentTarget = null, children }: Props
         unregisterInteractable,
       }}
     >
-      {children}
+      <InstanceStateProvider implementation={instanceStateImplementation}>
+        {children}
+      </InstanceStateProvider>
     </XRiftContext.Provider>
   )
 }

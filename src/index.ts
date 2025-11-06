@@ -8,7 +8,6 @@ export {
 
 export {
   InstanceStateContext,
-  InstanceStateProvider,
   useInstanceStateContext,
   type InstanceStateContextValue,
 } from './contexts/InstanceStateContext'
