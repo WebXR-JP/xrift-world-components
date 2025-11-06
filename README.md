@@ -48,6 +48,59 @@ function MyWorld() {
 }
 ```
 
+### useInstanceState フック
+
+インスタンス全体で同期される状態を管理するフックです。React の `useState` と同じAPIを提供します。
+
+```tsx
+import { useInstanceState } from '@xrift/world-components'
+
+function MyWorld() {
+  // インスタンス全体で同期される状態
+  const [buttonState, setButtonState] = useInstanceState('button-1', { enabled: false })
+
+  return (
+    <Interactable
+      id="button-1"
+      onInteract={() => {
+        // 状態を更新（全てのクライアントで同期される）
+        setButtonState({ enabled: !buttonState.enabled })
+      }}
+    >
+      <mesh>
+        <meshStandardMaterial color={buttonState.enabled ? 'green' : 'red'} />
+      </mesh>
+    </Interactable>
+  )
+}
+```
+
+#### 使用方法
+
+```tsx
+const [state, setState] = useInstanceState<T>(stateId, initialState)
+```
+
+- `stateId`: 状態の一意識別子（インスタンス内で一意である必要があります）
+- `initialState`: 初期状態
+- `setState`: 状態を更新する関数（直接値 or 関数型アップデートをサポート）
+
+#### 関数型アップデート
+
+```tsx
+// 直接値を設定
+setState({ enabled: true })
+
+// 前の状態を基に更新
+setState(prev => ({ enabled: !prev.enabled }))
+```
+
+#### 注意事項
+
+- Context未設定時はローカル `useState` として動作します
+- プラットフォーム側（xrift-frontend）がWebSocket実装を注入することで、インスタンス全体での同期が有効になります
+- 状態はシリアライズ可能な値（JSON）である必要があります
+
 ### Interactable コンポーネント
 
 3Dオブジェクトをインタラクション可能にするラッパーコンポーネントです。
