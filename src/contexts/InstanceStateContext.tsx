@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext, useState } from 'react'
+import { createContext, type ReactNode, useContext } from 'react'
 
 /**
  * インスタンス状態を管理するためのインターフェース
@@ -6,38 +6,29 @@ import { createContext, type ReactNode, useContext, useState } from 'react'
  */
 export interface InstanceStateContextValue {
   /**
-   * 指定されたIDの状態を取得する
-   * @param stateId 状態の一意識別子
-   * @param initialState 初期状態
-   * @returns [現在の状態, 状態更新関数]
+   * 全ての状態を保持するMap
+   * stateId -> 状態の値
    */
-  getState: <T>(
-    stateId: string,
-    initialState: T
-  ) => [T, (state: T | ((prevState: T) => T)) => void]
+  states: Map<string, unknown>
+  /**
+   * 状態を送信する関数
+   * @param stateId 状態の一意識別子
+   * @param payload 送信する状態
+   */
+  sendState: (stateId: string, payload: unknown) => void
 }
 
 /**
- * デフォルト実装: Context未設定時はローカルuseStateとして動作
+ * デフォルト実装: Context未設定時はローカル状態として動作
  * 開発時やテスト時に使用される
  */
 const createDefaultImplementation = (): InstanceStateContextValue => {
-  const stateMap = new Map<string, any>()
-  const setterMap = new Map<string, (value: any) => void>()
+  const states = new Map<string, unknown>()
 
   return {
-    getState: <T,>(stateId: string, initialState: T) => {
-      // このstateIdで既に状態が存在する場合は既存の状態を返す
-      if (stateMap.has(stateId)) {
-        return [stateMap.get(stateId), setterMap.get(stateId)!]
-      }
-
-      // 新しい状態を作成
-      const [state, setState] = useState<T>(initialState)
-      stateMap.set(stateId, state)
-      setterMap.set(stateId, setState)
-
-      return [state, setState]
+    states,
+    sendState: (stateId: string, payload: unknown) => {
+      states.set(stateId, payload)
     },
   }
 }

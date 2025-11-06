@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useInstanceStateContext } from '../contexts/InstanceStateContext'
 
 /**
@@ -40,6 +41,35 @@ export function useInstanceState<T>(
   stateId: string,
   initialState: T
 ): [T, (state: T | ((prevState: T) => T)) => void] {
-  const context = useInstanceStateContext()
-  return context.getState(stateId, initialState)
+  const { states, sendState } = useInstanceStateContext()
+
+  // ローカル状態を保持して即座に更新を反映
+  const [localState, setLocalState] = useState<T>(() => {
+    return (states.get(stateId) as T | undefined) ?? initialState
+  })
+
+  // グローバル状態が変更されたらローカル状態を更新
+  useEffect(() => {
+    const globalState = states.get(stateId) as T | undefined
+    if (globalState !== undefined) {
+      setLocalState(globalState)
+    }
+  }, [states, stateId])
+
+  // 関数型setStateをサポート（React の useState と同じAPI）
+  const setState = (newStateOrUpdater: T | ((prevState: T) => T)) => {
+    setLocalState(prev => {
+      // 関数の場合は前の状態を渡して新しい状態を計算
+      const newState = typeof newStateOrUpdater === 'function'
+        ? (newStateOrUpdater as (prevState: T) => T)(prev)
+        : newStateOrUpdater
+
+      // グローバルに送信
+      sendState(stateId, newState)
+
+      return newState
+    })
+  }
+
+  return [localState, setState]
 }
