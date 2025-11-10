@@ -1,6 +1,6 @@
 {
   "name": "@xrift/world-components",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Shared components and utilities for Xrift worlds",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -39,6 +39,7 @@
     "@react-three/fiber": "^9.4.0",
     "@types/react": "^18.3.12",
     "@types/three": "^0.181.0",
+    "react-dom": "^19.2.0",
     "three": "^0.181.0",
     "typescript": "^5.6.3"
   }

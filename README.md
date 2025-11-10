@@ -184,6 +184,43 @@ function MyWorld() {
 - 物理コライダーは含まれていません。必要な場合は`@react-three/rapier`などを使って別途追加してください
 - Meta Quest（Android Chrome）での互換性のため、マルチサンプリングは無効化されています
 
+### Skybox コンポーネント
+
+画像を使わずにグラデーションで空を表現するシンプルなskyboxコンポーネントです。
+
+```tsx
+import { Skybox } from '@xrift/world-components'
+
+function MyWorld() {
+  return (
+    <>
+      {/* 基本的な使い方（デフォルトは空色→白） */}
+      <Skybox />
+
+      {/* 夕焼け風 */}
+      <Skybox topColor={0xff6b35} bottomColor={0xffd93d} />
+
+      {/* 夜空風 */}
+      <Skybox topColor={0x000033} bottomColor={0x000011} />
+    </>
+  )
+}
+```
+
+#### Props
+
+| プロパティ | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|-----------|------|
+| `topColor` | `number` | - | `0x87ceeb` | 上部の色（16進数カラー） |
+| `bottomColor` | `number` | - | `0xffffff` | 下部の色（16進数カラー） |
+| `offset` | `number` | - | `0` | グラデーションの開始位置 |
+| `exponent` | `number` | - | `1` | グラデーションの範囲 |
+
+#### 注意事項
+
+- シェーダーを使用した軽量な実装です
+- シーンの背景色も自動的に設定されます
+
 ## 開発
 
 ```bash
