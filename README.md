@@ -184,6 +184,157 @@ function MyWorld() {
 - 物理コライダーは含まれていません。必要な場合は`@react-three/rapier`などを使って別途追加してください
 - Meta Quest（Android Chrome）での互換性のため、マルチサンプリングは無効化されています
 
+### VideoScreen コンポーネント
+
+ワールド内で動画を再生できるスクリーンコンポーネントです。`useInstanceState`を使用してインスタンス内の全ユーザーで再生状態が同期されます。
+
+```tsx
+import { VideoScreen } from '@xrift/world-components'
+
+function MyWorld() {
+  return (
+    <>
+      {/* メインスクリーン */}
+      <VideoScreen
+        id="main-screen"
+        position={[0, 2, -5]}
+        scale={[16/9 * 3, 3]}
+        url="https://example.com/video.mp4"
+      />
+
+      {/* サブスクリーン */}
+      <VideoScreen
+        id="sub-screen"
+        position={[5, 1.5, -3]}
+        scale={[16/9 * 1.5, 1.5]}
+      />
+    </>
+  )
+}
+```
+
+#### Props
+
+| プロパティ | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|-----------|------|
+| `id` | `string` | ✓ | - | スクリーンの一意なID（インスタンス内で一意である必要があります） |
+| `position` | `[number, number, number]` | - | `[0, 2, -5]` | スクリーンの位置 |
+| `rotation` | `[number, number, number]` | - | `[0, 0, 0]` | スクリーンの回転 |
+| `scale` | `[number, number]` | - | `[16/9 * 3, 3]` | スクリーンのサイズ [幅, 高さ] |
+| `url` | `string` | - | `''` | 動画のURL |
+| `playing` | `boolean` | - | `true` | 再生中かどうか |
+| `currentTime` | `number` | - | `0` | 再生位置（秒） |
+
+#### 状態管理
+
+VideoScreenは`useInstanceState`を使用して以下の状態を管理します：
+
+```tsx
+interface VideoState {
+  url: string          // 動画のURL
+  isPlaying: boolean   // 再生中かどうか
+  currentTime: number  // 現在の再生位置（秒）
+  serverTime: number   // サーバータイム（VRChat方式の同期用）
+}
+```
+
+#### 再生状態の制御（方法1: propsで制御）
+
+VideoScreenはpropsで直接制御できます：
+
+```tsx
+import { VideoScreen, Interactable } from '@xrift/world-components'
+import { useState } from 'react'
+
+function MyWorld() {
+  const [playing, setPlaying] = useState(true)
+  const [currentTime, setCurrentTime] = useState(0)
+
+  return (
+    <>
+      <VideoScreen
+        id="main-screen"
+        position={[0, 2, -5]}
+        scale={[16/9 * 3, 3]}
+        url="https://example.com/video.mp4"
+        playing={playing}
+        currentTime={currentTime}
+      />
+
+      <Interactable
+        id="toggle-button"
+        onInteract={() => setPlaying(!playing)}
+      >
+        <mesh>
+          <boxGeometry />
+          <meshStandardMaterial color={playing ? 'red' : 'green'} />
+        </mesh>
+      </Interactable>
+
+      <Interactable
+        id="seek-button"
+        onInteract={() => setCurrentTime(currentTime + 10)}
+      >
+        <mesh>
+          <boxGeometry />
+          <meshStandardMaterial color="cyan" />
+        </mesh>
+      </Interactable>
+    </>
+  )
+}
+```
+
+#### 再生状態の制御（方法2: useInstanceStateで制御）
+
+VideoScreenの状態は`useInstanceState`を使って外部から制御できます：
+
+```tsx
+import { VideoScreen, useInstanceState } from '@xrift/world-components'
+
+function MyWorld() {
+  const [videoState, setVideoState] = useInstanceState('video-main-screen', {
+    url: '',
+    isPlaying: false,
+    currentTime: 0,
+    serverTime: Date.now(),
+  })
+
+  const playVideo = (url: string) => {
+    setVideoState({
+      url,
+      isPlaying: true,
+      currentTime: 0,
+      serverTime: Date.now(),
+    })
+  }
+
+  return (
+    <>
+      <VideoScreen id="main-screen" />
+
+      <Interactable
+        id="play-button"
+        onInteract={() => playVideo('https://example.com/video.mp4')}
+      >
+        <mesh>
+          <boxGeometry />
+          <meshStandardMaterial color="green" />
+        </mesh>
+      </Interactable>
+    </>
+  )
+}
+```
+
+#### 注意事項
+
+- 動画URLは直接アクセス可能なMP4などの動画ファイルである必要があります
+- CORSの制約により、クロスオリジンの動画を再生する場合は、動画サーバー側で適切なCORSヘッダーの設定が必要です
+- 再生位置の同期はVRChat方式（サーバータイム基準）を採用しており、約0.5秒の誤差で自動補正されます
+- ブラウザのautoplay policyのため、動画は初期状態でミュートされています
+- 物理コライダーは含まれていません。必要な場合は別途追加してください
+
 ### Skybox コンポーネント
 
 画像を使わずにグラデーションで空を表現するシンプルなskyboxコンポーネントです。

@@ -22,5 +22,11 @@ export { Mirror, type MirrorProps } from './components/Mirror'
 
 export { Skybox, type SkyboxProps } from './components/Skybox'
 
+export {
+  VideoScreen,
+  type VideoScreenProps,
+  type VideoState,
+} from './components/VideoScreen'
+
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
