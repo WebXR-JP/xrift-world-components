@@ -1,9 +1,9 @@
 import { Text } from '@react-three/drei'
-import { useFrame } from '@react-three/fiber'
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback } from 'react'
 import * as THREE from 'three'
 import { useScreenShareContext } from '../../contexts/ScreenShareContext'
 import { Interactable } from '../Interactable'
+import { useVideoTexture } from './hooks'
 import type { Props } from './types'
 
 export type { Props as ScreenShareDisplayProps } from './types'
@@ -28,66 +28,10 @@ export const ScreenShareDisplay = memo(({
   rotation = DEFAULT_ROTATION,
   scale = DEFAULT_SCALE,
 }: Props) => {
-
-  // Context から値を取得
   const { videoElement, isSharing, startScreenShare, stopScreenShare } = useScreenShareContext()
   const interactionText = isSharing ? DEFAULT_STOP_TEXT : DEFAULT_START_TEXT
+  const { texture, hasVideo, materialRef } = useVideoTexture(videoElement)
 
-  const materialRef = useRef<THREE.MeshBasicMaterial>(null)
-  const [texture, setTexture] = useState<THREE.VideoTexture | null>(null)
-  const hasVideo = texture !== null
-
-  // VideoTextureの作成と更新
-  useEffect(() => {
-    if (!videoElement) {
-      setTexture(null)
-      return
-    }
-
-    const videoTexture = new THREE.VideoTexture(videoElement)
-    videoTexture.minFilter = THREE.LinearFilter
-    videoTexture.magFilter = THREE.LinearFilter
-    videoTexture.colorSpace = THREE.SRGBColorSpace
-    videoTexture.needsUpdate = true
-    setTexture(videoTexture)
-
-    return () => {
-      videoTexture.dispose()
-    }
-  }, [videoElement])
-
-  // マテリアルにテクスチャをセット
-  useEffect(() => {
-    if (!materialRef.current || !texture) return
-    materialRef.current.map = texture
-    materialRef.current.needsUpdate = true
-  }, [texture])
-
-  // テクスチャ更新（毎フレーム）
-  useFrame(() => {
-    if (!texture) return
-    texture.needsUpdate = true
-  })
-
-  // video要素が一時停止していたら再生を試みる
-  useEffect(() => {
-    if (!videoElement) return
-
-    const checkAndPlay = () => {
-      if (videoElement.paused) {
-        videoElement.play().catch(() => {
-          // 再生失敗は無視
-        })
-      }
-    }
-
-    checkAndPlay()
-    const interval = setInterval(checkAndPlay, 1000)
-
-    return () => clearInterval(interval)
-  }, [videoElement])
-
-  // インタラクションハンドラ
   const handleInteract = useCallback(() => {
     if (isSharing) {
       stopScreenShare?.()
