@@ -24,13 +24,12 @@ const DEFAULT_TEXT_COLOR = '#666666'
  *
  * props が指定されていない場合は ScreenShareContext から値を取得する
  */
-export const ScreenShareDisplay = memo((props: Props) => {
-  const {
-    id,
-    position = DEFAULT_POSITION,
-    rotation = DEFAULT_ROTATION,
-    scale = DEFAULT_SCALE,
-  } = props
+export const ScreenShareDisplay = memo(({
+  id,
+  position = DEFAULT_POSITION,
+  rotation = DEFAULT_ROTATION,
+  scale = DEFAULT_SCALE,
+}: Props) => {
 
   // Context から値を取得
   const { videoElement, isSharing, startScreenShare, stopScreenShare } = useScreenShareContext()
