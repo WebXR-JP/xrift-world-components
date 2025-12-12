@@ -21,8 +21,6 @@ const DEFAULT_TEXT_COLOR = '#666666'
 /**
  * 映像を3D空間内にスクリーンとして表示するコンポーネント
  * 画面共有やカメラ映像などの表示に使用可能
- *
- * props が指定されていない場合は ScreenShareContext から値を取得する
  */
 export const ScreenShareDisplay = memo(({
   id,
