@@ -12,6 +12,13 @@ export {
   type InstanceStateContextValue,
 } from './contexts/InstanceStateContext'
 
+export {
+  ScreenShareContext,
+  ScreenShareProvider,
+  useScreenShareContext,
+  type ScreenShareContextValue,
+} from './contexts/ScreenShareContext'
+
 // Components
 export {
   Interactable,
@@ -27,6 +34,11 @@ export {
   type VideoScreenProps,
   type VideoState,
 } from './components/VideoScreen'
+
+export {
+  ScreenShareDisplay,
+  type ScreenShareDisplayProps,
+} from './components/ScreenShareDisplay'
 
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
