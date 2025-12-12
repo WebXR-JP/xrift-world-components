@@ -7,8 +7,4 @@ export interface Props {
   rotation?: [number, number, number]
   /** スクリーンのサイズ [幅, 高さ] */
   scale?: [number, number]
-
-  // ---- インタラクション制御 ----
-  /** インタラクション有効化（デフォルト: true） */
-  interactable?: boolean
 }

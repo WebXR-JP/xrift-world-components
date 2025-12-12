@@ -30,7 +30,6 @@ export const ScreenShareDisplay = memo((props: Props) => {
     position = DEFAULT_POSITION,
     rotation = DEFAULT_ROTATION,
     scale = DEFAULT_SCALE,
-    interactable = true,
   } = props
 
   // Context から値を取得
@@ -122,18 +121,14 @@ export const ScreenShareDisplay = memo((props: Props) => {
 
   return (
     <group position={position} rotation={rotation}>
-      {interactable ? (
-        <Interactable
-          id={id}
-          onInteract={handleInteract}
-          interactionText={interactionText}
-          enabled={isSharing ? !!stopScreenShare : !!startScreenShare}
-        >
-          {screenMesh}
-        </Interactable>
-      ) : (
-        screenMesh
-      )}
+      <Interactable
+        id={id}
+        onInteract={handleInteract}
+        interactionText={interactionText}
+        enabled={isSharing ? !!stopScreenShare : !!startScreenShare}
+      >
+        {screenMesh}
+      </Interactable>
 
       {/* ガイドテキスト */}
       {!hasVideo && (
