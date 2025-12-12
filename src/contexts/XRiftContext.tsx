@@ -1,6 +1,7 @@
 import { createContext, type ReactNode, useCallback, useContext, useState } from 'react'
 import type { Object3D } from 'three'
 import { InstanceStateProvider, type InstanceStateContextValue } from './InstanceStateContext'
+import { ScreenShareProvider, type ScreenShareContextValue } from './ScreenShareContext'
 
 export interface XRiftContextValue {
   /**
@@ -46,6 +47,11 @@ interface Props {
    * 指定しない場合はデフォルト実装（ローカルstate）が使用される
    */
   instanceStateImplementation?: InstanceStateContextValue
+  /**
+   * 画面共有の実装（オプション）
+   * 指定しない場合は ScreenShareContext が提供されない
+   */
+  screenShareImplementation?: ScreenShareContextValue
   children: ReactNode
 }
 
@@ -58,7 +64,8 @@ export const XRiftProvider = ({
   baseUrl,
   currentTarget = null,
   instanceStateImplementation,
-  children
+  screenShareImplementation,
+  children,
 }: Props) => {
   // インタラクト可能なオブジェクトの管理
   const [interactableObjects] = useState(() => new Set<Object3D>())
@@ -73,6 +80,11 @@ export const XRiftProvider = ({
     interactableObjects.delete(object)
   }, [interactableObjects])
 
+  // 子要素（ScreenShareProvider でラップするかどうか）
+  const content = (
+    <InstanceStateProvider implementation={instanceStateImplementation}>{children}</InstanceStateProvider>
+  )
+
   return (
     <XRiftContext.Provider
       value={{
@@ -83,9 +95,11 @@ export const XRiftProvider = ({
         unregisterInteractable,
       }}
     >
-      <InstanceStateProvider implementation={instanceStateImplementation}>
-        {children}
-      </InstanceStateProvider>
+      {screenShareImplementation ? (
+        <ScreenShareProvider value={screenShareImplementation}>{content}</ScreenShareProvider>
+      ) : (
+        content
+      )}
     </XRiftContext.Provider>
   )
 }
