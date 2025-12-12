@@ -25,7 +25,8 @@ export const ScreenShareDisplay = memo(({
 }: Props) => {
   const { videoElement, isSharing, startScreenShare, stopScreenShare } = useScreenShareContext()
   const interactionText = isSharing ? '画面共有を停止' : '画面共有を開始'
-  const { texture, hasVideo, materialRef } = useVideoTexture(videoElement)
+  const screenAspect = scale[0] / scale[1]
+  const { texture, hasVideo, materialRef } = useVideoTexture(videoElement, screenAspect)
 
   const handleInteract = useCallback(() => {
     if (isSharing) {
