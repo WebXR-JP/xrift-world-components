@@ -28,5 +28,10 @@ export {
   type VideoState,
 } from './components/VideoScreen'
 
+export {
+  ScreenShareDisplay,
+  type ScreenShareDisplayProps,
+} from './components/ScreenShareDisplay'
+
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
