@@ -12,11 +12,6 @@ export type { Props as ScreenShareDisplayProps } from './types'
 const DEFAULT_SCALE: [number, number] = [4, 4 * (9 / 16)]
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
-const DEFAULT_GUIDE_TEXT = 'クリックして画面共有'
-const DEFAULT_START_TEXT = '画面共有を開始'
-const DEFAULT_STOP_TEXT = '画面共有を停止'
-const DEFAULT_BG_COLOR = '#1a1a2a'
-const DEFAULT_TEXT_COLOR = '#666666'
 
 /**
  * 映像を3D空間内にスクリーンとして表示するコンポーネント
@@ -29,7 +24,7 @@ export const ScreenShareDisplay = memo(({
   scale = DEFAULT_SCALE,
 }: Props) => {
   const { videoElement, isSharing, startScreenShare, stopScreenShare } = useScreenShareContext()
-  const interactionText = isSharing ? DEFAULT_STOP_TEXT : DEFAULT_START_TEXT
+  const interactionText = isSharing ? '画面共有を停止' : '画面共有を開始'
   const { texture, hasVideo, materialRef } = useVideoTexture(videoElement)
 
   const handleInteract = useCallback(() => {
@@ -54,7 +49,7 @@ export const ScreenShareDisplay = memo(({
             map={texture}
             side={THREE.FrontSide}
             toneMapped={false}
-            color={hasVideo ? 'white' : DEFAULT_BG_COLOR}
+            color={hasVideo ? 'white' : '#1a1a2a'}
           />
         </mesh>
       </Interactable>
@@ -64,11 +59,11 @@ export const ScreenShareDisplay = memo(({
         <Text
           position={[0, 0, 0.01]}
           fontSize={scale[0] * 0.05}
-          color={DEFAULT_TEXT_COLOR}
+          color="#666666"
           anchorX="center"
           anchorY="middle"
         >
-          {DEFAULT_GUIDE_TEXT}
+          クリックして画面共有
         </Text>
       )}
     </group>
