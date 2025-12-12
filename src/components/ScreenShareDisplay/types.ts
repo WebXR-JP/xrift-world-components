@@ -5,6 +5,6 @@ export interface Props {
   position?: [number, number, number]
   /** スクリーンの回転 */
   rotation?: [number, number, number]
-  /** スクリーンのサイズ [幅, 高さ] */
-  scale?: [number, number]
+  /** スクリーンの幅（高さは16:9で自動計算） */
+  width?: number
 }

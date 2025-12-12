@@ -9,7 +9,7 @@ import type { Props } from './types'
 export type { Props as ScreenShareDisplayProps } from './types'
 
 // デフォルト値
-const DEFAULT_SCALE: [number, number] = [4, 4 * (9 / 16)]
+const DEFAULT_WIDTH = 4
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
 
@@ -21,11 +21,12 @@ export const ScreenShareDisplay = memo(({
   id,
   position = DEFAULT_POSITION,
   rotation = DEFAULT_ROTATION,
-  scale = DEFAULT_SCALE,
+  width = DEFAULT_WIDTH,
 }: Props) => {
   const { videoElement, isSharing, startScreenShare, stopScreenShare } = useScreenShareContext()
   const interactionText = isSharing ? '画面共有を停止' : '画面共有を開始'
-  const { texture, hasVideo, materialRef, videoSize } = useVideoTexture(videoElement, scale)
+  const screenSize: [number, number] = [width, width * (9 / 16)]
+  const { texture, hasVideo, materialRef, videoSize } = useVideoTexture(videoElement, screenSize)
 
   const handleInteract = useCallback(() => {
     if (isSharing) {
@@ -44,7 +45,7 @@ export const ScreenShareDisplay = memo(({
       >
         {/* 背景（黒帯部分） */}
         <mesh>
-          <planeGeometry args={[scale[0], scale[1]]} />
+          <planeGeometry args={[screenSize[0], screenSize[1]]} />
           <meshBasicMaterial
             side={THREE.FrontSide}
             toneMapped={false}
@@ -69,7 +70,7 @@ export const ScreenShareDisplay = memo(({
       {!hasVideo && (
         <Text
           position={[0, 0, 0.01]}
-          fontSize={scale[0] * 0.05}
+          fontSize={width * 0.05}
           color="#666666"
           anchorX="center"
           anchorY="middle"
