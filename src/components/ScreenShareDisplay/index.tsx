@@ -18,9 +18,6 @@ const DEFAULT_STOP_TEXT = '画面共有を停止'
 const DEFAULT_BG_COLOR = '#1a1a2a'
 const DEFAULT_TEXT_COLOR = '#666666'
 
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-const NOOP = () => {}
-
 /**
  * 映像を3D空間内にスクリーンとして表示するコンポーネント
  * 画面共有やカメラ映像などの表示に使用可能
@@ -37,12 +34,7 @@ export const ScreenShareDisplay = memo((props: Props) => {
   } = props
 
   // Context から値を取得
-  const context = useScreenShareContext()
-  const videoElement = context?.videoElement ?? null
-  const isSharing = context?.isSharing ?? false
-  const canStartShare = context?.canStartShare ?? false
-  const onStartShare = context?.startScreenShare ?? NOOP
-  const onStopShare = context?.stopScreenShare ?? NOOP
+  const { videoElement, isSharing, startScreenShare, stopScreenShare } = useScreenShareContext()
 
   const materialRef = useRef<THREE.MeshBasicMaterial>(null)
   const [texture, setTexture] = useState<THREE.VideoTexture | null>(null)
@@ -102,13 +94,13 @@ export const ScreenShareDisplay = memo((props: Props) => {
   // インタラクションハンドラ
   const handleInteract = useCallback(
     (_id: string) => {
-      if (isSharing && onStopShare) {
-        onStopShare()
-      } else if (canStartShare && onStartShare) {
-        onStartShare()
+      if (isSharing) {
+        stopScreenShare?.()
+      } else {
+        startScreenShare?.()
       }
     },
-    [isSharing, canStartShare, onStartShare, onStopShare],
+    [isSharing, startScreenShare, stopScreenShare],
   )
 
   const interactionText = isSharing ? DEFAULT_STOP_TEXT : DEFAULT_START_TEXT
@@ -135,7 +127,7 @@ export const ScreenShareDisplay = memo((props: Props) => {
           id={id}
           onInteract={handleInteract}
           interactionText={interactionText}
-          enabled={canStartShare || isSharing}
+          enabled={isSharing ? !!stopScreenShare : !!startScreenShare}
         >
           {screenMesh}
         </Interactable>

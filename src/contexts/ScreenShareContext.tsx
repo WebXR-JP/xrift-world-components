@@ -5,12 +5,10 @@ export interface ScreenShareContextValue {
   videoElement: HTMLVideoElement | null
   /** 自分が共有中か */
   isSharing: boolean
-  /** 共有開始可能か */
-  canStartShare: boolean
-  /** 共有開始 */
-  startScreenShare: () => void
-  /** 共有停止 */
-  stopScreenShare: () => void
+  /** 共有開始（undefinedの場合は開始不可） */
+  startScreenShare?: () => void
+  /** 共有停止（undefinedの場合は停止不可） */
+  stopScreenShare?: () => void
 }
 
 /**
@@ -33,8 +31,12 @@ export const ScreenShareProvider = ({ value, children }: Props) => {
 
 /**
  * 画面共有の状態を取得するhook
- * Provider外で呼び出された場合はnullを返す（エラーにしない）
+ * @throws {Error} ScreenShareProvider の外で呼び出された場合
  */
-export const useScreenShareContext = (): ScreenShareContextValue | null => {
-  return useContext(ScreenShareContext)
+export const useScreenShareContext = (): ScreenShareContextValue => {
+  const context = useContext(ScreenShareContext)
+  if (!context) {
+    throw new Error('useScreenShareContext must be used within ScreenShareProvider')
+  }
+  return context
 }

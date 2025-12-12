@@ -48,10 +48,9 @@ interface Props {
    */
   instanceStateImplementation?: InstanceStateContextValue
   /**
-   * 画面共有の実装（オプション）
-   * 指定しない場合は ScreenShareContext が提供されない
+   * 画面共有の実装
    */
-  screenShareImplementation?: ScreenShareContextValue
+  screenShareImplementation: ScreenShareContextValue
   children: ReactNode
 }
 
@@ -80,11 +79,6 @@ export const XRiftProvider = ({
     interactableObjects.delete(object)
   }, [interactableObjects])
 
-  // 子要素（ScreenShareProvider でラップするかどうか）
-  const content = (
-    <InstanceStateProvider implementation={instanceStateImplementation}>{children}</InstanceStateProvider>
-  )
-
   return (
     <XRiftContext.Provider
       value={{
@@ -95,11 +89,11 @@ export const XRiftProvider = ({
         unregisterInteractable,
       }}
     >
-      {screenShareImplementation ? (
-        <ScreenShareProvider value={screenShareImplementation}>{content}</ScreenShareProvider>
-      ) : (
-        content
-      )}
+      <ScreenShareProvider value={screenShareImplementation}>
+        <InstanceStateProvider implementation={instanceStateImplementation}>
+          {children}
+        </InstanceStateProvider>
+      </ScreenShareProvider>
     </XRiftContext.Provider>
   )
 }
