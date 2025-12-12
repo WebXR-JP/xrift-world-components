@@ -3,45 +3,45 @@ import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 
 /**
- * テクスチャのrepeatとoffsetを設定してobject-fit: contain効果を実現
+ * object-fit: contain 用の映像サイズを計算
  */
-const applyContainFit = (
-  texture: THREE.VideoTexture,
-  videoElement: HTMLVideoElement,
-  screenAspect: number,
-) => {
-  const videoAspect = videoElement.videoWidth / videoElement.videoHeight
+const calculateContainSize = (
+  videoWidth: number,
+  videoHeight: number,
+  screenWidth: number,
+  screenHeight: number,
+): [number, number] => {
+  const videoAspect = videoWidth / videoHeight
+  const screenAspect = screenWidth / screenHeight
 
   if (videoAspect > screenAspect) {
-    // 映像が横長 → 上下に黒帯
-    const scale = screenAspect / videoAspect
-    texture.repeat.set(1, scale)
-    texture.offset.set(0, (1 - scale) / 2)
+    // 映像が横長 → 幅に合わせて高さを調整
+    return [screenWidth, screenWidth / videoAspect]
   } else {
-    // 映像が縦長 → 左右に黒帯
-    const scale = videoAspect / screenAspect
-    texture.repeat.set(scale, 1)
-    texture.offset.set((1 - scale) / 2, 0)
+    // 映像が縦長 → 高さに合わせて幅を調整
+    return [screenHeight * videoAspect, screenHeight]
   }
 }
 
 /**
  * VideoElement から VideoTexture を作成し管理するフック
  * @param videoElement 映像のvideo要素
- * @param screenAspect スクリーンのアスペクト比（幅/高さ）
+ * @param screenSize スクリーンのサイズ [幅, 高さ]
  */
 export const useVideoTexture = (
   videoElement: HTMLVideoElement | null,
-  screenAspect: number,
+  screenSize: [number, number],
 ) => {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null)
   const [texture, setTexture] = useState<THREE.VideoTexture | null>(null)
+  const [videoSize, setVideoSize] = useState<[number, number]>(screenSize)
   const hasVideo = texture !== null
 
   // VideoTextureの作成と更新
   useEffect(() => {
     if (!videoElement) {
       setTexture(null)
+      setVideoSize(screenSize)
       return
     }
 
@@ -52,9 +52,15 @@ export const useVideoTexture = (
     videoTexture.needsUpdate = true
     setTexture(videoTexture)
 
-    // 映像のメタデータがロードされたらアスペクト比を調整
+    // 映像のメタデータがロードされたらサイズを計算
     const handleLoadedMetadata = () => {
-      applyContainFit(videoTexture, videoElement, screenAspect)
+      const size = calculateContainSize(
+        videoElement.videoWidth,
+        videoElement.videoHeight,
+        screenSize[0],
+        screenSize[1],
+      )
+      setVideoSize(size)
     }
 
     if (videoElement.videoWidth > 0) {
@@ -67,7 +73,7 @@ export const useVideoTexture = (
       videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata)
       videoTexture.dispose()
     }
-  }, [videoElement, screenAspect])
+  }, [videoElement, screenSize])
 
   // マテリアルにテクスチャをセット
   useEffect(() => {
@@ -100,5 +106,5 @@ export const useVideoTexture = (
     return () => clearInterval(interval)
   }, [videoElement])
 
-  return { texture, hasVideo, materialRef }
+  return { texture, hasVideo, materialRef, videoSize }
 }

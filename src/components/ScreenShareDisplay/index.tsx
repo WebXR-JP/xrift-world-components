@@ -25,8 +25,7 @@ export const ScreenShareDisplay = memo(({
 }: Props) => {
   const { videoElement, isSharing, startScreenShare, stopScreenShare } = useScreenShareContext()
   const interactionText = isSharing ? '画面共有を停止' : '画面共有を開始'
-  const screenAspect = scale[0] / scale[1]
-  const { texture, hasVideo, materialRef } = useVideoTexture(videoElement, screenAspect)
+  const { texture, hasVideo, materialRef, videoSize } = useVideoTexture(videoElement, scale)
 
   const handleInteract = useCallback(() => {
     if (isSharing) {
@@ -43,16 +42,27 @@ export const ScreenShareDisplay = memo(({
         onInteract={handleInteract}
         interactionText={interactionText}
       >
+        {/* 背景（黒帯部分） */}
         <mesh>
           <planeGeometry args={[scale[0], scale[1]]} />
           <meshBasicMaterial
-            ref={materialRef}
-            map={texture}
             side={THREE.FrontSide}
             toneMapped={false}
-            color={hasVideo ? 'white' : '#1a1a2a'}
+            color="#1a1a2a"
           />
         </mesh>
+        {/* 映像 */}
+        {hasVideo && (
+          <mesh position={[0, 0, 0.001]}>
+            <planeGeometry args={[videoSize[0], videoSize[1]]} />
+            <meshBasicMaterial
+              ref={materialRef}
+              map={texture}
+              side={THREE.FrontSide}
+              toneMapped={false}
+            />
+          </mesh>
+        )}
       </Interactable>
 
       {/* ガイドテキスト */}
