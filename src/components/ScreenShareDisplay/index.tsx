@@ -31,9 +31,11 @@ export const ScreenShareDisplay = memo(({
 
   // Context から値を取得
   const { videoElement, isSharing, startScreenShare, stopScreenShare } = useScreenShareContext()
+  const interactionText = isSharing ? DEFAULT_STOP_TEXT : DEFAULT_START_TEXT
 
   const materialRef = useRef<THREE.MeshBasicMaterial>(null)
   const [texture, setTexture] = useState<THREE.VideoTexture | null>(null)
+  const hasVideo = texture !== null
 
   // VideoTextureの作成と更新
   useEffect(() => {
@@ -93,9 +95,6 @@ export const ScreenShareDisplay = memo(({
       startScreenShare?.()
     }
   }, [isSharing, startScreenShare, stopScreenShare])
-
-  const interactionText = isSharing ? DEFAULT_STOP_TEXT : DEFAULT_START_TEXT
-  const hasVideo = texture !== null
 
   return (
     <group position={position} rotation={rotation}>
