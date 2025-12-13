@@ -18,11 +18,6 @@ export interface XRiftContextValue {
    */
   baseUrl: string
   /**
-   * 現在レイキャストでターゲットされているオブジェクト
-   * xrift-frontend側のRaycastDetectorが設定する
-   */
-  currentTarget: Object3D | null
-  /**
    * インタラクト可能なオブジェクトのセット
    * レイキャストのパフォーマンス最適化のために使用
    */
@@ -40,6 +35,12 @@ export interface XRiftContextValue {
   // instanceId?: string
   // config?: WorldConfig
 }
+
+/**
+ * 現在のターゲットオブジェクトを提供するContext
+ * 頻繁に更新されるため、XRiftContextから分離してパフォーマンスを最適化
+ */
+export const CurrentTargetContext = createContext<Object3D | null>(null)
 
 /**
  * XRift ワールドの情報を提供するContext
@@ -94,21 +95,26 @@ export const XRiftProvider = ({
     interactableObjects.delete(object)
   }, [interactableObjects])
 
+  // XRiftContextの値をメモ化（currentTarget以外の値が変わらない限り再作成しない）
+  const xriftContextValue = useMemo(
+    () => ({
+      baseUrl,
+      interactableObjects,
+      registerInteractable,
+      unregisterInteractable,
+    }),
+    [baseUrl, interactableObjects, registerInteractable, unregisterInteractable],
+  )
+
   return (
-    <XRiftContext.Provider
-      value={{
-        baseUrl,
-        currentTarget,
-        interactableObjects,
-        registerInteractable,
-        unregisterInteractable,
-      }}
-    >
-      <ScreenShareProvider value={screenShareImpl}>
-        <InstanceStateProvider implementation={instanceStateImplementation}>
-          {children}
-        </InstanceStateProvider>
-      </ScreenShareProvider>
+    <XRiftContext.Provider value={xriftContextValue}>
+      <CurrentTargetContext.Provider value={currentTarget}>
+        <ScreenShareProvider value={screenShareImpl}>
+          <InstanceStateProvider implementation={instanceStateImplementation}>
+            {children}
+          </InstanceStateProvider>
+        </ScreenShareProvider>
+      </CurrentTargetContext.Provider>
     </XRiftContext.Provider>
   )
 }
@@ -131,4 +137,16 @@ export const useXRift = (): XRiftContextValue => {
   }
 
   return context
+}
+
+/**
+ * 現在のターゲットオブジェクトを取得するhook
+ * currentTargetの変更時のみ再レンダリングされる（パフォーマンス最適化）
+ *
+ * @example
+ * const currentTarget = useCurrentTarget()
+ * const isTargeted = currentTarget?.uuid === myObject.uuid
+ */
+export const useCurrentTarget = (): Object3D | null => {
+  return useContext(CurrentTargetContext)
 }

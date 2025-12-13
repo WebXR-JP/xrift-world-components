@@ -1,7 +1,7 @@
 import { Outlines } from '@react-three/drei'
 import { Children, cloneElement, isValidElement, useEffect, useMemo, useRef, type FC } from 'react'
 import type { Group } from 'three'
-import { useXRift } from '../../contexts/XRiftContext'
+import { useCurrentTarget, useXRift } from '../../contexts/XRiftContext'
 import type { Props } from './types'
 
 const INTERACTABLE_LAYER = 10
@@ -14,7 +14,9 @@ export const Interactable: FC<Props> = ({
   enabled = true,
   children,
 }) => {
-  const { currentTarget, registerInteractable, unregisterInteractable } = useXRift()
+  const { registerInteractable, unregisterInteractable } = useXRift()
+  // currentTargetは別のContextから取得（パフォーマンス最適化）
+  const currentTarget = useCurrentTarget()
   const groupRef = useRef<Group>(null)
 
   // userDataにインタラクション情報を設定 & レイヤー設定 & オブジェクト登録
@@ -65,8 +67,13 @@ export const Interactable: FC<Props> = ({
   const isTargeted = currentTarget !== null && currentTarget.uuid === groupRef.current?.uuid
 
   // 再帰的に子要素を探索して、すべての<mesh>に<Outlines>を追加する関数
-  // useMemoを使用して、isTargetedとenabledが変更された時のみ再計算する
+  // isTargetedがfalseの場合は元のchildrenをそのまま返す（パフォーマンス最適化）
   const childrenWithOutlines = useMemo(() => {
+    // ターゲットでない場合、または無効の場合は重いcloneElement処理をスキップ
+    if (!isTargeted || !enabled) {
+      return children
+    }
+
     const addOutlinesToMeshes = (child: React.ReactNode): React.ReactNode => {
       if (!isValidElement(child)) return child
 
@@ -81,16 +88,14 @@ export const Interactable: FC<Props> = ({
             <>
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {(child.props as any).children}
-              {isTargeted && enabled && (
-                <Outlines
-                  thickness={5}
-                  color="#4dabf7"
-                  screenspace={false}
-                  opacity={1}
-                  transparent={false}
-                  angle={Math.PI}
-                />
-              )}
+              <Outlines
+                thickness={5}
+                color="#4dabf7"
+                screenspace={false}
+                opacity={1}
+                transparent={false}
+                angle={Math.PI}
+              />
             </>
           ),
         } as never)

@@ -3,6 +3,8 @@ export {
   XRiftContext,
   XRiftProvider,
   useXRift,
+  CurrentTargetContext,
+  useCurrentTarget,
   type XRiftContextValue,
 } from './contexts/XRiftContext'
 
