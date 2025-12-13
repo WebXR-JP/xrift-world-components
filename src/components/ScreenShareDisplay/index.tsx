@@ -1,5 +1,5 @@
 import { Text } from '@react-three/drei'
-import { memo, useCallback } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import * as THREE from 'three'
 import { useScreenShareContext } from '../../contexts/ScreenShareContext'
 import { Interactable } from '../Interactable'
@@ -25,7 +25,7 @@ export const ScreenShareDisplay = memo(({
 }: Props) => {
   const { videoElement, isSharing, startScreenShare, stopScreenShare } = useScreenShareContext()
   const interactionText = isSharing ? '画面共有を停止' : '画面共有を開始'
-  const screenSize: [number, number] = [width, width * (9 / 16)]
+  const screenSize = useMemo<[number, number]>(() => [width, width * (9 / 16)], [width])
   const { texture, hasVideo, materialRef, videoSize } = useVideoTexture(videoElement, screenSize)
 
   const handleInteract = useCallback(() => {
