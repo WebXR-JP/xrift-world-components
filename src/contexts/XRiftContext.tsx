@@ -18,11 +18,6 @@ export interface XRiftContextValue {
    */
   baseUrl: string
   /**
-   * 現在レイキャストでターゲットされているオブジェクト
-   * xrift-frontend側のRaycastDetectorが設定する
-   */
-  currentTarget: Object3D | null
-  /**
    * インタラクト可能なオブジェクトのセット
    * レイキャストのパフォーマンス最適化のために使用
    */
@@ -49,7 +44,6 @@ export const XRiftContext = createContext<XRiftContextValue | null>(null)
 
 interface Props {
   baseUrl: string
-  currentTarget?: Object3D | null
   /**
    * インスタンス状態管理の実装（オプション）
    * 指定しない場合はデフォルト実装（ローカルstate）が使用される
@@ -70,7 +64,6 @@ interface Props {
  */
 export const XRiftProvider = ({
   baseUrl,
-  currentTarget = null,
   instanceStateImplementation,
   screenShareImplementation,
   children,
@@ -98,7 +91,6 @@ export const XRiftProvider = ({
     <XRiftContext.Provider
       value={{
         baseUrl,
-        currentTarget,
         interactableObjects,
         registerInteractable,
         unregisterInteractable,
