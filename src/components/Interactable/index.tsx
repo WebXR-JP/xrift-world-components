@@ -3,7 +3,8 @@ import type { Group } from 'three'
 import { useXRift } from '../../contexts/XRiftContext'
 import type { Props } from './types'
 
-const INTERACTABLE_LAYER = 10
+// Note: Layer 10 は VRMFirstPerson の THIRD_PERSON_ONLY で使用されているため、Layer 11 を使用
+const INTERACTABLE_LAYER = 11
 
 export const Interactable: FC<Props> = ({
   id,
