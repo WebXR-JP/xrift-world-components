@@ -1,5 +1,6 @@
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
+import type { PerspectiveCamera } from 'three'
 import { Group, PlaneGeometry } from 'three'
 import { Reflector } from 'three/addons/objects/Reflector.js'
 import { MirrorProps } from './types'
@@ -48,6 +49,21 @@ export function Mirror({
       reflectorRef.current = null
     }
   }, [size, color, textureResolution, gl])
+
+  // Reflectorの内部カメラ（virtualCamera）の全レイヤーを有効化
+  // VRMFirstPersonのレイヤー設定により、メインカメラではThirdPersonOnlyレイヤー（頭部）が
+  // 非表示になっているが、鏡には全身を映す必要があるため
+  // onBeforeRenderでメインカメラの設定がコピーされるため、毎フレーム設定が必要
+  useFrame(() => {
+    const reflector = reflectorRef.current
+    if (!reflector) return
+
+    // Reflectorの内部カメラにアクセス（型定義にないためanyでキャスト）
+    const virtualCamera = (reflector as unknown as { camera: PerspectiveCamera }).camera
+    if (virtualCamera) {
+      virtualCamera.layers.enableAll()
+    }
+  })
 
   return <group ref={groupRef} position={position} rotation={rotation} />
 }
