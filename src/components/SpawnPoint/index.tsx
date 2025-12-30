@@ -113,14 +113,14 @@ export const SpawnPoint: FC<SpawnPointProps> = ({
           </mesh>
 
           {/* 矢印（向きを示す） */}
-          <group>
+          <group rotation={[0, Math.PI, 0]}>
             {/* 矢印の軸 */}
-            <mesh position={[0, 0.3, 0.0]} rotation={[Math.PI / 2, 0, 0]}>
+            <mesh position={[0, 0.3, -0.05]} rotation={[Math.PI / 2, 0, 0]}>
               <cylinderGeometry args={[0.03, 0.03, 0.4, 15]} />
               <meshBasicMaterial color="#00ff88" />
             </mesh>
             {/* 矢印の先端 */}
-            <mesh position={[0, 0.3, 0.27]} rotation={[Math.PI / 2, 0, 0]}>
+            <mesh position={[0, 0.3, 0.22]} rotation={[Math.PI / 2, 0, 0]}>
               <coneGeometry args={[0.08, 0.15, 8]} />
               <meshBasicMaterial color="#00ff88" />
             </mesh>
