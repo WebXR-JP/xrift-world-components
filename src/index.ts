@@ -19,6 +19,14 @@ export {
   type ScreenShareContextValue,
 } from './contexts/ScreenShareContext'
 
+export {
+  SpawnPointContext,
+  SpawnPointProvider,
+  useSpawnPointContext,
+  type SpawnPoint as SpawnPointData,
+  type SpawnPointContextValue,
+} from './contexts/SpawnPointContext'
+
 // Components
 export {
   Interactable,
@@ -40,5 +48,11 @@ export {
   type ScreenShareDisplayProps,
 } from './components/ScreenShareDisplay'
 
+export {
+  SpawnPoint,
+  type SpawnPointProps,
+} from './components/SpawnPoint'
+
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
+export { useSpawnPoint } from './hooks/useSpawnPoint'
