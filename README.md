@@ -479,6 +479,68 @@ function MyWorld() {
 - シェーダーを使用した軽量な実装です
 - シーンの背景色も自動的に設定されます
 
+### SpawnPoint コンポーネント
+
+ワールド内のプレイヤーのスポーン（出現）地点を指定するコンポーネントです。開発時には位置と向きを視覚的に確認できるヘルパーが表示されます。
+
+```tsx
+import { SpawnPoint } from '@xrift/world-components'
+
+function MyWorld() {
+  return (
+    <>
+      {/* 原点にスポーン、正面向き */}
+      <SpawnPoint />
+
+      {/* 位置と向きを指定 */}
+      <SpawnPoint position={[0, 0, 5]} yaw={180} />
+    </>
+  )
+}
+```
+
+#### Props
+
+| プロパティ | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|------|-----------|------|
+| `position` | `[number, number, number]` | - | `[0, 0, 0]` | スポーン位置 |
+| `yaw` | `number` | - | `0` | スポーン時の向き（度数法 0-360） |
+
+#### 開発時ヘルパー
+
+開発環境（`import.meta.env.DEV === true`）では、スポーン位置と向きを視覚的に確認できるヘルパーが表示されます：
+
+- 半透明の円柱（下から上にかけて透明度が増すグラデーション）
+- 黄緑色の矢印でスポーン方向を表示
+
+本番ビルドではヘルパーは表示されず、コードも含まれません。
+
+#### useSpawnPoint フック
+
+プラットフォーム側で現在設定されているスポーン地点を取得するフックです。
+
+```tsx
+import { useSpawnPoint } from '@xrift/world-components'
+
+function PlayerSpawner() {
+  const spawnPoint = useSpawnPoint()
+
+  useEffect(() => {
+    if (spawnPoint) {
+      player.position.set(...spawnPoint.position)
+      player.rotation.y = THREE.MathUtils.degToRad(spawnPoint.yaw)
+    }
+  }, [spawnPoint])
+
+  return null
+}
+```
+
+#### 注意事項
+
+- 1つのワールドに複数のSpawnPointがある場合、最後に設定されたものが有効になります
+- `useSpawnPoint`は主にプラットフォーム側（xrift-frontend）での使用を想定しています
+
 ## 開発
 
 ```bash
