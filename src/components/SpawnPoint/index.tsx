@@ -1,8 +1,13 @@
-import { type FC, useEffect } from 'react'
+import { type FC, useRef } from 'react'
 import { shaderMaterial } from '@react-three/drei'
-import { extend } from '@react-three/fiber'
-import { DoubleSide } from 'three'
+import { extend, useFrame } from '@react-three/fiber'
+import { DoubleSide, Euler, Group, Quaternion, Vector3 } from 'three'
 import { useSpawnPointContext } from '../../contexts/SpawnPointContext'
+
+// ワールド座標取得用の一時変数（毎フレーム生成を避けるため）
+const _worldPos = new Vector3()
+const _worldQuat = new Quaternion()
+const _euler = new Euler()
 
 const GradientCylinderMaterial = shaderMaterial(
   { color: [0, 1, 0.53], opacity: 0.5 },
@@ -60,46 +65,74 @@ export const SpawnPoint: FC<SpawnPointProps> = ({
   yaw = 0,
 }) => {
   const { setSpawnPoint } = useSpawnPointContext()
+  const groupRef = useRef<Group>(null)
   const yawRad = (yaw * Math.PI) / 180
 
-  useEffect(() => {
-    setSpawnPoint({ position, yaw })
-  }, [position, yaw, setSpawnPoint])
+  // 前回の値を保持（変化があった時だけsetSpawnPointを呼ぶため）
+  const lastPosRef = useRef<string>('')
+  const lastYawRef = useRef<number>(0)
+
+  useFrame(() => {
+    if (!groupRef.current) return
+
+    // ワールド座標を取得
+    groupRef.current.getWorldPosition(_worldPos)
+    groupRef.current.getWorldQuaternion(_worldQuat)
+
+    // クォータニオンからyaw（Y軸回転）を抽出
+    _euler.setFromQuaternion(_worldQuat, 'YXZ')
+    const worldYawRad = _euler.y
+    const worldYawDeg = (worldYawRad * 180) / Math.PI
+
+    // ワールド座標（度数法に変換、0-360に正規化）
+    const normalizedYaw = ((worldYawDeg % 360) + 360) % 360
+    const worldPosition: [number, number, number] = [
+      _worldPos.x,
+      _worldPos.y,
+      _worldPos.z,
+    ]
+
+    // 変化があった時だけ更新（パフォーマンス最適化）
+    const posKey = worldPosition.join(',')
+    if (posKey !== lastPosRef.current || normalizedYaw !== lastYawRef.current) {
+      lastPosRef.current = posKey
+      lastYawRef.current = normalizedYaw
+      setSpawnPoint({ position: worldPosition, yaw: normalizedYaw })
+    }
+  })
 
   // Vite以外の環境では import.meta.env が存在しない可能性があるため安全にアクセス
   const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV
-  if (!isDev) {
-    return null
-  }
 
   return (
-    <group position={position}>
-      {/* 半透明の円柱（下から上にかけて透明度が増す） */}
-      <mesh position={[0, 0.375, 0]}>
-        <cylinderGeometry args={[0.5, 0.5, 0.75, 32, 1, true]} />
-        <gradientCylinderMaterial
-          transparent
-          side={DoubleSide}
-          depthWrite={false}
-        />
-      </mesh>
+    <group ref={groupRef} position={position} rotation={[0, yawRad, 0]}>
+      {isDev && (
+        <>
+          {/* 半透明の円柱（下から上にかけて透明度が増す） */}
+          <mesh position={[0, 0.375, 0]}>
+            <cylinderGeometry args={[0.5, 0.5, 0.75, 32, 1, true]} />
+            <gradientCylinderMaterial
+              transparent
+              side={DoubleSide}
+              depthWrite={false}
+            />
+          </mesh>
 
-      {/* 矢印（向きを示す） - yawに合わせて回転 */}
-      <group rotation={[0, -yawRad, 0]}>
-        {/* 矢印全体を180度回転して正しい向きに */}
-        <group rotation={[0, Math.PI, 0]}>
-          {/* 矢印の軸 */}
-          <mesh position={[0, 0.3, -0.1]} rotation={[Math.PI / 2, 0, 0]}>
-            <cylinderGeometry args={[0.03, 0.03, 0.3, 8]} />
-            <meshBasicMaterial color="#00ff88" />
-          </mesh>
-          {/* 矢印の先端 */}
-          <mesh position={[0, 0.3, 0.12]} rotation={[Math.PI / 2, 0, 0]}>
-            <coneGeometry args={[0.08, 0.15, 8]} />
-            <meshBasicMaterial color="#00ff88" />
-          </mesh>
-        </group>
-      </group>
+          {/* 矢印（向きを示す） */}
+          <group>
+            {/* 矢印の軸 */}
+            <mesh position={[0, 0.3, 0.0]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.03, 0.03, 0.4, 15]} />
+              <meshBasicMaterial color="#00ff88" />
+            </mesh>
+            {/* 矢印の先端 */}
+            <mesh position={[0, 0.3, 0.27]} rotation={[Math.PI / 2, 0, 0]}>
+              <coneGeometry args={[0.08, 0.15, 8]} />
+              <meshBasicMaterial color="#00ff88" />
+            </mesh>
+          </group>
+        </>
+      )}
     </group>
   )
 }
