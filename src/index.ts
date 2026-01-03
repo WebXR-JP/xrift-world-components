@@ -64,3 +64,12 @@ export {
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
+
+// Types
+export {
+  type PlayerMovement,
+  type Position3D,
+  type Rotation3D,
+  type VRTrackingData,
+  type VRMovementDirection,
+} from './types/movement'
