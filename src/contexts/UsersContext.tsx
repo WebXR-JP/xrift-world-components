@@ -5,8 +5,10 @@ import type { PlayerMovement } from '../types/movement'
  * ユーザー情報の型定義
  */
 export interface User {
-  /** ユーザーID */
+  /** 認証ユーザーID（一貫性がある、フレンド機能等で使用） */
   id: string
+  /** ソケットID（接続固有、プラットフォーム内部で使用） */
+  socketId: string
   /** 表示名 */
   displayName: string
   /** アバターアイコンURL */
@@ -40,7 +42,7 @@ export interface UsersContextValue {
   /**
    * 指定したユーザーの位置情報を取得
    * useFrame内で毎フレーム呼び出しても再レンダリングを引き起こさない
-   * @param userId - ユーザーID
+   * @param userId - 認証ユーザーID
    * @returns PlayerMovement または undefined（ユーザーが存在しない場合）
    */
   getMovement: (userId: string) => PlayerMovement | undefined
