@@ -5,8 +5,10 @@ import type { PlayerMovement } from '../types/movement'
  * ユーザー情報の型定義
  */
 export interface User {
-  /** ユーザーID */
+  /** 認証ユーザーID */
   id: string
+  /** ソケット接続ID */
+  socketId: string
   /** 表示名 */
   displayName: string
   /** アバターアイコンURL */
@@ -40,10 +42,10 @@ export interface UsersContextValue {
   /**
    * 指定したユーザーの位置情報を取得
    * useFrame内で毎フレーム呼び出しても再レンダリングを引き起こさない
-   * @param userId - ユーザーID
+   * @param socketId - ソケット接続ID
    * @returns PlayerMovement または undefined（ユーザーが存在しない場合）
    */
-  getMovement: (userId: string) => PlayerMovement | undefined
+  getMovement: (socketId: string) => PlayerMovement | undefined
   /**
    * ローカルユーザー（自分）の位置情報を取得
    * useFrame内で毎フレーム呼び出しても再レンダリングを引き起こさない
@@ -118,7 +120,7 @@ export const UsersProvider = ({ implementation, children }: Props) => {
  *
  *   // 他のユーザーの位置を取得
  *   remoteUsers.forEach(user => {
- *     const movement = getMovement(user.id)
+ *     const movement = getMovement(user.socketId)
  *     if (movement) {
  *       console.log(`${user.displayName} is at`, movement.position)
  *     }
