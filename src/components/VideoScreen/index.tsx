@@ -18,6 +18,7 @@ function VideoScreenInner({
   playing = true,
   currentTime = 0,
   sync = 'global',
+  muted = true,
 }: VideoScreenProps) {
   // グローバル同期用の状態
   const [globalState, setGlobalState] = useInstanceState<VideoState>(
@@ -61,7 +62,7 @@ function VideoScreenInner({
 
   // useVideoTextureで動画テクスチャを取得
   const texture = useVideoTexture(url || '', {
-    muted: true,
+    muted,
     loop: true,
     start: playing,
   })
