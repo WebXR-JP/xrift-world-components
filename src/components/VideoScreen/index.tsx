@@ -18,7 +18,7 @@ function VideoScreenInner({
   playing = true,
   currentTime = 0,
   sync = 'global',
-  muted = true,
+  muted = false,
 }: VideoScreenProps) {
   // グローバル同期用の状態
   const [globalState, setGlobalState] = useInstanceState<VideoState>(
