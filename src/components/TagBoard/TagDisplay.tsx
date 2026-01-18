@@ -14,7 +14,7 @@
 import { Billboard, Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
-import { type Group } from 'three'
+import { type Group, DoubleSide } from 'three'
 import { useInstanceState } from '@xrift/world-components'
 
 import { type Tag, type TagDisplayProps } from './types'
@@ -76,9 +76,9 @@ export const TagDisplay = ({ userId, getMovement, tags, visible, storageKey }: T
       <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
         <group>
           {/* 背景: 半透明の黒背景でタグを浮き出させる */}
-          <mesh position={[0, -(maxRows - 1) * (tagHeight + tagSpacing) / 2, -0.02]}>
-            <planeGeometry args={[totalWidth + 0.1, maxRows * tagHeight + (maxRows - 1) * tagSpacing + 0.1]} />
-            <meshBasicMaterial color={0x000000} opacity={0.6} transparent />
+          <mesh position={[0, -(maxRows - 1) * tagHeight / 2, -0.02]}>
+            <planeGeometry args={[totalWidth + 0.1, maxRows * tagHeight + 0.1]} />
+            <meshBasicMaterial color={0x000000} opacity={0.6} transparent side={DoubleSide} />
           </mesh>
 
           {/* 列ごとにタグを配置 */}
@@ -96,7 +96,7 @@ export const TagDisplay = ({ userId, getMovement, tags, visible, storageKey }: T
                       {/* タグボックス */}
                       <mesh position={[0, 0, -0.01]}>
                         <planeGeometry args={[tagWidth, tagHeight]} />
-                        <meshBasicMaterial color={tag.color} opacity={1} transparent />
+                        <meshBasicMaterial color={tag.color} opacity={0.6} transparent  side={DoubleSide}/>
                       </mesh>
                       {/* タグラベルテキスト */}
                       <Text
@@ -105,6 +105,16 @@ export const TagDisplay = ({ userId, getMovement, tags, visible, storageKey }: T
                         color={0xffffff}
                         anchorX="center"
                         anchorY="middle"
+                      >
+                        {tag.label}
+                      </Text>
+                      {/* タグラベルテキスト（裏面用） */}
+                      <Text
+                        position={[0, 0, -0.03]}
+                        fontSize={0.08}
+                        anchorX="center"
+                        anchorY="middle"
+                        color={0xffffff}
                       >
                         {tag.label}
                       </Text>
