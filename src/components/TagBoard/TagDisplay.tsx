@@ -27,6 +27,9 @@ export const TagDisplay = ({ userId, getMovement, tags, visible, storageKey }: T
     []
   )
 
+  // tags から平坦化されたタグリストを生成
+  const flatTags = tags.flat()
+
   // フレーム毎に位置を更新: ユーザーの頭上 +1.4 に追従
   useFrame(() => {
     if (!userId) return
@@ -43,7 +46,7 @@ export const TagDisplay = ({ userId, getMovement, tags, visible, storageKey }: T
   // 重複を排除して選択済みタグを特定
   const uniqueTagIds = [...new Set(selectedTagIds)]
   const selectedTags = uniqueTagIds
-    .map(id => tags.find(tag => tag.id === id))
+    .map(id => flatTags.find(tag => tag.id === id))
     .filter((tag): tag is Tag => tag !== undefined)
 
   // タグが無い場合、または非表示の場合は何も描画しない
@@ -52,10 +55,20 @@ export const TagDisplay = ({ userId, getMovement, tags, visible, storageKey }: T
   // 選択済みタグを列ごとにマッピング
   const columnMap = new Map<number, Tag[]>()
   selectedTags.forEach(tag => {
-    if (!columnMap.has(tag.column)) {
-      columnMap.set(tag.column, [])
+    // tags から列番号を特定
+    let columnIndex = -1
+    for (let i = 0; i < tags.length; i++) {
+      if (tags[i].some(t => t.id === tag.id)) {
+        columnIndex = i
+        break
+      }
     }
-    columnMap.get(tag.column)!.push(tag)
+    if (columnIndex === -1) return // 見つからない場合はスキップ
+    
+    if (!columnMap.has(columnIndex)) {
+      columnMap.set(columnIndex, [])
+    }
+    columnMap.get(columnIndex)!.push(tag)
   })
 
   // アクティブな列のみを取得してソート

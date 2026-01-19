@@ -19,10 +19,10 @@ import { Text } from '@react-three/drei'
 import { RigidBody } from '@react-three/rapier'
 import { useUsers, useInstanceState, Interactable } from '@xrift/world-components'
 
-import { type Tag, type TagSelectorProps } from './types'
+import { type TagSelectorProps } from './types'
 import { STORAGE_KEY_PREFIX, VISIBILITY_STORAGE_KEY } from './constants'
 
-export const TagSelector = ({ tags, title, columns, storageKey, position, rotation, scale }: TagSelectorProps) => {
+export const TagSelector = ({ tags, title, storageKey, position, rotation, scale }: TagSelectorProps) => {
   const { localUser } = useUsers()
   // グローバル同期用の選択タグID（他ユーザーからも見える状態に反映）
   const [, setGlobalSelectedTagIds] = useInstanceState<string[]>(
@@ -32,6 +32,10 @@ export const TagSelector = ({ tags, title, columns, storageKey, position, rotati
   const [localSelectedTagIds, setLocalSelectedTagIds] = useState<string[]>([])
   const [tagsVisible, setTagsVisible] = useState(true)
   const [isInitialized, setIsInitialized] = useState(false)
+
+  // tags から平坦化したタグリストを生成
+  const flatTags = tags.flat()
+  const columns = tags.length
 
   // 初期化: localStorage から自分の選択タグおよび表示状態を読み込み
   useEffect(() => {
@@ -88,8 +92,8 @@ export const TagSelector = ({ tags, title, columns, storageKey, position, rotati
       }
       // tags配列の順番に合わせてソート
       return newIds.sort((a, b) => {
-        const indexA = tags.findIndex(tag => tag.id === a)
-        const indexB = tags.findIndex(tag => tag.id === b)
+        const indexA = flatTags.findIndex(tag => tag.id === a)
+        const indexB = flatTags.findIndex(tag => tag.id === b)
         return indexA - indexB
       })
     })
@@ -109,12 +113,8 @@ export const TagSelector = ({ tags, title, columns, storageKey, position, rotati
     setTagsVisible(prev => !prev)
   }
 
-  // タグを列ごとにグルーピング（列番号が上限を超えていても最終列に詰める）
-  const columnGroups: Tag[][] = Array.from({ length: columns }, () => [])
-  tags.forEach(tag => {
-    const colIndex = Math.min(tag.column, columns - 1)
-    columnGroups[colIndex].push(tag)
-  })
+  // タグを列ごとにグルーピング（すでに tags として列ごとに分かれている）
+  const columnGroups = tags
 
   // レイアウト計算（タグボタンのサイズ・ボードサイズ・列間隔）
   const tagHeight = 0.27 * scale

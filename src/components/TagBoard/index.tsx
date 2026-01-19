@@ -32,9 +32,6 @@ export const TagBoard = ({
 	const { remoteUsers, getMovement, getLocalMovement, localUser } = useUsers()
 	const [tagsVisible, setTagsVisible] = useState(true)
 
-	// 列数を計算: tags から自動計算
-	const columns = Math.max(...tags.map(tag => tag.column), -1) + 1
-
 	// 初期化: localStorage からタグ表示状態を読み込み
 	useEffect(() => {
 		const visibilityState = localStorage.getItem(VISIBILITY_STORAGE_KEY)
@@ -61,7 +58,6 @@ export const TagBoard = ({
 			<TagSelector
         tags={tags}
         title={title}
-        columns={columns}
         storageKey={storageKey}
         position={position}
         rotation={rotation}
