@@ -15,6 +15,28 @@ export interface TagSelectorLayout {
   buttonRightX: number;
 }
 
+/**
+ * タグIDの選択状態をトグルし、tagsの順番でソートして返す
+ */
+export const toggleTagSelection = (
+  prevIds: string[],
+  tagId: string,
+  flatTags: Tag[],
+): string[] => {
+  let newIds: string[];
+  if (prevIds.includes(tagId)) {
+    newIds = prevIds.filter((id) => id !== tagId);
+  } else {
+    newIds = [...new Set([...prevIds, tagId])];
+  }
+  // tags配列の順番に合わせてソート
+  return newIds.sort((a, b) => {
+    const indexA = flatTags.findIndex((tag) => tag.id === a);
+    const indexB = flatTags.findIndex((tag) => tag.id === b);
+    return indexA - indexB;
+  });
+};
+
 export const calculateLayout = (tags: Tag[][], scale: number): TagSelectorLayout => {
   const tagHeight = 0.27 * scale;
   const tagWidth = 1.33 * scale;

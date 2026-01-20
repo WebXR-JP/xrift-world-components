@@ -20,7 +20,7 @@ import { useInstanceState } from "../../../../hooks/useInstanceState";
 import { type TagSelectorProps } from "../../types";
 import { ActionButton } from "./ActionButton";
 import { TagButton } from "./TagButton";
-import { calculateLayout } from "./utils";
+import { calculateLayout, toggleTagSelection } from "./utils";
 
 export const TagSelector = ({
   tags,
@@ -52,20 +52,7 @@ export const TagSelector = ({
   // タグボタンのクリック処理: 選択のトグル（tags配列の順番を維持）
   const handleTagClick = useCallback(
     (tagId: string) => {
-      setLocalSelectedTagIds((prev) => {
-        let newIds: string[];
-        if (prev.includes(tagId)) {
-          newIds = prev.filter((id) => id !== tagId);
-        } else {
-          newIds = [...new Set([...prev, tagId])];
-        }
-        // tags配列の順番に合わせてソート
-        return newIds.sort((a, b) => {
-          const indexA = flatTags.findIndex((tag) => tag.id === a);
-          const indexB = flatTags.findIndex((tag) => tag.id === b);
-          return indexA - indexB;
-        });
-      });
+      setLocalSelectedTagIds((prev) => toggleTagSelection(prev, tagId, flatTags));
     },
     [flatTags],
   );
