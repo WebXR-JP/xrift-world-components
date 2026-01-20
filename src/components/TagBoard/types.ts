@@ -1,7 +1,5 @@
 import { type PlayerMovement } from "../../types/movement";
 
-export { type PlayerMovement };
-
 /** 表示用のタグ定義 */
 export interface Tag {
   id: string;
