@@ -17,6 +17,8 @@ import { DEFAULT_COLUMNS, DEFAULT_TAGS, DEFAULT_TITLE } from "./constants";
 import { type TagBoardProps } from "./types";
 import { splitIntoColumns } from "./utils";
 
+export { type TagBoardProps, type Tag } from "./types";
+
 export const TagBoard = ({
   tags = DEFAULT_TAGS,
   columns = DEFAULT_COLUMNS,

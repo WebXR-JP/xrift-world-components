@@ -85,6 +85,12 @@ export {
   type TextInputProps,
 } from './components/TextInput'
 
+export {
+  TagBoard,
+  type TagBoardProps,
+  type Tag,
+} from './components/TagBoard'
+
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
