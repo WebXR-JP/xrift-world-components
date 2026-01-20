@@ -36,9 +36,6 @@ export const TagBoard = ({
     [tags, columns],
   );
 
-  // DEBUG
-  console.log('TagBoard:', { localUser, remoteUsersCount: remoteUsers.length });
-
   return (
     <>
       {/* タグ選択ボード UI */}
@@ -54,7 +51,6 @@ export const TagBoard = ({
       />
 
       {/* 自分の頭上にタグを表示 */}
-      {localUser && console.log('TagBoard: rendering TagDisplay for localUser') as unknown as null}
       {localUser && (
         <TagDisplay
           userId={localUser.id}
