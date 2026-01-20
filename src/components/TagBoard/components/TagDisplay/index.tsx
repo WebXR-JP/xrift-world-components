@@ -25,6 +25,8 @@ import {
   groupTagsByColumn,
 } from "./utils";
 
+const HEAD_OFFSET_Y = 1.8;
+
 export const TagDisplay = ({
   userId,
   getMovement,
@@ -53,33 +55,28 @@ export const TagDisplay = ({
     [activeColumns],
   );
 
-  // 現在の movement を取得（レンダリング判定用）
-  const movement = userId ? getMovement(userId) : undefined;
-
-  // useFrame
+  // useFrame で位置を更新
   useFrame(() => {
     if (!userId || !groupRef.current) return;
-    const currentMovement = getMovement(userId);
-    if (!currentMovement) return;
+    const movement = getMovement(userId);
+    if (!movement) {
+      groupRef.current.visible = false;
+      return;
+    }
 
     groupRef.current.position.set(
-      currentMovement.position.x,
-      currentMovement.position.y + 1.8,
-      currentMovement.position.z,
+      movement.position.x,
+      movement.position.y + HEAD_OFFSET_Y,
+      movement.position.z,
     );
+    groupRef.current.visible = true;
   });
 
-  // タグが無い、非表示、または位置が取得できない場合は何も描画しない
-  if (selectedTags.length === 0 || !visible || !movement) return null;
-
-  const initialPosition: [number, number, number] = [
-    movement.position.x,
-    movement.position.y + 1.8,
-    movement.position.z,
-  ];
+  // タグが無い、または非表示の場合は何も描画しない
+  if (selectedTags.length === 0 || !visible) return null;
 
   return (
-    <group ref={groupRef} position={initialPosition} scale={[0.5, 0.5, 0.5]}>
+    <group ref={groupRef} visible={false} scale={[0.5, 0.5, 0.5]}>
       <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
         <group>
           {/* 背景: 半透明の黒背景 */}
