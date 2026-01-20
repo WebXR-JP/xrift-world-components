@@ -12,87 +12,99 @@
  * - tagsVisible: タグ表示/非表示の状態
  * - onTagsVisibleChange: タグ表示/非表示の変更コールバック
  */
-import { useEffect, useState } from 'react'
-import { Text } from '@react-three/drei'
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Text } from "@react-three/drei";
 
-import { useUsers } from '../../../contexts/UsersContext'
-import { useInstanceState } from '../../../hooks/useInstanceState'
-import { Interactable } from '../../Interactable'
-import { TagChip } from './TagChip'
-import { type TagSelectorProps } from '../types'
+import { useUsers } from "../../../contexts/UsersContext";
+import { useInstanceState } from "../../../hooks/useInstanceState";
+import { Interactable } from "../../Interactable";
+import { TagChip } from "./TagChip";
+import { type TagSelectorProps } from "../types";
 
-export const TagSelector = ({ tags, title, instanceStateKey, position, rotation, scale, tagsVisible, onTagsVisibleChange }: TagSelectorProps) => {
-  const { localUser } = useUsers()
+export const TagSelector = ({
+  tags,
+  title,
+  instanceStateKey,
+  position,
+  rotation,
+  scale,
+  tagsVisible,
+  onTagsVisibleChange,
+}: TagSelectorProps) => {
+  const { localUser } = useUsers();
   // グローバル同期用の選択タグID（他ユーザーからも見える状態に反映）
   const [, setGlobalSelectedTagIds] = useInstanceState<string[]>(
     `tag-${instanceStateKey}-${localUser?.id}`,
-    []
-  )
-  const [localSelectedTagIds, setLocalSelectedTagIds] = useState<string[]>([])
+    [],
+  );
+  const [localSelectedTagIds, setLocalSelectedTagIds] = useState<string[]>([]);
 
   // tags から平坦化したタグリストを生成
-  const flatTags = tags.flat()
-  const columns = tags.length
+  const flatTags = useMemo(() => tags.flat(), [tags]);
+  const columns = tags.length;
 
   // 選択状態の変更時にグローバル状態へ反映
   useEffect(() => {
-    if (!localUser?.id) return
-    setGlobalSelectedTagIds(localSelectedTagIds)
-  }, [localSelectedTagIds, localUser?.id, setGlobalSelectedTagIds])
+    if (!localUser?.id) return;
+    setGlobalSelectedTagIds(localSelectedTagIds);
+  }, [localSelectedTagIds, localUser?.id, setGlobalSelectedTagIds]);
 
   // タグボタンのクリック処理: 選択のトグル（tags配列の順番を維持）
-  const handleTagClick = (tagId: string) => {
-    setLocalSelectedTagIds((prev) => {
-      let newIds: string[]
-      if (prev.includes(tagId)) {
-        newIds = prev.filter(id => id !== tagId)
-      } else {
-        newIds = [...new Set([...prev, tagId])]
-      }
-      // tags配列の順番に合わせてソート
-      return newIds.sort((a, b) => {
-        const indexA = flatTags.findIndex(tag => tag.id === a)
-        const indexB = flatTags.findIndex(tag => tag.id === b)
-        return indexA - indexB
-      })
-    })
-  }
+  const handleTagClick = useCallback(
+    (tagId: string) => {
+      setLocalSelectedTagIds((prev) => {
+        let newIds: string[];
+        if (prev.includes(tagId)) {
+          newIds = prev.filter((id) => id !== tagId);
+        } else {
+          newIds = [...new Set([...prev, tagId])];
+        }
+        // tags配列の順番に合わせてソート
+        return newIds.sort((a, b) => {
+          const indexA = flatTags.findIndex((tag) => tag.id === a);
+          const indexB = flatTags.findIndex((tag) => tag.id === b);
+          return indexA - indexB;
+        });
+      });
+    },
+    [flatTags],
+  );
 
   // 全クリア: 選択状態を空にする
-  const handleClear = () => {
-    setLocalSelectedTagIds([])
-  }
+  const handleClear = useCallback(() => {
+    setLocalSelectedTagIds([]);
+  }, []);
 
   // 表示/非表示をトグル
-  const handleToggleVisibility = () => {
-    onTagsVisibleChange(!tagsVisible)
-  }
+  const handleToggleVisibility = useCallback(() => {
+    onTagsVisibleChange(!tagsVisible);
+  }, [onTagsVisibleChange, tagsVisible]);
 
   // タグを列ごとにグルーピング（すでに tags として列ごとに分かれている）
-  const columnGroups = tags
+  const columnGroups = tags;
 
   // レイアウト計算（タグボタンのサイズ・ボードサイズ・列間隔）
-  const tagHeight = 0.27 * scale
-  const tagWidth = 1.33 * scale
-  const columnSpacing = tagWidth
+  const tagHeight = 0.27 * scale;
+  const tagWidth = 1.33 * scale;
+  const columnSpacing = tagWidth;
 
-  const maxRowsInColumn = Math.max(...columnGroups.map(col => col.length), 0)
-  const boardWidth = columns * tagWidth + 0.2 * scale
-  
+  const maxRowsInColumn = Math.max(...columnGroups.map((col) => col.length), 0);
+  const boardWidth = columns * tagWidth + 0.2 * scale;
+
   // ヘッダー領域の高さ（タイトル + ボタン + マージン）
-  const headerHeight = 1.0 * scale
-  const boardHeight = maxRowsInColumn * tagHeight + headerHeight
-  
+  const headerHeight = 1.0 * scale;
+  const boardHeight = maxRowsInColumn * tagHeight + headerHeight;
+
   // 背景ボードの上端からの各要素の位置
-  const boardTop = boardHeight / 2 
-  const titleY = boardTop - 0.25 * scale
-  const buttonGroupY = boardTop - 0.3 * scale
-  const tagStartY = boardTop - headerHeight
+  const boardTop = boardHeight / 2;
+  const titleY = boardTop - 0.25 * scale;
+  const buttonGroupY = boardTop - 0.3 * scale;
+  const tagStartY = boardTop - headerHeight;
 
   // ボタンサイズ計算: 背景ボード幅に合わせて可変（左右ボタンで幅を二分）
-  const buttonWidth = boardWidth / 2 - 0.05 * scale
-  const buttonLeftX = -boardWidth / 4
-  const buttonRightX = boardWidth / 4
+  const buttonWidth = boardWidth / 2 - 0.05 * scale;
+  const buttonLeftX = -boardWidth / 4;
+  const buttonRightX = boardWidth / 4;
 
   return (
     <group position={position} rotation={rotation}>
@@ -101,7 +113,7 @@ export const TagSelector = ({ tags, title, instanceStateKey, position, rotation,
         <planeGeometry args={[boardWidth, boardHeight]} />
         <meshBasicMaterial color={0x2a2a2a} opacity={1} transparent />
       </mesh>
-      
+
       <Text
         position={[0, titleY, 0]}
         fontSize={0.2 * scale}
@@ -123,11 +135,7 @@ export const TagSelector = ({ tags, title, instanceStateKey, position, rotation,
           >
             <mesh position={[0, 0, 0]}>
               <boxGeometry args={[buttonWidth, 0.35 * scale, 0.01 * scale]} />
-              <meshStandardMaterial
-                color={0xff6666}
-                opacity={1}
-                transparent
-              />
+              <meshStandardMaterial color={0xff6666} opacity={1} transparent />
             </mesh>
           </Interactable>
           <Text
@@ -170,13 +178,13 @@ export const TagSelector = ({ tags, title, instanceStateKey, position, rotation,
       </group>
 
       {columnGroups.map((columnTags, colIndex) => {
-        const xPos = (colIndex - (columns - 1) / 2) * columnSpacing
-        
+        const xPos = (colIndex - (columns - 1) / 2) * columnSpacing;
+
         return (
           <group key={colIndex} position={[xPos, 0, -0.01]}>
             {columnTags.map((tag, rowIndex) => {
-              const yPos = tagStartY - rowIndex * tagHeight
-              const isSelected = localSelectedTagIds.includes(tag.id)
+              const yPos = tagStartY - rowIndex * tagHeight;
+              const isSelected = localSelectedTagIds.includes(tag.id);
 
               return (
                 <group key={tag.id} position={[0, yPos, 0]}>
@@ -205,11 +213,11 @@ export const TagSelector = ({ tags, title, instanceStateKey, position, rotation,
                     </Text>
                   )}
                 </group>
-              )
+              );
             })}
           </group>
-        )
+        );
       })}
     </group>
-  )
-}
+  );
+};
