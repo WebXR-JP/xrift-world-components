@@ -237,26 +237,15 @@ export const LiveVideoPlayer = memo(
               color="#000000"
             />
             {!currentUrl && (
-              <group position={[0, 0, 0.01]}>
-                <Text
-                  position={[0, 0.05, 0]}
-                  fontSize={width * 0.05}
-                  color="#666666"
-                  anchorX="center"
-                  anchorY="middle"
-                >
-                  ライブストリームURLを入力
-                </Text>
-                <Text
-                  position={[0, -0.15, 0]}
-                  fontSize={width * 0.025}
-                  color="#555555"
-                  anchorX="center"
-                  anchorY="middle"
-                >
-                  HLS .m3u8 形式
-                </Text>
-              </group>
+              <Text
+                position={[0, 0, 0.01]}
+                fontSize={width * 0.05}
+                color="#666666"
+                anchorX="center"
+                anchorY="middle"
+              >
+                {`ライブストリームURLを入力\nHLS .m3u8 形式`}
+              </Text>
             )}
           </>
         ) : (

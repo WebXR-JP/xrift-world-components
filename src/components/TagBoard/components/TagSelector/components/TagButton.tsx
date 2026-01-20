@@ -35,14 +35,19 @@ export const TagButton = ({
         onInteract={onInteract}
         interactionText={tag.label}
       >
-        <TagChip tag={tag} width={width} height={height} fontSize={0.15 * scale} />
+        <TagChip
+          tag={tag}
+          width={width}
+          height={height}
+          fontSize={0.15 * scale}
+        />
       </Interactable>
       {/* 選択済みインジケーター（チェックマーク） */}
       {isSelected && (
         <Text
           position={[-0.58 * scale, -0.02 * scale, 0.012 * scale]}
           fontSize={0.2 * scale}
-          color={tag.color}
+          color={0xffffff}
           anchorX="center"
           anchorY="middle"
         >
