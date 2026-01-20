@@ -7,7 +7,7 @@
 import { Text } from '@react-three/drei'
 import { DoubleSide } from 'three'
 
-import { type Tag } from './types'
+import { type Tag } from '../types'
 
 export interface TagChipProps {
   tag: Tag

@@ -16,9 +16,9 @@ import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import { type Group, DoubleSide } from 'three'
 
-import { useInstanceState } from '../../hooks/useInstanceState'
+import { useInstanceState } from '../../../hooks/useInstanceState'
 import { TagChip } from './TagChip'
-import { type Tag, type TagDisplayProps } from './types'
+import { type Tag, type TagDisplayProps } from '../types'
 
 export const TagDisplay = ({ userId, getMovement, tags, visible, instanceStateKey }: TagDisplayProps) => {
   const groupRef = useRef<Group>(null)

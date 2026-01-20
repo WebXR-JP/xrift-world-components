@@ -15,11 +15,11 @@
 import { useEffect, useState } from 'react'
 import { Text } from '@react-three/drei'
 
-import { useUsers } from '../../contexts/UsersContext'
-import { useInstanceState } from '../../hooks/useInstanceState'
-import { Interactable } from '../Interactable'
+import { useUsers } from '../../../contexts/UsersContext'
+import { useInstanceState } from '../../../hooks/useInstanceState'
+import { Interactable } from '../../Interactable'
 import { TagChip } from './TagChip'
-import { type TagSelectorProps } from './types'
+import { type TagSelectorProps } from '../types'
 
 export const TagSelector = ({ tags, title, instanceStateKey, position, rotation, scale, tagsVisible, onTagsVisibleChange }: TagSelectorProps) => {
   const { localUser } = useUsers()

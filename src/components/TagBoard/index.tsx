@@ -14,8 +14,8 @@
  */
 import { useState } from "react";
 import { useUsers } from "../../contexts/UsersContext";
-import { TagSelector } from "./TagSelector";
-import { TagDisplay } from "./TagDisplay";
+import { TagSelector } from "./components/TagSelector";
+import { TagDisplay } from "./components/TagDisplay";
 import {
   DEFAULT_TAGS,
   DEFAULT_TITLE,
