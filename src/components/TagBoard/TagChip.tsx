@@ -14,7 +14,6 @@ export interface TagChipProps {
   width: number
   height: number
   fontSize: number
-  opacity?: number
 }
 
 export const TagChip = ({
@@ -22,19 +21,13 @@ export const TagChip = ({
   width,
   height,
   fontSize,
-  opacity = 1,
 }: TagChipProps) => {
   return (
     <group>
       {/* タグボックス */}
       <mesh position={[0, 0, -0.01]}>
         <planeGeometry args={[width, height]} />
-        <meshBasicMaterial
-          color={tag.color}
-          opacity={opacity}
-          transparent
-          side={DoubleSide}
-        />
+        <meshBasicMaterial color={tag.color} side={DoubleSide} />
       </mesh>
       {/* タグラベルテキスト（表面） */}
       <Text

@@ -112,7 +112,6 @@ export const TagDisplay = ({ userId, getMovement, tags, visible, instanceStateKe
                         width={tagWidth}
                         height={tagHeight}
                         fontSize={0.08}
-                        opacity={0.6}
                       />
                     </group>
                   )
