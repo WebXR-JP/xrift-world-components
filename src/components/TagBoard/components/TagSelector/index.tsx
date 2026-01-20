@@ -20,6 +20,7 @@ import { useInstanceState } from "../../../../hooks/useInstanceState";
 import { type TagSelectorProps } from "../../types";
 import { ActionButton } from "./ActionButton";
 import { TagButton } from "./TagButton";
+import { calculateLayout } from "./utils";
 
 export const TagSelector = ({
   tags,
@@ -80,42 +81,7 @@ export const TagSelector = ({
   }, [onTagsVisibleChange, tagsVisible]);
 
   // レイアウト計算
-  const layout = useMemo(() => {
-    const tagHeight = 0.27 * scale;
-    const tagWidth = 1.33 * scale;
-    const columnSpacing = tagWidth;
-    const columns = tags.length;
-
-    const maxRowsInColumn = Math.max(...tags.map((col) => col.length), 0);
-    const boardWidth = columns * tagWidth + 0.2 * scale;
-
-    const headerHeight = 1.0 * scale;
-    const boardHeight = maxRowsInColumn * tagHeight + headerHeight;
-
-    const boardTop = boardHeight / 2;
-    const titleY = boardTop - 0.25 * scale;
-    const buttonGroupY = boardTop - 0.3 * scale;
-    const tagStartY = boardTop - headerHeight;
-
-    const buttonWidth = boardWidth / 2 - 0.05 * scale;
-    const buttonLeftX = -boardWidth / 4;
-    const buttonRightX = boardWidth / 4;
-
-    return {
-      tagHeight,
-      tagWidth,
-      columnSpacing,
-      columns,
-      boardWidth,
-      boardHeight,
-      titleY,
-      buttonGroupY,
-      tagStartY,
-      buttonWidth,
-      buttonLeftX,
-      buttonRightX,
-    };
-  }, [tags, scale]);
+  const layout = useMemo(() => calculateLayout(tags, scale), [tags, scale]);
 
   return (
     <group position={position} rotation={rotation}>
