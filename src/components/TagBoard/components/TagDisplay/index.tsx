@@ -72,8 +72,14 @@ export const TagDisplay = ({
   // タグが無い、非表示、または位置が取得できない場合は何も描画しない
   if (selectedTags.length === 0 || !visible || !movement) return null;
 
+  const initialPosition: [number, number, number] = [
+    movement.position.x,
+    movement.position.y + 1.8,
+    movement.position.z,
+  ];
+
   return (
-    <group ref={groupRef} scale={[0.5, 0.5, 0.5]}>
+    <group ref={groupRef} position={initialPosition} scale={[0.5, 0.5, 0.5]}>
       <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
         <group>
           {/* 背景: 半透明の黒背景 */}
