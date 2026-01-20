@@ -14,6 +14,7 @@ export interface TagChipProps {
   width: number
   height: number
   fontSize: number
+  position?: [number, number, number]
   /** 裏面にもテキストを表示するか */
   doubleSided?: boolean
 }
@@ -23,10 +24,11 @@ export const TagChip = ({
   width,
   height,
   fontSize,
+  position,
   doubleSided = false,
 }: TagChipProps) => {
   return (
-    <group>
+    <group position={position}>
       {/* タグボックス */}
       <mesh position={[0, 0, -0.01]}>
         <planeGeometry args={[width, height]} />

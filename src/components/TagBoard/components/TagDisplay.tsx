@@ -99,26 +99,21 @@ export const TagDisplay = ({ userId, getMovement, tags, visible, instanceStateKe
           {activeColumns.map(([columnIndex, columnTags], activeColIndex) => {
             const xPos = (activeColIndex - (activeColumns.length - 1) / 2) * columnSpacing
 
-            return (
-              <group key={columnIndex} position={[xPos, 0, 0]}>
-                {/* 各列内のタグを上から下へ積む */}
-                {columnTags.map((tag, rowIndex) => {
-                  const yOffset = -rowIndex * (tagHeight + tagSpacing)
+            return columnTags.map((tag, rowIndex) => {
+              const yOffset = -rowIndex * (tagHeight + tagSpacing)
 
-                  return (
-                    <group key={tag.id} position={[0, yOffset, 0]}>
-                      <TagChip
-                        tag={tag}
-                        width={tagWidth}
-                        height={tagHeight}
-                        fontSize={0.08}
-                        doubleSided
-                      />
-                    </group>
-                  )
-                })}
-              </group>
-            )
+              return (
+                <TagChip
+                  key={`${columnIndex}-${tag.id}`}
+                  tag={tag}
+                  width={tagWidth}
+                  height={tagHeight}
+                  fontSize={0.08}
+                  position={[xPos, yOffset, 0]}
+                  doubleSided
+                />
+              )
+            })
           })}
         </group>
       </Billboard>
