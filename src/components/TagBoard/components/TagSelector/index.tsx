@@ -72,7 +72,7 @@ export const TagSelector = ({
       {/* 背景ボード */}
       <mesh position={[0, 0, -0.02]}>
         <planeGeometry args={[layout.boardWidth, layout.boardHeight]} />
-        <meshBasicMaterial color={0x2a2a2a} opacity={1} transparent />
+        <meshBasicMaterial color={0x2a2a2a} />
       </mesh>
 
       {/* タイトル */}

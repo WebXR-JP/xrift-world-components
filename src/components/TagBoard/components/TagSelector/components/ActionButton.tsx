@@ -33,7 +33,7 @@ export const ActionButton = ({
   return (
     <group position={position}>
       <Interactable id={id} onInteract={onInteract} interactionText={interactionText}>
-        <mesh position={[0, 0, 0]}>
+        <mesh>
           <boxGeometry args={[width, height, 0.01 * scale]} />
           <meshStandardMaterial color={color} opacity={1} transparent />
         </mesh>
