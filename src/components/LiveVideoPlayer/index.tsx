@@ -100,7 +100,7 @@ const VideoTexture = memo(
       } else {
         video.pause();
       }
-    }, [playing, onError]);
+    }, [playing, onError, texture]);
 
     useEffect(() => {
       const video = videoRef.current;
@@ -199,6 +199,9 @@ export const LiveVideoPlayer = memo(
     const handleUrlChange = useCallback((newUrl: string) => {
       setCurrentUrl(newUrl);
       setHasError(false);
+      if (newUrl) {
+        setPlaying(true);
+      }
     }, []);
 
     const handleReload = useCallback(() => {
@@ -243,6 +246,7 @@ export const LiveVideoPlayer = memo(
                 color="#666666"
                 anchorX="center"
                 anchorY="middle"
+                textAlign="center"
               >
                 {`ライブストリームURLを入力\nHLS .m3u8 形式`}
               </Text>
