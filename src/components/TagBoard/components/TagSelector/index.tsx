@@ -43,11 +43,12 @@ export const TagSelector = ({
   const flatTags = useMemo(() => tags.flat(), [tags]);
   const layout = useMemo(() => calculateLayout(tags, scale), [tags, scale]);
 
-  // useEffect
+  // useEffect - localSelectedTagIds が変更されたらグローバル状態に同期
   useEffect(() => {
     if (!localUser?.id) return;
     setGlobalSelectedTagIds(localSelectedTagIds);
-  }, [localSelectedTagIds, localUser?.id, setGlobalSelectedTagIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localSelectedTagIds, localUser?.id]);
 
   // useCallback
   const handleTagClick = useCallback(
