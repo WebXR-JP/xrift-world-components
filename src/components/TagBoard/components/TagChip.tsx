@@ -41,7 +41,7 @@ export const TagChip = ({
         color={0xffffff}
         anchorX="center"
         anchorY="middle"
-        outlineWidth={fontSize * 0.08}
+        outlineWidth={fontSize * 0.04}
         outlineColor={0x000000}
       >
         {tag.label}
@@ -54,7 +54,7 @@ export const TagChip = ({
           anchorX="center"
           anchorY="middle"
           color={0xffffff}
-          outlineWidth={fontSize * 0.08}
+          outlineWidth={fontSize * 0.04}
           outlineColor={0x000000}
         >
           {tag.label}
