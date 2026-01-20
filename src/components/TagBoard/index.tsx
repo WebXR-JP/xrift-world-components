@@ -36,6 +36,9 @@ export const TagBoard = ({
     [tags, columns],
   );
 
+  // DEBUG
+  console.log('TagBoard:', { localUser, remoteUsersCount: remoteUsers.length });
+
   return (
     <>
       {/* タグ選択ボード UI */}
