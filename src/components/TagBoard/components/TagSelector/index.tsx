@@ -43,7 +43,10 @@ export const TagSelector = ({
   const flatTags = useMemo(() => tags.flat(), [tags]);
   const layout = useMemo(() => calculateLayout(tags, scale), [tags, scale]);
 
-  // useEffect - localSelectedTagIds が変更されたらグローバル状態に同期
+  // localSelectedTagIds が変更されたらグローバル状態に同期
+  // NOTE: setGlobalSelectedTagIds は useInstanceState から返される setter だが、
+  // このフックが毎レンダリングで新しい関数参照を返すため依存配列に含めると無限ループが発生する。
+  // setter の実装自体は変わらないため、依存から除外しても動作に問題はない。
   useEffect(() => {
     if (!localUser?.id) return;
     setGlobalSelectedTagIds(localSelectedTagIds);
