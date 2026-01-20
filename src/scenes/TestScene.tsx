@@ -1,19 +1,19 @@
-import { useState } from 'react'
-import { VideoScreen } from '../components/VideoScreen'
-import { VideoPlayer } from '../components/VideoPlayer'
-import { LiveVideoPlayer } from '../components/LiveVideoPlayer'
-import { Mirror } from '../components/Mirror'
-import { Skybox } from '../components/Skybox'
-import { Interactable } from '../components/Interactable'
-import { TextInput } from '../components/TextInput'
-import { TagBoard } from '../components/TagBoard'
+import { useState } from "react";
+import { VideoScreen } from "../components/VideoScreen";
+import { VideoPlayer } from "../components/VideoPlayer";
+import { LiveVideoPlayer } from "../components/LiveVideoPlayer";
+import { Mirror } from "../components/Mirror";
+import { Skybox } from "../components/Skybox";
+import { Interactable } from "../components/Interactable";
+import { TextInput } from "../components/TextInput";
+import { TagBoard } from "../components/TagBoard";
 
 /**
  * VideoScreenとMirrorのテストシーン
  * Triplexでコンポーネントを確認するためのシーン
  */
 export function TestScene() {
-  const [textInputValue, setTextInputValue] = useState('')
+  const [textInputValue, setTextInputValue] = useState("");
 
   return (
     <>
@@ -71,18 +71,10 @@ export function TestScene() {
       />
 
       {/* 鏡（左） */}
-      <Mirror
-        position={[-5, 2.5, -3]}
-        size={[3, 4]}
-        textureResolution={512}
-      />
+      <Mirror position={[-5, 2.5, -3]} size={[3, 4]} textureResolution={512} />
 
       {/* 小さい鏡（左奥） */}
-      <Mirror
-        position={[-3, 1.5, -7]}
-        size={[2, 2]}
-        color={0xffd700}
-      />
+      <Mirror position={[-3, 1.5, -7]} size={[2, 2]} color={0xffd700} />
 
       {/* 参照用のキューブ */}
       <mesh position={[0, 0.5, 0]}>
@@ -109,8 +101,8 @@ export function TestScene() {
         maxLength={20}
         value={textInputValue}
         onSubmit={(value) => {
-          console.log('TextInput submitted:', value)
-          setTextInputValue(value)
+          console.log("TextInput submitted:", value);
+          setTextInputValue(value);
         }}
       >
         <mesh position={[0, 1.5, -2]}>
@@ -122,8 +114,9 @@ export function TestScene() {
       {/* タグボード */}
       <TagBoard
         instanceStateKey="test-tags"
-        position={[0, 2, -7]}
+        position={[0, 2, 7]}
+        rotation={[0, Math.PI, 0]}
       />
     </>
-  )
+  );
 }

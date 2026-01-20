@@ -30,13 +30,13 @@ export const TagChip = ({
   return (
     <group position={position}>
       {/* タグボックス */}
-      <mesh position={[0, 0, -0.01]}>
+      <mesh>
         <planeGeometry args={[width, height]} />
         <meshBasicMaterial color={tag.color} side={DoubleSide} />
       </mesh>
       {/* タグラベルテキスト（表面） */}
       <Text
-        position={[0, 0, 0]}
+        position={[0, 0, 0.01]}
         fontSize={fontSize}
         color={0xffffff}
         anchorX="center"
@@ -47,7 +47,7 @@ export const TagChip = ({
       {/* タグラベルテキスト（裏面） */}
       {doubleSided && (
         <Text
-          position={[0, 0, -0.03]}
+          position={[0, 0, -0.02]}
           fontSize={fontSize}
           anchorX="center"
           anchorY="middle"
