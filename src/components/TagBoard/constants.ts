@@ -2,11 +2,11 @@
  * TagBoard 関連の定数定義
  *
  * - `DEFAULT_TAGS`: デフォルトで表示・選択可能なタグ一覧（列数は tags から自動計算）
- * - `DEFAULT_TITLE` / `DEFAULT_STORAGE_KEY`: TagBoard のデフォルト設定
+ * - `DEFAULT_TITLE` / `DEFAULT_INSTANCE_STATE_KEY`: TagBoard のデフォルト設定
  */
 import { type Tag } from './types'
 
-export const DEFAULT_STORAGE_KEY = 'default'
+export const DEFAULT_INSTANCE_STATE_KEY = 'default'
 export const DEFAULT_TITLE = 'タグ選択'
 
 export const DEFAULT_TAGS: Tag[][] = [

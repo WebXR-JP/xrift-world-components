@@ -7,7 +7,7 @@
  * Props 概要:
  * - tags: 表示・選択対象のタグ一覧
  * - title: ボード上部に表示するタイトル文言
- * - storageKey: 複数ボード設置時のキー識別子
+ * - instanceStateKey: 複数ボード設置時のキー識別子
  * - position/rotation/scale: ボードの位置・回転・スケール
  * - tagsVisible: タグ表示/非表示の状態
  * - onTagsVisibleChange: タグ表示/非表示の変更コールバック
@@ -20,11 +20,11 @@ import { useInstanceState } from '../../hooks/useInstanceState'
 import { Interactable } from '../Interactable'
 import { type TagSelectorProps } from './types'
 
-export const TagSelector = ({ tags, title, storageKey, position, rotation, scale, tagsVisible, onTagsVisibleChange }: TagSelectorProps) => {
+export const TagSelector = ({ tags, title, instanceStateKey, position, rotation, scale, tagsVisible, onTagsVisibleChange }: TagSelectorProps) => {
   const { localUser } = useUsers()
   // グローバル同期用の選択タグID（他ユーザーからも見える状態に反映）
   const [, setGlobalSelectedTagIds] = useInstanceState<string[]>(
-    `tag-${storageKey}-${localUser?.id}`,
+    `tag-${instanceStateKey}-${localUser?.id}`,
     []
   )
   const [localSelectedTagIds, setLocalSelectedTagIds] = useState<string[]>([])

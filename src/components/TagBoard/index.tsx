@@ -4,7 +4,7 @@
  * ユーザーが選択したタグをローカル/グローバルに扱い、
  * ボードUI（`TagSelector`）と、各ユーザー頭上へのタグ表示（`TagDisplay`）を提供します。
  *
- * デフォルト値は `constants.ts` の `DEFAULT_TAGS` / `DEFAULT_TITLE` / `DEFAULT_STORAGE_KEY` を使用します。
+ * デフォルト値は `constants.ts` の `DEFAULT_TAGS` / `DEFAULT_TITLE` / `DEFAULT_INSTANCE_STATE_KEY` を使用します。
  * 列数は `tags` から自動計算されます。
  *
  * 役割:
@@ -19,14 +19,14 @@ import { TagDisplay } from "./TagDisplay";
 import {
   DEFAULT_TAGS,
   DEFAULT_TITLE,
-  DEFAULT_STORAGE_KEY,
+  DEFAULT_INSTANCE_STATE_KEY,
 } from "./constants";
 import { type TagBoardProps } from "./types";
 
 export const TagBoard = ({
   tags = DEFAULT_TAGS,
   title = DEFAULT_TITLE,
-  storageKey = DEFAULT_STORAGE_KEY,
+  instanceStateKey = DEFAULT_INSTANCE_STATE_KEY,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = 1,
@@ -40,7 +40,7 @@ export const TagBoard = ({
       <TagSelector
         tags={tags}
         title={title}
-        storageKey={storageKey}
+        instanceStateKey={instanceStateKey}
         position={position}
         rotation={rotation}
         scale={scale}
@@ -55,7 +55,7 @@ export const TagBoard = ({
           getMovement={getLocalMovement}
           tags={tags}
           visible={tagsVisible}
-          storageKey={storageKey}
+          instanceStateKey={instanceStateKey}
         />
       )}
 
@@ -67,7 +67,7 @@ export const TagBoard = ({
           getMovement={getMovement}
           tags={tags}
           visible={tagsVisible}
-          storageKey={storageKey}
+          instanceStateKey={instanceStateKey}
         />
       ))}
     </>

@@ -9,7 +9,7 @@
  * - getMovement: ユーザー位置を取得する関数（毎フレーム呼び出し）
  * - tags: 全タグ定義（フィルター前）
  * - visible: 表示/非表示フラグ
- * - storageKey: インスタンス状態キーの識別子
+ * - instanceStateKey: インスタンス状態キーの識別子
  */
 import { Billboard, Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
@@ -19,11 +19,11 @@ import { type Group, DoubleSide } from 'three'
 import { useInstanceState } from '../../hooks/useInstanceState'
 import { type Tag, type TagDisplayProps } from './types'
 
-export const TagDisplay = ({ userId, getMovement, tags, visible, storageKey }: TagDisplayProps) => {
+export const TagDisplay = ({ userId, getMovement, tags, visible, instanceStateKey }: TagDisplayProps) => {
   const groupRef = useRef<Group>(null)
   // インスタンス状態から選択済みタグID を取得（他ユーザーからも見える状態と同期）
   const [selectedTagIds] = useInstanceState<string[]>(
-    `tag-${storageKey}-${userId}`,
+    `tag-${instanceStateKey}-${userId}`,
     []
   )
 

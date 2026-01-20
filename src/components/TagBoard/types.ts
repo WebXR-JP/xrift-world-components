@@ -17,8 +17,8 @@ export interface TagBoardProps {
   tags?: Tag[][]
   /** タイトル文言 */
   title?: string
-  /** 保存に用いるキー（複数ボード設置時の識別用） */
-  storageKey?: string
+  /** インスタンス状態のキー（複数ボード設置時の識別用） */
+  instanceStateKey?: string
   /** ボードの位置 */
   position?: [number, number, number]
   /** ボードの回転 */
@@ -33,14 +33,14 @@ export interface TagDisplayProps {
   getMovement: (userId: string) => PlayerMovement | undefined
   tags: Tag[][]
   visible: boolean
-  storageKey: string
+  instanceStateKey: string
 }
 
 /** TagSelector のプロパティ */
 export interface TagSelectorProps {
   tags: Tag[][]
   title: string
-  storageKey: string
+  instanceStateKey: string
   position: [number, number, number]
   rotation: [number, number, number]
   scale: number
