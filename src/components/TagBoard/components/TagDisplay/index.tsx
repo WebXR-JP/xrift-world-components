@@ -64,6 +64,9 @@ export const TagDisplay = ({
       return;
     }
 
+    // DEBUG
+    console.log('TagDisplay movement:', userId, movement.position);
+
     groupRef.current.position.set(
       movement.position.x,
       movement.position.y + HEAD_OFFSET_Y,
