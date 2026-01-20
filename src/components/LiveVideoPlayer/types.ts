@@ -9,7 +9,7 @@ export interface LiveVideoPlayerProps {
   width?: number
   /** ライブストリームのURL（HLS .m3u8 形式） */
   url?: string
-  /** 初期再生状態（デフォルト: true） */
+  /** 初期再生状態（デフォルト: false） */
   playing?: boolean
   /** 初期音量 0〜1（デフォルト: 1） */
   volume?: number

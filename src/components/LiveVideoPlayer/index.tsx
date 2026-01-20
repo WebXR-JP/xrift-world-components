@@ -184,7 +184,7 @@ export const LiveVideoPlayer = memo(
     rotation = DEFAULT_ROTATION,
     width = DEFAULT_WIDTH,
     url: initialUrl,
-    playing: initialPlaying = true,
+    playing: initialPlaying = false,
     volume: initialVolume = 1,
     onError,
   }: LiveVideoPlayerProps) => {
