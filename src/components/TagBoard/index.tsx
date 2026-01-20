@@ -4,23 +4,22 @@
  * ユーザーが選択したタグをローカル/グローバルに扱い、
  * ボードUI（`TagSelector`）と、各ユーザー頭上へのタグ表示（`TagDisplay`）を提供します。
  *
- * デフォルト値は `constants.ts` の `DEFAULT_TAGS` / `DEFAULT_TITLE` / `DEFAULT_INSTANCE_STATE_KEY` を使用します。
- * 列数は `tags` から自動計算されます。
- *
  * 役割:
  * - TagSelector: タグ選択ボードUI の提供
  * - TagDisplay: 各ユーザー頭上へのタグ表示
  * - 両者の同期: インスタンス状態を通じた連携
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useUsers } from "../../contexts/UsersContext";
 import { TagSelector } from "./components/TagSelector";
 import { TagDisplay } from "./components/TagDisplay";
-import { DEFAULT_TAGS, DEFAULT_TITLE } from "./constants";
+import { DEFAULT_COLUMNS, DEFAULT_TAGS, DEFAULT_TITLE } from "./constants";
 import { type TagBoardProps } from "./types";
+import { splitIntoColumns } from "./utils";
 
 export const TagBoard = ({
   tags = DEFAULT_TAGS,
+  columns = DEFAULT_COLUMNS,
   title = DEFAULT_TITLE,
   instanceStateKey,
   position = [0, 0, 0],
@@ -30,11 +29,16 @@ export const TagBoard = ({
   const { remoteUsers, getMovement, getLocalMovement, localUser } = useUsers();
   const [tagsVisible, setTagsVisible] = useState(true);
 
+  const tagColumns = useMemo(
+    () => splitIntoColumns(tags, columns),
+    [tags, columns],
+  );
+
   return (
     <>
       {/* タグ選択ボード UI */}
       <TagSelector
-        tags={tags}
+        tags={tagColumns}
         title={title}
         instanceStateKey={instanceStateKey}
         position={position}
@@ -49,7 +53,7 @@ export const TagBoard = ({
         <TagDisplay
           userId={localUser.id}
           getMovement={getLocalMovement}
-          tags={tags}
+          tags={tagColumns}
           visible={tagsVisible}
           instanceStateKey={instanceStateKey}
         />
@@ -61,7 +65,7 @@ export const TagBoard = ({
           key={user.id}
           userId={user.id}
           getMovement={getMovement}
-          tags={tags}
+          tags={tagColumns}
           visible={tagsVisible}
           instanceStateKey={instanceStateKey}
         />

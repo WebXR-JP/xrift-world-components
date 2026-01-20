@@ -9,8 +9,10 @@ export interface Tag {
 
 /** TagBoard のプロパティ */
 export interface TagBoardProps {
-  /** 表示・選択対象のタグ（列ごとの配列。省略時はデフォルトを使用） */
-  tags?: Tag[][];
+  /** 表示・選択対象のタグ（省略時はデフォルトを使用） */
+  tags?: Tag[];
+  /** 表示列数（省略時は3列） */
+  columns?: number;
   /** タイトル文言 */
   title?: string;
   /** インスタンス状態のキー（複数ボード設置時の識別用） */
