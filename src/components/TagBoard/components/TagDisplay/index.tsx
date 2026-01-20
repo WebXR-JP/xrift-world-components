@@ -34,6 +34,7 @@ export const TagDisplay = ({
   visible,
   instanceStateKey,
 }: TagDisplayProps) => {
+  console.log('TagDisplay: component called');
   const groupRef = useRef<Group>(null);
   const stateKey = `tag-${instanceStateKey}-${userId}`;
 
