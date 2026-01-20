@@ -53,21 +53,24 @@ export const TagDisplay = ({
     [activeColumns],
   );
 
+  // 現在の movement を取得（レンダリング判定用）
+  const movement = userId ? getMovement(userId) : undefined;
+
   // useFrame
   useFrame(() => {
-    if (!userId) return;
-    const movement = getMovement(userId);
-    if (!movement || !groupRef.current) return;
+    if (!userId || !groupRef.current) return;
+    const currentMovement = getMovement(userId);
+    if (!currentMovement) return;
 
     groupRef.current.position.set(
-      movement.position.x,
-      movement.position.y + 1.4,
-      movement.position.z,
+      currentMovement.position.x,
+      currentMovement.position.y + 1.8,
+      currentMovement.position.z,
     );
   });
 
-  // タグが無い場合、または非表示の場合は何も描画しない
-  if (selectedTags.length === 0 || !visible) return null;
+  // タグが無い、非表示、または位置が取得できない場合は何も描画しない
+  if (selectedTags.length === 0 || !visible || !movement) return null;
 
   return (
     <group ref={groupRef} scale={[0.5, 0.5, 0.5]}>
