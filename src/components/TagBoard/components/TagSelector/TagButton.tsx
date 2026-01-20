@@ -14,6 +14,7 @@ export interface TagButtonProps {
   width: number;
   height: number;
   scale: number;
+  position: [number, number, number];
   isSelected: boolean;
   onInteract: () => void;
 }
@@ -23,11 +24,12 @@ export const TagButton = ({
   width,
   height,
   scale,
+  position,
   isSelected,
   onInteract,
 }: TagButtonProps) => {
   return (
-    <group>
+    <group position={position}>
       <Interactable
         id={`tag-button-${tag.id}`}
         onInteract={onInteract}

@@ -14,6 +14,7 @@ export interface ActionButtonProps {
   width: number;
   height: number;
   scale: number;
+  position: [number, number, number];
   onInteract: () => void;
   interactionText: string;
 }
@@ -25,11 +26,12 @@ export const ActionButton = ({
   width,
   height,
   scale,
+  position,
   onInteract,
   interactionText,
 }: ActionButtonProps) => {
   return (
-    <group>
+    <group position={position}>
       <Interactable id={id} onInteract={onInteract} interactionText={interactionText}>
         <mesh position={[0, 0, 0]}>
           <boxGeometry args={[width, height, 0.01 * scale]} />

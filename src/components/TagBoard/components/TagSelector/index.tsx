@@ -89,60 +89,51 @@ export const TagSelector = ({
       </Text>
 
       {/* アクションボタン群 */}
-      <group position={[0, layout.buttonGroupY, -0.01]}>
-        <group position={[layout.buttonLeftX, -0.3 * scale, 0]}>
-          <ActionButton
-            id="tag-clear-button"
-            label="全削除"
-            color={0xff6666}
-            width={layout.buttonWidth}
-            height={0.35 * scale}
-            scale={scale}
-            onInteract={handleClear}
-            interactionText="選択をクリア"
-          />
-        </group>
-
-        <group position={[layout.buttonRightX, -0.3 * scale, 0]}>
-          <ActionButton
-            id="tag-visibility-toggle"
-            label={tagsVisible ? "非表示" : "表示"}
-            color={tagsVisible ? 0x00aa00 : 0xaa0000}
-            width={layout.buttonWidth}
-            height={0.35 * scale}
-            scale={scale}
-            onInteract={handleToggleVisibility}
-            interactionText={tagsVisible ? "タグを非表示" : "タグを表示"}
-          />
-        </group>
-      </group>
+      <ActionButton
+        id="tag-clear-button"
+        label="全削除"
+        color={0xff6666}
+        width={layout.buttonWidth}
+        height={0.35 * scale}
+        scale={scale}
+        position={[layout.buttonLeftX, layout.buttonGroupY - 0.3 * scale, -0.01]}
+        onInteract={handleClear}
+        interactionText="選択をクリア"
+      />
+      <ActionButton
+        id="tag-visibility-toggle"
+        label={tagsVisible ? "非表示" : "表示"}
+        color={tagsVisible ? 0x00aa00 : 0xaa0000}
+        width={layout.buttonWidth}
+        height={0.35 * scale}
+        scale={scale}
+        position={[layout.buttonRightX, layout.buttonGroupY - 0.3 * scale, -0.01]}
+        onInteract={handleToggleVisibility}
+        interactionText={tagsVisible ? "タグを非表示" : "タグを表示"}
+      />
 
       {/* タグボタン群 */}
       {tags.map((columnTags, colIndex) => {
         const xPos =
           (colIndex - (layout.columns - 1) / 2) * layout.columnSpacing;
 
-        return (
-          <group key={colIndex} position={[xPos, 0, -0.01]}>
-            {columnTags.map((tag, rowIndex) => {
-              const yPos = layout.tagStartY - rowIndex * layout.tagHeight;
-              const isSelected = localSelectedTagIds.includes(tag.id);
+        return columnTags.map((tag, rowIndex) => {
+          const yPos = layout.tagStartY - rowIndex * layout.tagHeight;
+          const isSelected = localSelectedTagIds.includes(tag.id);
 
-              return (
-                <group key={tag.id} position={[0, yPos, 0]}>
-                  <TagButton
-                    tag={tag}
-                    width={layout.tagWidth}
-                    height={layout.tagHeight}
-                    scale={scale}
-                    isSelected={isSelected}
-                    onInteract={() => handleTagClick(tag.id)}
-                  />
-                </group>
-              );
-            })}
-          </group>
-        );
+          return (
+            <TagButton
+              key={tag.id}
+              tag={tag}
+              width={layout.tagWidth}
+              height={layout.tagHeight}
+              scale={scale}
+              position={[xPos, yPos, -0.01]}
+              isSelected={isSelected}
+              onInteract={() => handleTagClick(tag.id)}
+            />
+          );
+        });
       })}
     </group>
   );
