@@ -18,6 +18,7 @@ import { Text } from '@react-three/drei'
 import { useUsers } from '../../contexts/UsersContext'
 import { useInstanceState } from '../../hooks/useInstanceState'
 import { Interactable } from '../Interactable'
+import { TagChip } from './TagChip'
 import { type TagSelectorProps } from './types'
 
 export const TagSelector = ({ tags, title, instanceStateKey, position, rotation, scale, tagsVisible, onTagsVisibleChange }: TagSelectorProps) => {
@@ -176,7 +177,7 @@ export const TagSelector = ({ tags, title, instanceStateKey, position, rotation,
             {columnTags.map((tag, rowIndex) => {
               const yPos = tagStartY - rowIndex * tagHeight
               const isSelected = localSelectedTagIds.includes(tag.id)
-              
+
               return (
                 <group key={tag.id} position={[0, yPos, 0]}>
                   <Interactable
@@ -184,24 +185,13 @@ export const TagSelector = ({ tags, title, instanceStateKey, position, rotation,
                     onInteract={() => handleTagClick(tag.id)}
                     interactionText={tag.label}
                   >
-                    <mesh position={[0, 0, 0]}>
-                      <boxGeometry args={[tagWidth, tagHeight, 0.01 * scale]} />
-                      <meshStandardMaterial
-                        color={tag.color}
-                        opacity={1}
-                        transparent
-                      />
-                    </mesh>
+                    <TagChip
+                      tag={tag}
+                      width={tagWidth}
+                      height={tagHeight}
+                      fontSize={0.15 * scale}
+                    />
                   </Interactable>
-                  <Text
-                    position={[0, 0, 0.01 * scale]}
-                    fontSize={0.15 * scale}
-                    color={0xffffff}
-                    anchorX="center"
-                    anchorY="middle"
-                  >
-                    {tag.label}
-                  </Text>
                   {/* 選択済みインジケーター（チェックマーク） */}
                   {isSelected && (
                     <Text

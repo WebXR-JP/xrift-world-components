@@ -11,12 +11,13 @@
  * - visible: 表示/非表示フラグ
  * - instanceStateKey: インスタンス状態キーの識別子
  */
-import { Billboard, Text } from '@react-three/drei'
+import { Billboard } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import { type Group, DoubleSide } from 'three'
 
 import { useInstanceState } from '../../hooks/useInstanceState'
+import { TagChip } from './TagChip'
 import { type Tag, type TagDisplayProps } from './types'
 
 export const TagDisplay = ({ userId, getMovement, tags, visible, instanceStateKey }: TagDisplayProps) => {
@@ -103,34 +104,16 @@ export const TagDisplay = ({ userId, getMovement, tags, visible, instanceStateKe
                 {/* 各列内のタグを上から下へ積む */}
                 {columnTags.map((tag, rowIndex) => {
                   const yOffset = -rowIndex * (tagHeight + tagSpacing)
-                  
+
                   return (
                     <group key={tag.id} position={[0, yOffset, 0]}>
-                      {/* タグボックス */}
-                      <mesh position={[0, 0, -0.01]}>
-                        <planeGeometry args={[tagWidth, tagHeight]} />
-                        <meshBasicMaterial color={tag.color} opacity={0.6} transparent  side={DoubleSide}/>
-                      </mesh>
-                      {/* タグラベルテキスト */}
-                      <Text
-                        position={[0, 0, 0]}
+                      <TagChip
+                        tag={tag}
+                        width={tagWidth}
+                        height={tagHeight}
                         fontSize={0.08}
-                        color={0xffffff}
-                        anchorX="center"
-                        anchorY="middle"
-                      >
-                        {tag.label}
-                      </Text>
-                      {/* タグラベルテキスト（裏面用） */}
-                      <Text
-                        position={[0, 0, -0.03]}
-                        fontSize={0.08}
-                        anchorX="center"
-                        anchorY="middle"
-                        color={0xffffff}
-                      >
-                        {tag.label}
-                      </Text>
+                        opacity={0.6}
+                      />
                     </group>
                   )
                 })}
