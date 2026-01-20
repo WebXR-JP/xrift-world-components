@@ -1,0 +1,114 @@
+/**
+ * TagDisplay コンポーネント
+ *
+ * 指定ユーザーの頭上に選択済みタグを列ごとに整列して表示します。
+ * 位置は `getMovement(userId)` の結果に追従します。
+ *
+ * Props:
+ * - userId: 表示対象ユーザーID
+ * - getMovement: ユーザー位置を取得する関数（毎フレーム呼び出し）
+ * - tags: 全タグ定義（フィルター前）
+ * - visible: 表示/非表示フラグ
+ * - instanceStateKey: インスタンス状態キーの識別子
+ */
+import { useMemo, useRef } from "react";
+import { Billboard } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
+import { type Group, DoubleSide } from "three";
+
+import { useInstanceState } from "../../../../hooks/useInstanceState";
+import { TagChip } from "../TagChip";
+import { type TagDisplayProps } from "../../types";
+import {
+  calculateLayout,
+  getSelectedTags,
+  groupTagsByColumn,
+} from "./utils";
+
+export const TagDisplay = ({
+  userId,
+  getMovement,
+  tags,
+  visible,
+  instanceStateKey,
+}: TagDisplayProps) => {
+  const groupRef = useRef<Group>(null);
+  const stateKey = `tag-${instanceStateKey}-${userId}`;
+
+  // インスタンス状態から選択済みタグID を取得
+  const [selectedTagIds] = useInstanceState<string[]>(stateKey, []);
+
+  // useMemo
+  const flatTags = useMemo(() => tags.flat(), [tags]);
+  const selectedTags = useMemo(
+    () => getSelectedTags(selectedTagIds, flatTags),
+    [selectedTagIds, flatTags],
+  );
+  const activeColumns = useMemo(
+    () => groupTagsByColumn(selectedTags, tags),
+    [selectedTags, tags],
+  );
+  const layout = useMemo(
+    () => calculateLayout(activeColumns),
+    [activeColumns],
+  );
+
+  // useFrame
+  useFrame(() => {
+    if (!userId) return;
+    const movement = getMovement(userId);
+    if (!movement || !groupRef.current) return;
+
+    groupRef.current.position.set(
+      movement.position.x,
+      movement.position.y + 1.4,
+      movement.position.z,
+    );
+  });
+
+  // タグが無い場合、または非表示の場合は何も描画しない
+  if (selectedTags.length === 0 || !visible) return null;
+
+  return (
+    <group ref={groupRef} scale={[0.5, 0.5, 0.5]}>
+      <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+        <group>
+          {/* 背景: 半透明の黒背景 */}
+          <mesh position={[0, (-(layout.maxRows - 1) * layout.tagHeight) / 2, -0.02]}>
+            <planeGeometry
+              args={[layout.totalWidth + 0.1, layout.maxRows * layout.tagHeight + 0.1]}
+            />
+            <meshBasicMaterial
+              color={0x000000}
+              opacity={0.6}
+              transparent
+              side={DoubleSide}
+            />
+          </mesh>
+
+          {/* タグを配置 */}
+          {activeColumns.map(([columnIndex, columnTags], activeColIndex) => {
+            const xPos =
+              (activeColIndex - (activeColumns.length - 1) / 2) * layout.columnSpacing;
+
+            return columnTags.map((tag, rowIndex) => {
+              const yOffset = -rowIndex * (layout.tagHeight + layout.tagSpacing);
+
+              return (
+                <TagChip
+                  key={`${columnIndex}-${tag.id}`}
+                  tag={tag}
+                  width={layout.tagWidth}
+                  height={layout.tagHeight}
+                  fontSize={0.08}
+                  position={[xPos, yOffset, 0]}
+                  doubleSided
+                />
+              );
+            });
+          })}
+        </group>
+      </Billboard>
+    </group>
+  );
+};
