@@ -6,6 +6,7 @@ import { Mirror } from '../components/Mirror'
 import { Skybox } from '../components/Skybox'
 import { Interactable } from '../components/Interactable'
 import { TextInput } from '../components/TextInput'
+import { TagBoard } from '../components/TagBoard'
 
 /**
  * VideoScreenとMirrorのテストシーン
@@ -117,6 +118,12 @@ export function TestScene() {
           <meshStandardMaterial color="#333" />
         </mesh>
       </TextInput>
+
+      {/* タグボード */}
+      <TagBoard
+        instanceStateKey="test-tags"
+        position={[0, 2, -7]}
+      />
     </>
   )
 }
