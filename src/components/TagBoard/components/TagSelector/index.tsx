@@ -40,35 +40,33 @@ export const TagSelector = ({
   );
   const [localSelectedTagIds, setLocalSelectedTagIds] = useState<string[]>([]);
 
-  // tags から平坦化したタグリストを生成
+  // useMemo
   const flatTags = useMemo(() => tags.flat(), [tags]);
+  const layout = useMemo(() => calculateLayout(tags, scale), [tags, scale]);
 
-  // 選択状態の変更時にグローバル状態へ反映
+  // useEffect
   useEffect(() => {
     if (!localUser?.id) return;
     setGlobalSelectedTagIds(localSelectedTagIds);
   }, [localSelectedTagIds, localUser?.id, setGlobalSelectedTagIds]);
 
-  // タグボタンのクリック処理: 選択のトグル（tags配列の順番を維持）
+  // useCallback
   const handleTagClick = useCallback(
     (tagId: string) => {
-      setLocalSelectedTagIds((prev) => toggleTagSelection(prev, tagId, flatTags));
+      setLocalSelectedTagIds((prev) =>
+        toggleTagSelection(prev, tagId, flatTags),
+      );
     },
     [flatTags],
   );
 
-  // 全クリア: 選択状態を空にする
   const handleClear = useCallback(() => {
     setLocalSelectedTagIds([]);
   }, []);
 
-  // 表示/非表示をトグル
   const handleToggleVisibility = useCallback(() => {
     onTagsVisibleChange(!tagsVisible);
   }, [onTagsVisibleChange, tagsVisible]);
-
-  // レイアウト計算
-  const layout = useMemo(() => calculateLayout(tags, scale), [tags, scale]);
 
   return (
     <group position={position} rotation={rotation}>
@@ -121,7 +119,8 @@ export const TagSelector = ({
 
       {/* タグボタン群 */}
       {tags.map((columnTags, colIndex) => {
-        const xPos = (colIndex - (layout.columns - 1) / 2) * layout.columnSpacing;
+        const xPos =
+          (colIndex - (layout.columns - 1) / 2) * layout.columnSpacing;
 
         return (
           <group key={colIndex} position={[xPos, 0, -0.01]}>
