@@ -16,17 +16,13 @@ import { useState } from "react";
 import { useUsers } from "../../contexts/UsersContext";
 import { TagSelector } from "./components/TagSelector";
 import { TagDisplay } from "./components/TagDisplay";
-import {
-  DEFAULT_TAGS,
-  DEFAULT_TITLE,
-  DEFAULT_INSTANCE_STATE_KEY,
-} from "./constants";
+import { DEFAULT_TAGS, DEFAULT_TITLE } from "./constants";
 import { type TagBoardProps } from "./types";
 
 export const TagBoard = ({
   tags = DEFAULT_TAGS,
   title = DEFAULT_TITLE,
-  instanceStateKey = DEFAULT_INSTANCE_STATE_KEY,
+  instanceStateKey,
   position = [0, 0, 0],
   rotation = [0, 0, 0],
   scale = 1,
