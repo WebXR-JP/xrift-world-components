@@ -2,16 +2,17 @@ import { memo } from 'react'
 import { Text } from '@react-three/drei'
 import type { LiveIndicatorProps } from './types'
 
-export const LiveIndicator = memo(({ position, size }: LiveIndicatorProps) => {
+export const LiveIndicator = memo(({ position, size, playing }: LiveIndicatorProps) => {
   const dotSize = size * 0.15
   const fontSize = size * 0.4
+  const dotColor = playing ? '#ff0000' : '#666666'
 
   return (
     <group position={position}>
-      {/* 赤い丸 */}
+      {/* 状態インジケーター */}
       <mesh position={[-size * 0.5, 0, 0]}>
         <circleGeometry args={[dotSize, 16]} />
-        <meshBasicMaterial color="#ff0000" />
+        <meshBasicMaterial color={dotColor} />
       </mesh>
 
       {/* LIVEテキスト */}

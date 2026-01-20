@@ -62,7 +62,7 @@ export const ControlPanel = memo(
         />
 
         {/* LIVEインジケータ（中央） */}
-        <LiveIndicator position={[0, 0, 0.01]} size={buttonSize} />
+        <LiveIndicator position={[0, 0, 0.01]} size={buttonSize} playing={playing} />
 
         {/* バッファリング中のテキスト */}
         {isBuffering && (

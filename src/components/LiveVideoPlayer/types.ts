@@ -52,6 +52,7 @@ export interface VolumeControlProps {
 export interface LiveIndicatorProps {
   position: [number, number, number]
   size: number
+  playing: boolean
 }
 
 export interface LoadingSpinnerProps {
