@@ -57,15 +57,18 @@ export const TagDisplay = ({
 
   // useFrame で位置を更新
   useFrame(() => {
+    // DEBUG: 早期リターンの原因を特定
+    console.log('TagDisplay useFrame:', { userId, hasRef: !!groupRef.current });
+
     if (!userId || !groupRef.current) return;
     const movement = getMovement(userId);
+
+    console.log('TagDisplay movement:', movement);
+
     if (!movement) {
       groupRef.current.visible = false;
       return;
     }
-
-    // DEBUG
-    console.log('TagDisplay movement:', userId, movement.position);
 
     groupRef.current.position.set(
       movement.position.x,
@@ -74,6 +77,9 @@ export const TagDisplay = ({
     );
     groupRef.current.visible = true;
   });
+
+  // DEBUG
+  console.log('TagDisplay render:', { userId, selectedTagsCount: selectedTags.length, visible });
 
   // タグが無い、または非表示の場合は何も描画しない
   if (selectedTags.length === 0 || !visible) return null;
