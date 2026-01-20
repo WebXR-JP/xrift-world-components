@@ -25,7 +25,7 @@ import {
   groupTagsByColumn,
 } from "./utils";
 
-const HEAD_OFFSET_Y = 3.0;
+const HEAD_OFFSET_Y = 1.8;
 
 export const TagDisplay = ({
   userId,
