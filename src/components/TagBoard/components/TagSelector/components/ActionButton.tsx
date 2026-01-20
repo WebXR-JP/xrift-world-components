@@ -5,7 +5,7 @@
  */
 import { Text } from "@react-three/drei";
 
-import { Interactable } from "../../../Interactable";
+import { Interactable } from "../../../../Interactable";
 
 export interface ActionButtonProps {
   id: string;

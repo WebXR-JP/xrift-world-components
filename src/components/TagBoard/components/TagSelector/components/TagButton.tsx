@@ -5,9 +5,9 @@
  */
 import { Text } from "@react-three/drei";
 
-import { Interactable } from "../../../Interactable";
-import { TagChip } from "../TagChip";
-import { type Tag } from "../../types";
+import { Interactable } from "../../../../Interactable";
+import { TagChip } from "../../TagChip";
+import { type Tag } from "../../../types";
 
 export interface TagButtonProps {
   tag: Tag;

@@ -18,8 +18,8 @@ import { Text } from "@react-three/drei";
 import { useUsers } from "../../../../contexts/UsersContext";
 import { useInstanceState } from "../../../../hooks/useInstanceState";
 import { type TagSelectorProps } from "../../types";
-import { ActionButton } from "./ActionButton";
-import { TagButton } from "./TagButton";
+import { ActionButton } from "./components/ActionButton";
+import { TagButton } from "./components/TagButton";
 import { calculateLayout, toggleTagSelection } from "./utils";
 
 export const TagSelector = ({
