@@ -30,6 +30,7 @@ export interface LiveControlPanelProps {
   onPlayPause: () => void
   onVolumeChange: (volume: number) => void
   onUrlChange: (url: string) => void
+  onReload: () => void
 }
 
 export interface PlayPauseButtonProps {
@@ -64,4 +65,11 @@ export interface UrlInputButtonProps {
   size: number
   currentUrl: string
   onUrlChange: (url: string) => void
+}
+
+export interface ReloadButtonProps {
+  id: string
+  position: [number, number, number]
+  size: number
+  onReload: () => void
 }
