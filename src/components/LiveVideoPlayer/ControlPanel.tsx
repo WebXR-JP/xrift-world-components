@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { Text } from '@react-three/drei'
 import { PlayPauseButton } from './PlayPauseButton'
+import { StopButton } from '../VideoPlayer/StopButton'
 import { VolumeControl } from './VolumeControl'
 import { LiveIndicator } from './LiveIndicator'
 import { UrlInputButton } from './UrlInputButton'
@@ -20,6 +21,7 @@ export const ControlPanel = memo(
     isBuffering,
     currentUrl,
     onPlayPause,
+    onStop,
     onVolumeChange,
     onUrlChange,
     onReload,
@@ -47,18 +49,26 @@ export const ControlPanel = memo(
         {/* リロードボタン */}
         <ReloadButton
           id={`${id}-reload`}
-          position={[-width * 0.38, 0, 0.01]}
+          position={[-width * 0.39, 0, 0.01]}
           size={buttonSize}
           onReload={onReload}
         />
 
-        {/* 再生/停止ボタン（左） */}
+        {/* 再生/一時停止ボタン */}
         <PlayPauseButton
           id={`${id}-play-pause`}
-          position={[-width * 0.31, 0, 0.01]}
+          position={[-width * 0.33, 0, 0.01]}
           size={buttonSize}
           playing={playing}
           onInteract={onPlayPause}
+        />
+
+        {/* 停止ボタン */}
+        <StopButton
+          id={`${id}-stop`}
+          position={[-width * 0.27, 0, 0.01]}
+          size={buttonSize}
+          onInteract={onStop}
         />
 
         {/* LIVEインジケータ（中央） */}

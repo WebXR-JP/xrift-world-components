@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { Text } from '@react-three/drei'
 import { PlayPauseButton } from './PlayPauseButton'
+import { StopButton } from './StopButton'
 import { ProgressBar } from './ProgressBar'
 import { VolumeControl } from './VolumeControl'
 import { UrlInputButton } from './UrlInputButton'
@@ -23,6 +24,7 @@ export const ControlPanel = memo(
     volume,
     currentUrl,
     onPlayPause,
+    onStop,
     onSeek,
     onVolumeChange,
     onUrlChange,
@@ -51,13 +53,21 @@ export const ControlPanel = memo(
           onUrlChange={onUrlChange}
         />
 
-        {/* 再生/停止ボタン（左） */}
+        {/* 再生/一時停止ボタン */}
         <PlayPauseButton
           id={`${id}-play-pause`}
-          position={[-width * 0.35, 0, 0.01]}
+          position={[-width * 0.38, 0, 0.01]}
           size={buttonSize}
           playing={playing}
           onInteract={onPlayPause}
+        />
+
+        {/* 停止ボタン */}
+        <StopButton
+          id={`${id}-stop`}
+          position={[-width * 0.31, 0, 0.01]}
+          size={buttonSize}
+          onInteract={onStop}
         />
 
         {/* プログレスバー（中央） */}

@@ -28,6 +28,7 @@ export interface LiveControlPanelProps {
   isBuffering: boolean
   currentUrl: string
   onPlayPause: () => void
+  onStop: () => void
   onVolumeChange: (volume: number) => void
   onUrlChange: (url: string) => void
   onReload: () => void
@@ -73,4 +74,11 @@ export interface ReloadButtonProps {
   position: [number, number, number]
   size: number
   onReload: () => void
+}
+
+export interface StopButtonProps {
+  id: string
+  position: [number, number, number]
+  size: number
+  onInteract: () => void
 }

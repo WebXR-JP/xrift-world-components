@@ -210,6 +210,13 @@ export const LiveVideoPlayer = memo(
       setPlaying((prev) => !prev);
     }, []);
 
+    const handleStop = useCallback(() => {
+      setCurrentUrl(undefined);
+      setPlaying(false);
+      setIsBuffering(false);
+      setHasError(false);
+    }, []);
+
     const handleVolumeChange = useCallback((newVolume: number) => {
       setVolume(newVolume);
     }, []);
@@ -293,6 +300,7 @@ export const LiveVideoPlayer = memo(
           isBuffering={isBuffering}
           currentUrl={currentUrl || ""}
           onPlayPause={handlePlayPause}
+          onStop={handleStop}
           onVolumeChange={handleVolumeChange}
           onUrlChange={handleUrlChange}
           onReload={handleReload}

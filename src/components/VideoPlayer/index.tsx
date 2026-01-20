@@ -180,6 +180,14 @@ export const VideoPlayer = memo(
       setPlaying((prev) => !prev)
     }, [])
 
+    const handleStop = useCallback(() => {
+      setCurrentUrl(undefined)
+      setPlaying(false)
+      setProgress(0)
+      setDuration(0)
+      setHasError(false)
+    }, [])
+
     const handleVolumeChange = useCallback((newVolume: number) => {
       setVolume(newVolume)
     }, [])
@@ -255,6 +263,7 @@ export const VideoPlayer = memo(
           volume={volume}
           currentUrl={currentUrl || ''}
           onPlayPause={handlePlayPause}
+          onStop={handleStop}
           onSeek={handleSeek}
           onVolumeChange={handleVolumeChange}
           onUrlChange={handleUrlChange}

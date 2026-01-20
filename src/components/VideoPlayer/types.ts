@@ -29,6 +29,7 @@ export interface ControlPanelProps {
   volume: number
   currentUrl: string
   onPlayPause: () => void
+  onStop: () => void
   onSeek: (time: number) => void
   onVolumeChange: (volume: number) => void
   onUrlChange: (url: string) => void
@@ -66,4 +67,11 @@ export interface UrlInputButtonProps {
   size: number
   currentUrl: string
   onUrlChange: (url: string) => void
+}
+
+export interface StopButtonProps {
+  id: string
+  position: [number, number, number]
+  size: number
+  onInteract: () => void
 }
