@@ -14,7 +14,7 @@
 import { useMemo, useRef } from "react";
 import { Billboard } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
-import { type Group, DoubleSide } from "three";
+import { type Group, DoubleSide, Vector3 } from "three";
 
 import { useInstanceState } from "../../../../hooks/useInstanceState";
 import { TagChip } from "../TagChip";
@@ -64,11 +64,21 @@ export const TagDisplay = ({
       return;
     }
 
-    groupRef.current.position.set(
+    // ワールド座標
+    const worldPos = new Vector3(
       movement.position.x,
       movement.position.y + HEAD_OFFSET_Y,
       movement.position.z,
     );
+
+    // 親がある場合、ワールド座標をローカル座標に変換
+    const parent = groupRef.current.parent;
+    if (parent) {
+      parent.updateWorldMatrix(true, false);
+      parent.worldToLocal(worldPos);
+    }
+
+    groupRef.current.position.copy(worldPos);
     groupRef.current.visible = true;
   });
 
