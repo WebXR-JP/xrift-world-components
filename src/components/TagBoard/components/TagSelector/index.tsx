@@ -15,11 +15,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Text } from "@react-three/drei";
 
-import { useUsers } from "../../../contexts/UsersContext";
-import { useInstanceState } from "../../../hooks/useInstanceState";
-import { Interactable } from "../../Interactable";
-import { TagChip } from "./TagChip";
-import { type TagSelectorProps } from "../types";
+import { useUsers } from "../../../../contexts/UsersContext";
+import { useInstanceState } from "../../../../hooks/useInstanceState";
+import { type TagSelectorProps } from "../../types";
+import { ActionButton } from "./ActionButton";
+import { TagButton } from "./TagButton";
 
 export const TagSelector = ({
   tags,
@@ -80,40 +80,35 @@ export const TagSelector = ({
     onTagsVisibleChange(!tagsVisible);
   }, [onTagsVisibleChange, tagsVisible]);
 
-  // タグを列ごとにグルーピング（すでに tags として列ごとに分かれている）
-  const columnGroups = tags;
-
-  // レイアウト計算（タグボタンのサイズ・ボードサイズ・列間隔）
+  // レイアウト計算
   const tagHeight = 0.27 * scale;
   const tagWidth = 1.33 * scale;
   const columnSpacing = tagWidth;
 
-  const maxRowsInColumn = Math.max(...columnGroups.map((col) => col.length), 0);
+  const maxRowsInColumn = Math.max(...tags.map((col) => col.length), 0);
   const boardWidth = columns * tagWidth + 0.2 * scale;
 
-  // ヘッダー領域の高さ（タイトル + ボタン + マージン）
   const headerHeight = 1.0 * scale;
   const boardHeight = maxRowsInColumn * tagHeight + headerHeight;
 
-  // 背景ボードの上端からの各要素の位置
   const boardTop = boardHeight / 2;
   const titleY = boardTop - 0.25 * scale;
   const buttonGroupY = boardTop - 0.3 * scale;
   const tagStartY = boardTop - headerHeight;
 
-  // ボタンサイズ計算: 背景ボード幅に合わせて可変（左右ボタンで幅を二分）
   const buttonWidth = boardWidth / 2 - 0.05 * scale;
   const buttonLeftX = -boardWidth / 4;
   const buttonRightX = boardWidth / 4;
 
   return (
     <group position={position} rotation={rotation}>
-      {/* 背景ボード（タイトル・コントロールボタンを含む） - 原点を中央に */}
+      {/* 背景ボード */}
       <mesh position={[0, 0, -0.02]}>
         <planeGeometry args={[boardWidth, boardHeight]} />
         <meshBasicMaterial color={0x2a2a2a} opacity={1} transparent />
       </mesh>
 
+      {/* タイトル */}
       <Text
         position={[0, titleY, 0]}
         fontSize={0.2 * scale}
@@ -125,59 +120,37 @@ export const TagSelector = ({
         {title}
       </Text>
 
+      {/* アクションボタン群 */}
       <group position={[0, buttonGroupY, -0.01]}>
-        {/* クリアボタン: 選択済みタグをすべて解除（背景ボード幅に合わせて可変） */}
         <group position={[buttonLeftX, -0.3 * scale, 0]}>
-          <Interactable
+          <ActionButton
             id="tag-clear-button"
+            label="全削除"
+            color={0xff6666}
+            width={buttonWidth}
+            height={0.35 * scale}
+            scale={scale}
             onInteract={handleClear}
             interactionText="選択をクリア"
-          >
-            <mesh position={[0, 0, 0]}>
-              <boxGeometry args={[buttonWidth, 0.35 * scale, 0.01 * scale]} />
-              <meshStandardMaterial color={0xff6666} opacity={1} transparent />
-            </mesh>
-          </Interactable>
-          <Text
-            position={[0, 0, 0.006 * scale]}
-            fontSize={0.15 * scale}
-            color={0xffffff}
-            anchorX="center"
-            anchorY="middle"
-          >
-            全削除
-          </Text>
+          />
         </group>
 
-        {/* 表示/非表示トグルボタン: 頭上タグの表示状態切替（背景ボード幅に合わせて可変） */}
         <group position={[buttonRightX, -0.3 * scale, 0]}>
-          <Interactable
+          <ActionButton
             id="tag-visibility-toggle"
+            label={tagsVisible ? "非表示" : "表示"}
+            color={tagsVisible ? 0x00aa00 : 0xaa0000}
+            width={buttonWidth}
+            height={0.35 * scale}
+            scale={scale}
             onInteract={handleToggleVisibility}
             interactionText={tagsVisible ? "タグを非表示" : "タグを表示"}
-          >
-            <mesh position={[0, 0, 0]}>
-              <boxGeometry args={[buttonWidth, 0.35 * scale, 0.01 * scale]} />
-              <meshStandardMaterial
-                color={tagsVisible ? 0x00aa00 : 0xaa0000}
-                opacity={1}
-                transparent
-              />
-            </mesh>
-          </Interactable>
-          <Text
-            position={[0, 0, 0.006 * scale]}
-            fontSize={0.15 * scale}
-            color={0xffffff}
-            anchorX="center"
-            anchorY="middle"
-          >
-            {tagsVisible ? "非表示" : "表示"}
-          </Text>
+          />
         </group>
       </group>
 
-      {columnGroups.map((columnTags, colIndex) => {
+      {/* タグボタン群 */}
+      {tags.map((columnTags, colIndex) => {
         const xPos = (colIndex - (columns - 1) / 2) * columnSpacing;
 
         return (
@@ -188,30 +161,14 @@ export const TagSelector = ({
 
               return (
                 <group key={tag.id} position={[0, yPos, 0]}>
-                  <Interactable
-                    id={`tag-button-${tag.id}`}
+                  <TagButton
+                    tag={tag}
+                    width={tagWidth}
+                    height={tagHeight}
+                    scale={scale}
+                    isSelected={isSelected}
                     onInteract={() => handleTagClick(tag.id)}
-                    interactionText={tag.label}
-                  >
-                    <TagChip
-                      tag={tag}
-                      width={tagWidth}
-                      height={tagHeight}
-                      fontSize={0.15 * scale}
-                    />
-                  </Interactable>
-                  {/* 選択済みインジケーター（チェックマーク） */}
-                  {isSelected && (
-                    <Text
-                      position={[-0.58 * scale, -0.02 * scale, 0.012 * scale]}
-                      fontSize={0.2 * scale}
-                      color={tag.color}
-                      anchorX="center"
-                      anchorY="middle"
-                    >
-                      ✓
-                    </Text>
-                  )}
+                  />
                 </group>
               );
             })}
