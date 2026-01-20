@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useVideoTexture, Text } from "@react-three/drei";
 import { ControlPanel } from "./ControlPanel";
+import { useWebAudioVolume } from "../../hooks/useWebAudioVolume";
 import type { LiveVideoPlayerProps } from "./types";
 
 export type { LiveVideoPlayerProps } from "./types";
@@ -102,12 +103,8 @@ const VideoTexture = memo(
       }
     }, [playing, onError, texture]);
 
-    useEffect(() => {
-      const video = videoRef.current;
-      if (!video) return;
-
-      video.volume = Math.max(0, Math.min(1, volume));
-    }, [volume]);
+    // Web Audio API を使用した音量制御（iOS対応）
+    useWebAudioVolume(videoRef.current, volume);
 
     useEffect(() => {
       const video = videoRef.current;

@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useVideoTexture } from '@react-three/drei'
 import { useInstanceState } from '../../hooks/useInstanceState'
+import { useWebAudioVolume } from '../../hooks/useWebAudioVolume'
 import { VideoScreenProps, VideoState } from './types'
 
 export type { VideoScreenProps, VideoState } from './types'
@@ -84,13 +85,8 @@ function VideoScreenInner({
     }
   }, [playing, texture])
 
-  // 音量の同期
-  useEffect(() => {
-    const video = texture.image as HTMLVideoElement
-    if (!video) return
-
-    video.volume = Math.max(0, Math.min(1, volume))
-  }, [volume, texture])
+  // Web Audio API を使用した音量制御（iOS対応）
+  useWebAudioVolume(texture.image as HTMLVideoElement, volume)
 
   // 再生位置の同期ロジック（VRChat方式）
   // currentTimeが外部から変更された場合のみ同期
