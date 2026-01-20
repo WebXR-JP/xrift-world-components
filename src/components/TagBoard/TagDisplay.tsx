@@ -112,6 +112,7 @@ export const TagDisplay = ({ userId, getMovement, tags, visible, instanceStateKe
                         width={tagWidth}
                         height={tagHeight}
                         fontSize={0.08}
+                        doubleSided
                       />
                     </group>
                   )

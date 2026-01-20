@@ -14,6 +14,8 @@ export interface TagChipProps {
   width: number
   height: number
   fontSize: number
+  /** 裏面にもテキストを表示するか */
+  doubleSided?: boolean
 }
 
 export const TagChip = ({
@@ -21,6 +23,7 @@ export const TagChip = ({
   width,
   height,
   fontSize,
+  doubleSided = false,
 }: TagChipProps) => {
   return (
     <group>
@@ -40,15 +43,17 @@ export const TagChip = ({
         {tag.label}
       </Text>
       {/* タグラベルテキスト（裏面） */}
-      <Text
-        position={[0, 0, -0.03]}
-        fontSize={fontSize}
-        anchorX="center"
-        anchorY="middle"
-        color={0xffffff}
-      >
-        {tag.label}
-      </Text>
+      {doubleSided && (
+        <Text
+          position={[0, 0, -0.03]}
+          fontSize={fontSize}
+          anchorX="center"
+          anchorY="middle"
+          color={0xffffff}
+        >
+          {tag.label}
+        </Text>
+      )}
     </group>
   )
 }
