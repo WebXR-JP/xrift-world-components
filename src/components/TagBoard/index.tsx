@@ -54,6 +54,7 @@ export const TagBoard = ({
       />
 
       {/* 自分の頭上にタグを表示 */}
+      {localUser && console.log('TagBoard: rendering TagDisplay for localUser') as unknown as null}
       {localUser && (
         <TagDisplay
           userId={localUser.id}
