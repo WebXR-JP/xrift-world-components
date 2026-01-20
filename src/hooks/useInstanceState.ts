@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useInstanceStateContext } from '../contexts/InstanceStateContext'
 
 /**
@@ -57,19 +57,22 @@ export function useInstanceState<T>(
   }, [states, stateId])
 
   // 関数型setStateをサポート（React の useState と同じAPI）
-  const setState = (newStateOrUpdater: T | ((prevState: T) => T)) => {
-    setLocalState(prev => {
-      // 関数の場合は前の状態を渡して新しい状態を計算
-      const newState = typeof newStateOrUpdater === 'function'
-        ? (newStateOrUpdater as (prevState: T) => T)(prev)
-        : newStateOrUpdater
+  const setState = useCallback(
+    (newStateOrUpdater: T | ((prevState: T) => T)) => {
+      setLocalState(prev => {
+        // 関数の場合は前の状態を渡して新しい状態を計算
+        const newState = typeof newStateOrUpdater === 'function'
+          ? (newStateOrUpdater as (prevState: T) => T)(prev)
+          : newStateOrUpdater
 
-      // グローバルに送信
-      sendState(stateId, newState)
+        // グローバルに送信
+        sendState(stateId, newState)
 
-      return newState
-    })
-  }
+        return newState
+      })
+    },
+    [sendState, stateId]
+  )
 
   return [localState, setState]
 }
