@@ -41,7 +41,6 @@ export const TagSelector = ({
 
   // tags から平坦化したタグリストを生成
   const flatTags = useMemo(() => tags.flat(), [tags]);
-  const columns = tags.length;
 
   // 選択状態の変更時にグローバル状態へ反映
   useEffect(() => {
@@ -81,36 +80,54 @@ export const TagSelector = ({
   }, [onTagsVisibleChange, tagsVisible]);
 
   // レイアウト計算
-  const tagHeight = 0.27 * scale;
-  const tagWidth = 1.33 * scale;
-  const columnSpacing = tagWidth;
+  const layout = useMemo(() => {
+    const tagHeight = 0.27 * scale;
+    const tagWidth = 1.33 * scale;
+    const columnSpacing = tagWidth;
+    const columns = tags.length;
 
-  const maxRowsInColumn = Math.max(...tags.map((col) => col.length), 0);
-  const boardWidth = columns * tagWidth + 0.2 * scale;
+    const maxRowsInColumn = Math.max(...tags.map((col) => col.length), 0);
+    const boardWidth = columns * tagWidth + 0.2 * scale;
 
-  const headerHeight = 1.0 * scale;
-  const boardHeight = maxRowsInColumn * tagHeight + headerHeight;
+    const headerHeight = 1.0 * scale;
+    const boardHeight = maxRowsInColumn * tagHeight + headerHeight;
 
-  const boardTop = boardHeight / 2;
-  const titleY = boardTop - 0.25 * scale;
-  const buttonGroupY = boardTop - 0.3 * scale;
-  const tagStartY = boardTop - headerHeight;
+    const boardTop = boardHeight / 2;
+    const titleY = boardTop - 0.25 * scale;
+    const buttonGroupY = boardTop - 0.3 * scale;
+    const tagStartY = boardTop - headerHeight;
 
-  const buttonWidth = boardWidth / 2 - 0.05 * scale;
-  const buttonLeftX = -boardWidth / 4;
-  const buttonRightX = boardWidth / 4;
+    const buttonWidth = boardWidth / 2 - 0.05 * scale;
+    const buttonLeftX = -boardWidth / 4;
+    const buttonRightX = boardWidth / 4;
+
+    return {
+      tagHeight,
+      tagWidth,
+      columnSpacing,
+      columns,
+      boardWidth,
+      boardHeight,
+      titleY,
+      buttonGroupY,
+      tagStartY,
+      buttonWidth,
+      buttonLeftX,
+      buttonRightX,
+    };
+  }, [tags, scale]);
 
   return (
     <group position={position} rotation={rotation}>
       {/* 背景ボード */}
       <mesh position={[0, 0, -0.02]}>
-        <planeGeometry args={[boardWidth, boardHeight]} />
+        <planeGeometry args={[layout.boardWidth, layout.boardHeight]} />
         <meshBasicMaterial color={0x2a2a2a} opacity={1} transparent />
       </mesh>
 
       {/* タイトル */}
       <Text
-        position={[0, titleY, 0]}
+        position={[0, layout.titleY, 0]}
         fontSize={0.2 * scale}
         color="white"
         anchorX="center"
@@ -121,13 +138,13 @@ export const TagSelector = ({
       </Text>
 
       {/* アクションボタン群 */}
-      <group position={[0, buttonGroupY, -0.01]}>
-        <group position={[buttonLeftX, -0.3 * scale, 0]}>
+      <group position={[0, layout.buttonGroupY, -0.01]}>
+        <group position={[layout.buttonLeftX, -0.3 * scale, 0]}>
           <ActionButton
             id="tag-clear-button"
             label="全削除"
             color={0xff6666}
-            width={buttonWidth}
+            width={layout.buttonWidth}
             height={0.35 * scale}
             scale={scale}
             onInteract={handleClear}
@@ -135,12 +152,12 @@ export const TagSelector = ({
           />
         </group>
 
-        <group position={[buttonRightX, -0.3 * scale, 0]}>
+        <group position={[layout.buttonRightX, -0.3 * scale, 0]}>
           <ActionButton
             id="tag-visibility-toggle"
             label={tagsVisible ? "非表示" : "表示"}
             color={tagsVisible ? 0x00aa00 : 0xaa0000}
-            width={buttonWidth}
+            width={layout.buttonWidth}
             height={0.35 * scale}
             scale={scale}
             onInteract={handleToggleVisibility}
@@ -151,20 +168,20 @@ export const TagSelector = ({
 
       {/* タグボタン群 */}
       {tags.map((columnTags, colIndex) => {
-        const xPos = (colIndex - (columns - 1) / 2) * columnSpacing;
+        const xPos = (colIndex - (layout.columns - 1) / 2) * layout.columnSpacing;
 
         return (
           <group key={colIndex} position={[xPos, 0, -0.01]}>
             {columnTags.map((tag, rowIndex) => {
-              const yPos = tagStartY - rowIndex * tagHeight;
+              const yPos = layout.tagStartY - rowIndex * layout.tagHeight;
               const isSelected = localSelectedTagIds.includes(tag.id);
 
               return (
                 <group key={tag.id} position={[0, yPos, 0]}>
                   <TagButton
                     tag={tag}
-                    width={tagWidth}
-                    height={tagHeight}
+                    width={layout.tagWidth}
+                    height={layout.tagHeight}
                     scale={scale}
                     isSelected={isSelected}
                     onInteract={() => handleTagClick(tag.id)}
