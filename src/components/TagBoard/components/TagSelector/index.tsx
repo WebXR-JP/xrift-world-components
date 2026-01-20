@@ -33,11 +33,10 @@ export const TagSelector = ({
   onTagsVisibleChange,
 }: TagSelectorProps) => {
   const { localUser } = useUsers();
+  const stateKey = `tag-${instanceStateKey}-${localUser?.id}`;
+
   // グローバル同期用の選択タグID（他ユーザーからも見える状態に反映）
-  const [, setGlobalSelectedTagIds] = useInstanceState<string[]>(
-    `tag-${instanceStateKey}-${localUser?.id}`,
-    [],
-  );
+  const [, setGlobalSelectedTagIds] = useInstanceState<string[]>(stateKey, []);
   const [localSelectedTagIds, setLocalSelectedTagIds] = useState<string[]>([]);
 
   // useMemo
