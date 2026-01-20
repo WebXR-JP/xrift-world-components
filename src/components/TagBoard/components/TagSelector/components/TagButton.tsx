@@ -50,6 +50,8 @@ export const TagButton = ({
           color={0xffffff}
           anchorX="center"
           anchorY="middle"
+          outlineWidth={0.2 * scale * 0.04}
+          outlineColor={0x000000}
         >
           ✓
         </Text>
