@@ -1,15 +1,10 @@
 /**
  * TagBoard 関連の定数定義
  *
- * - `STORAGE_KEY_PREFIX`: 選択タグを保存する際のキー接頭辞
- * - `VISIBILITY_STORAGE_KEY`: タグ表示/非表示の保存キー
  * - `DEFAULT_TAGS`: デフォルトで表示・選択可能なタグ一覧（列数は tags から自動計算）
  * - `DEFAULT_TITLE` / `DEFAULT_STORAGE_KEY`: TagBoard のデフォルト設定
  */
 import { type Tag } from './types'
-
-export const STORAGE_KEY_PREFIX = 'xrift-tag-'
-export const VISIBILITY_STORAGE_KEY = 'xrift-tag-visibility'
 
 export const DEFAULT_STORAGE_KEY = 'default'
 export const DEFAULT_TITLE = 'タグ選択'

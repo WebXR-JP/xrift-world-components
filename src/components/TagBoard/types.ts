@@ -44,4 +44,8 @@ export interface TagSelectorProps {
   position: [number, number, number]
   rotation: [number, number, number]
   scale: number
+  /** タグ表示/非表示の状態 */
+  tagsVisible: boolean
+  /** タグ表示/非表示の変更コールバック */
+  onTagsVisibleChange: (visible: boolean) => void
 }

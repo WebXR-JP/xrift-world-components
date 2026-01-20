@@ -15,8 +15,8 @@ import { Billboard, Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { useRef } from 'react'
 import { type Group, DoubleSide } from 'three'
-import { useInstanceState } from '@xrift/world-components'
 
+import { useInstanceState } from '../../hooks/useInstanceState'
 import { type Tag, type TagDisplayProps } from './types'
 
 export const TagDisplay = ({ userId, getMovement, tags, visible, storageKey }: TagDisplayProps) => {
