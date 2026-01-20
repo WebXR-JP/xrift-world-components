@@ -10,7 +10,7 @@ export type { Props as ScreenShareDisplayProps } from './types'
 
 // デフォルト値
 const DEFAULT_WIDTH = 4
-const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
+const DEFAULT_POSITION: [number, number, number] = [0, 0, 0]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
 
 /**
