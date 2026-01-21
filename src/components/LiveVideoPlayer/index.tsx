@@ -215,6 +215,7 @@ export const LiveVideoPlayer = memo(
       setPlaying(false);
       setIsBuffering(false);
       setHasError(false);
+      setReloadKey((prev) => prev + 1);
     }, []);
 
     const handleVolumeChange = useCallback((newVolume: number) => {

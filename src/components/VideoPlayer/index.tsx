@@ -166,6 +166,7 @@ export const VideoPlayer = memo(
     const [progress, setProgress] = useState(0)
     const [duration, setDuration] = useState(0)
     const [hasError, setHasError] = useState(false)
+    const [reloadKey, setReloadKey] = useState(0)
     const videoRef = useRef<HTMLVideoElement | null>(null)
     const screenHeight = width * (9 / 16)
 
@@ -186,6 +187,7 @@ export const VideoPlayer = memo(
       setProgress(0)
       setDuration(0)
       setHasError(false)
+      setReloadKey((prev) => prev + 1)
     }, [])
 
     const handleVolumeChange = useCallback((newVolume: number) => {
@@ -238,7 +240,7 @@ export const VideoPlayer = memo(
               fallback={<PlaceholderScreen width={width} screenHeight={screenHeight} color="#333333" />}
             >
               <VideoTexture
-                key={currentUrl}
+                key={`${currentUrl}-${reloadKey}`}
                 url={currentUrl}
                 width={width}
                 screenHeight={screenHeight}
