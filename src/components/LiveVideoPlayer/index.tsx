@@ -11,9 +11,10 @@ import {
 import { useVideoTexture, Text } from "@react-three/drei";
 import { ControlPanel } from "./ControlPanel";
 import { useWebAudioVolume } from "../../hooks/useWebAudioVolume";
-import type { LiveVideoPlayerProps } from "./types";
+import { useInstanceState } from "../../hooks/useInstanceState";
+import type { LiveVideoPlayerProps, LiveVideoState } from "./types";
 
-export type { LiveVideoPlayerProps } from "./types";
+export type { LiveVideoPlayerProps, LiveVideoState } from "./types";
 
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5];
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
@@ -197,35 +198,66 @@ export const LiveVideoPlayer = memo(
     url: initialUrl,
     playing: initialPlaying = false,
     volume: initialVolume = 1,
+    sync = "global",
     onError,
   }: LiveVideoPlayerProps) => {
-    const [currentUrl, setCurrentUrl] = useState(initialUrl);
-    const [playing, setPlaying] = useState(initialPlaying);
+    // グローバル同期用の状態
+    const [globalState, setGlobalState] = useInstanceState<LiveVideoState>(
+      `live-video-${id}`,
+      {
+        url: initialUrl,
+        playing: initialPlaying,
+        reloadKey: 0,
+      },
+    );
+
+    // ローカル専用の状態
+    const [localState, setLocalState] = useState<LiveVideoState>({
+      url: initialUrl,
+      playing: initialPlaying,
+      reloadKey: 0,
+    });
+
+    // sync modeに応じて使用する状態を切り替え
+    const videoState = sync === "global" ? globalState : localState;
+    const setVideoState = sync === "global" ? setGlobalState : setLocalState;
+
+    // 音量は常にローカル（個人設定）
     const [volume, setVolume] = useState(initialVolume);
+    // バッファリング状態とエラー状態もローカル
     const [isBuffering, setIsBuffering] = useState(false);
     const [hasError, setHasError] = useState(false);
-    const [reloadKey, setReloadKey] = useState(0);
+
     const screenHeight = width * (9 / 16);
 
-    const handleUrlChange = useCallback((newUrl: string) => {
-      setCurrentUrl(newUrl);
-      setHasError(false);
-      if (newUrl) {
-        setPlaying(true);
-      }
-    }, []);
+    const handleUrlChange = useCallback(
+      (newUrl: string) => {
+        setVideoState((prev) => ({
+          ...prev,
+          url: newUrl,
+          playing: !!newUrl,
+        }));
+        setHasError(false);
+      },
+      [setVideoState],
+    );
 
     const handlePlayPause = useCallback(() => {
-      setPlaying((prev) => !prev);
-    }, []);
+      setVideoState((prev) => ({
+        ...prev,
+        playing: !prev.playing,
+      }));
+    }, [setVideoState]);
 
     const handleStop = useCallback(() => {
-      setCurrentUrl(undefined);
-      setPlaying(false);
+      setVideoState((prev) => ({
+        url: undefined,
+        playing: false,
+        reloadKey: prev.reloadKey + 1,
+      }));
       setIsBuffering(false);
       setHasError(false);
-      setReloadKey((prev) => prev + 1);
-    }, []);
+    }, [setVideoState]);
 
     const handleVolumeChange = useCallback((newVolume: number) => {
       setVolume(newVolume);
@@ -246,14 +278,14 @@ export const LiveVideoPlayer = memo(
     return (
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
-        {!currentUrl || hasError ? (
+        {!videoState.url || hasError ? (
           <>
             <PlaceholderScreen
               width={width}
               screenHeight={screenHeight}
               color="#000000"
             />
-            {!currentUrl && (
+            {!videoState.url && (
               <Text
                 position={[0, 0, 0.01]}
                 fontSize={width * 0.05}
@@ -287,12 +319,12 @@ export const LiveVideoPlayer = memo(
               }
             >
               <VideoTexture
-                key={`${currentUrl}-${reloadKey}`}
-                url={currentUrl}
-                cacheKey={reloadKey}
+                key={`${videoState.url}-${videoState.reloadKey}`}
+                url={videoState.url}
+                cacheKey={videoState.reloadKey}
                 width={width}
                 screenHeight={screenHeight}
-                playing={playing}
+                playing={videoState.playing}
                 volume={volume}
                 onError={handleError}
                 onBufferingChange={handleBufferingChange}
@@ -306,10 +338,10 @@ export const LiveVideoPlayer = memo(
           id={id}
           width={width}
           screenHeight={screenHeight}
-          playing={playing}
+          playing={videoState.playing}
           volume={volume}
           isBuffering={isBuffering}
-          currentUrl={currentUrl || ""}
+          currentUrl={videoState.url || ""}
           onPlayPause={handlePlayPause}
           onStop={handleStop}
           onVolumeChange={handleVolumeChange}
