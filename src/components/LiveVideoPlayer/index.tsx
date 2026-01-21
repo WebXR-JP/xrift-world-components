@@ -141,9 +141,19 @@ const VideoTexture = memo(
     useEffect(() => {
       const video = texture.image as HTMLVideoElement;
       return () => {
+        // 再生を停止
         video.pause();
+
+        // ソースを完全にクリア
         video.src = "";
+        video.removeAttribute("src");
+        video.srcObject = null;
+
+        // MediaSourceをリリースするためにloadを呼び出し
         video.load();
+
+        // テクスチャを破棄
+        texture.dispose();
       };
     }, [texture]);
 
