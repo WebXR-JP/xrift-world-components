@@ -1,5 +1,15 @@
 import { useEffect, useRef } from 'react'
 
+interface AudioConnection {
+  audioContext: AudioContext
+  gainNode: GainNode
+  source: MediaElementAudioSourceNode
+}
+
+// グローバルなWeakMapで各MediaElementの接続を追跡
+// 一度createMediaElementSourceで接続したMediaElementは他のAudioContextに再接続できないため
+const audioConnections = new WeakMap<HTMLMediaElement, AudioConnection>()
+
 /**
  * Web Audio API を使用して HTMLMediaElement（video/audio）の音量を制御するフック
  * iOSでは HTMLMediaElement.volume が読み取り専用のため、GainNode を使用して音量を制御する
@@ -11,32 +21,36 @@ export const useWebAudioVolume = (
   mediaElement: HTMLVideoElement | HTMLAudioElement | null,
   volume: number
 ) => {
-  const audioContextRef = useRef<AudioContext | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null)
-  const connectedElementRef = useRef<HTMLMediaElement | null>(null)
 
   // AudioContext のセットアップと接続
   useEffect(() => {
-    if (!mediaElement) return
-
-    // 同じ要素が既に接続されている場合はスキップ
-    // 一度 createMediaElementSource で接続した要素は再接続できないため
-    if (connectedElementRef.current === mediaElement) {
+    if (!mediaElement) {
+      gainNodeRef.current = null
       return
     }
 
-    // 新しい要素の場合、古い AudioContext をクリーンアップ
-    if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {
-        // クローズ失敗は無視
-      })
-      audioContextRef.current = null
-      gainNodeRef.current = null
-      sourceRef.current = null
+    // 既存の接続があれば再利用
+    const existingConnection = audioConnections.get(mediaElement)
+    if (existingConnection) {
+      gainNodeRef.current = existingConnection.gainNode
+      // suspended状態なら resume
+      if (existingConnection.audioContext.state === 'suspended') {
+        existingConnection.audioContext.resume().catch(() => {
+          // resume 失敗は無視
+        })
+      }
+      return
     }
 
     const setupAudioContext = () => {
+      // 既に接続済みかもう一度確認
+      if (audioConnections.has(mediaElement)) {
+        const connection = audioConnections.get(mediaElement)!
+        gainNodeRef.current = connection.gainNode
+        return
+      }
+
       try {
         // Web Audio API を使用（iOS対応）
         const AudioContextClass =
@@ -44,7 +58,6 @@ export const useWebAudioVolume = (
           (window as unknown as { webkitAudioContext: typeof AudioContext })
             .webkitAudioContext
         const audioContext = new AudioContextClass()
-        audioContextRef.current = audioContext
 
         // GainNode で音量制御
         const gainNode = audioContext.createGain()
@@ -53,14 +66,17 @@ export const useWebAudioVolume = (
 
         // MediaElement をソースとして接続
         const source = audioContext.createMediaElementSource(mediaElement)
-        sourceRef.current = source
 
         // 接続: source -> gain -> destination
         source.connect(gainNode)
         gainNode.connect(audioContext.destination)
 
-        // 接続済みの要素を記録
-        connectedElementRef.current = mediaElement
+        // 接続情報をWeakMapに保存
+        audioConnections.set(mediaElement, {
+          audioContext,
+          gainNode,
+          source,
+        })
 
         // AudioContext が suspended の場合は resume
         if (audioContext.state === 'suspended') {
@@ -69,16 +85,26 @@ export const useWebAudioVolume = (
           })
         }
       } catch (error) {
+        // 既に接続済みの場合のエラーは無視
+        if (error instanceof DOMException && error.name === 'InvalidStateError') {
+          // 既存の接続を探す（念のため）
+          const connection = audioConnections.get(mediaElement)
+          if (connection) {
+            gainNodeRef.current = connection.gainNode
+          }
+          return
+        }
         console.error('Failed to setup Web Audio API:', error)
       }
     }
 
     // ユーザーインタラクション後に AudioContext を開始する必要がある場合がある
     const handleInteraction = () => {
-      if (!audioContextRef.current) {
+      const connection = audioConnections.get(mediaElement)
+      if (!connection) {
         setupAudioContext()
-      } else if (audioContextRef.current.state === 'suspended') {
-        audioContextRef.current.resume().catch(() => {
+      } else if (connection.audioContext.state === 'suspended') {
+        connection.audioContext.resume().catch(() => {
           // resume 失敗は無視
         })
       }
@@ -94,6 +120,8 @@ export const useWebAudioVolume = (
     return () => {
       document.removeEventListener('click', handleInteraction)
       document.removeEventListener('touchstart', handleInteraction)
+      // 注意: AudioContextはクローズしない（MediaElementが再利用される可能性があるため）
+      // WeakMapを使用しているので、MediaElementがGCされれば自動的にクリーンアップされる
     }
   }, [mediaElement, volume])
 
@@ -103,19 +131,4 @@ export const useWebAudioVolume = (
       gainNodeRef.current.gain.value = Math.max(0, Math.min(1, volume))
     }
   }, [volume])
-
-  // クリーンアップ
-  useEffect(() => {
-    return () => {
-      if (audioContextRef.current) {
-        audioContextRef.current.close().catch(() => {
-          // クローズ失敗は無視
-        })
-        audioContextRef.current = null
-        gainNodeRef.current = null
-        sourceRef.current = null
-        connectedElementRef.current = null
-      }
-    }
-  }, [])
 }
