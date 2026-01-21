@@ -60,6 +60,7 @@ class VideoErrorBoundary extends Component<
 const VideoTexture = memo(
   ({
     url,
+    cacheKey,
     width,
     screenHeight,
     playing,
@@ -68,6 +69,7 @@ const VideoTexture = memo(
     onBufferingChange,
   }: {
     url: string;
+    cacheKey: number;
     width: number;
     screenHeight: number;
     playing: boolean;
@@ -75,7 +77,9 @@ const VideoTexture = memo(
     onError?: (error: Error) => void;
     onBufferingChange: (isBuffering: boolean) => void;
   }) => {
-    const texture = useVideoTexture(url, {
+    // suspend-reactのキャッシュを無効化するためにURLにcacheKeyを付与
+    const urlWithCacheKey = `${url}${url.includes("?") ? "&" : "?"}_ck=${cacheKey}`;
+    const texture = useVideoTexture(urlWithCacheKey, {
       muted: false,
       loop: false,
       start: playing,
@@ -275,6 +279,7 @@ export const LiveVideoPlayer = memo(
               <VideoTexture
                 key={`${currentUrl}-${reloadKey}`}
                 url={currentUrl}
+                cacheKey={reloadKey}
                 width={width}
                 screenHeight={screenHeight}
                 playing={playing}
