@@ -5,7 +5,6 @@ import { StopButton } from '../VideoPlayer/StopButton'
 import { VolumeControl } from './VolumeControl'
 import { LiveIndicator } from './LiveIndicator'
 import { UrlInputButton } from './UrlInputButton'
-import { ReloadButton } from './ReloadButton'
 import type { LiveControlPanelProps } from './types'
 
 const PANEL_HEIGHT = 0.15
@@ -24,7 +23,6 @@ export const ControlPanel = memo(
     onStop,
     onVolumeChange,
     onUrlChange,
-    onReload,
   }: LiveControlPanelProps) => {
     const panelY = -screenHeight / 2 - PANEL_HEIGHT / 2
     const buttonSize = PANEL_HEIGHT * BUTTON_SIZE_RATIO
@@ -46,18 +44,10 @@ export const ControlPanel = memo(
           onUrlChange={onUrlChange}
         />
 
-        {/* リロードボタン */}
-        <ReloadButton
-          id={`${id}-reload`}
-          position={[-width * 0.39, 0, 0.01]}
-          size={buttonSize}
-          onReload={onReload}
-        />
-
         {/* 再生/一時停止ボタン */}
         <PlayPauseButton
           id={`${id}-play-pause`}
-          position={[-width * 0.33, 0, 0.01]}
+          position={[-width * 0.38, 0, 0.01]}
           size={buttonSize}
           playing={playing}
           onInteract={onPlayPause}
@@ -66,7 +56,7 @@ export const ControlPanel = memo(
         {/* 停止ボタン */}
         <StopButton
           id={`${id}-stop`}
-          position={[-width * 0.27, 0, 0.01]}
+          position={[-width * 0.31, 0, 0.01]}
           size={buttonSize}
           onInteract={onStop}
         />
