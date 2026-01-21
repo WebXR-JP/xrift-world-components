@@ -120,10 +120,24 @@ export const useWebAudioVolume = (
     return () => {
       document.removeEventListener('click', handleInteraction)
       document.removeEventListener('touchstart', handleInteraction)
-      // 注意: AudioContextはクローズしない（MediaElementが再利用される可能性があるため）
-      // WeakMapを使用しているので、MediaElementがGCされれば自動的にクリーンアップされる
+
+      // AudioContext のクリーンアップ
+      const connection = audioConnections.get(mediaElement)
+      if (connection) {
+        try {
+          connection.source.disconnect()
+          connection.gainNode.disconnect()
+          connection.audioContext.close().catch(() => {
+            // close 失敗は無視
+          })
+        } catch {
+          // disconnect エラーは無視
+        }
+        audioConnections.delete(mediaElement)
+      }
+      gainNodeRef.current = null
     }
-  }, [mediaElement, volume])
+  }, [mediaElement])
 
   // 音量変更時の処理
   useEffect(() => {
