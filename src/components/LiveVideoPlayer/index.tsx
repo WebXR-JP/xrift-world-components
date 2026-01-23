@@ -8,10 +8,11 @@ import {
   Component,
   ReactNode,
 } from "react";
-import { useVideoTexture, Text } from "@react-three/drei";
+import { Text } from "@react-three/drei";
 import { ControlPanel } from "./ControlPanel";
 import { useWebAudioVolume } from "../../hooks/useWebAudioVolume";
 import { useInstanceState } from "../../hooks/useInstanceState";
+import { useHlsVideo } from "../../hooks/useHlsVideo";
 import type { LiveVideoPlayerProps, LiveVideoState } from "./types";
 
 export type { LiveVideoPlayerProps, LiveVideoState } from "./types";
@@ -57,11 +58,10 @@ class VideoErrorBoundary extends Component<
   }
 }
 
-/** 動画テクスチャを表示するコンポーネント（Suspense内で使用） */
+/** 動画テクスチャを表示するコンポーネント */
 const VideoTexture = memo(
   ({
     url,
-    cacheKey,
     width,
     screenHeight,
     playing,
@@ -70,7 +70,6 @@ const VideoTexture = memo(
     onBufferingChange,
   }: {
     url: string;
-    cacheKey: number;
     width: number;
     screenHeight: number;
     playing: boolean;
@@ -78,25 +77,30 @@ const VideoTexture = memo(
     onError?: (error: Error) => void;
     onBufferingChange: (isBuffering: boolean) => void;
   }) => {
-    // suspend-reactのキャッシュを無効化するためにURLにcacheKeyを付与
-    const urlWithCacheKey = `${url}${url.includes("?") ? "&" : "?"}_ck=${cacheKey}`;
-    const texture = useVideoTexture(urlWithCacheKey, {
+    // HLS 対応の video とテクスチャを取得
+    const { video, texture, isReady, error } = useHlsVideo(url, {
       muted: false,
       loop: false,
-      start: playing,
+      autoplay: false,
     });
 
-    const videoRef = useRef<HTMLVideoElement>(
-      texture.image as HTMLVideoElement,
-    );
+    const videoRef = useRef<HTMLVideoElement | null>(null);
 
     useEffect(() => {
-      videoRef.current = texture.image as HTMLVideoElement;
-    }, [texture]);
+      videoRef.current = video;
+    }, [video]);
 
+    // エラーをコールバックに伝える
     useEffect(() => {
-      const video = videoRef.current;
-      if (!video) return;
+      if (error) {
+        console.error("HLS video error:", error);
+        onError?.(error);
+      }
+    }, [error, onError]);
+
+    // 再生状態の制御
+    useEffect(() => {
+      if (!video || !isReady) return;
 
       if (playing) {
         video.play().catch((err) => {
@@ -106,23 +110,23 @@ const VideoTexture = memo(
       } else {
         video.pause();
       }
-    }, [playing, onError, texture]);
+    }, [playing, video, isReady, onError]);
 
     // Web Audio API を使用した音量制御（iOS対応）
-    useWebAudioVolume(videoRef.current, volume);
+    useWebAudioVolume(video, volume);
 
+    // バッファリング状態の監視
     useEffect(() => {
-      const video = videoRef.current;
       if (!video) return;
 
       const handleWaiting = () => onBufferingChange(true);
       const handlePlaying = () => onBufferingChange(false);
       const handleCanPlay = () => onBufferingChange(false);
       const handleError = (e: Event) => {
-        const error = (e.target as HTMLVideoElement).error;
-        if (error) {
-          console.error("Live video error:", error.message);
-          onError?.(new Error(error.message));
+        const mediaError = (e.target as HTMLVideoElement).error;
+        if (mediaError) {
+          console.error("Live video error:", mediaError.message);
+          onError?.(new Error(mediaError.message));
         }
       };
 
@@ -137,26 +141,18 @@ const VideoTexture = memo(
         video.removeEventListener("canplay", handleCanPlay);
         video.removeEventListener("error", handleError);
       };
-    }, [texture, onError, onBufferingChange]);
+    }, [video, onError, onBufferingChange]);
 
-    useEffect(() => {
-      const video = texture.image as HTMLVideoElement;
-      return () => {
-        // 再生を停止
-        video.pause();
-
-        // ソースを完全にクリア
-        video.src = "";
-        video.removeAttribute("src");
-        video.srcObject = null;
-
-        // MediaSourceをリリースするためにloadを呼び出し
-        video.load();
-
-        // テクスチャを破棄
-        texture.dispose();
-      };
-    }, [texture]);
+    // テクスチャが準備できていない場合はプレースホルダーを表示
+    if (!texture) {
+      return (
+        <PlaceholderScreen
+          width={width}
+          screenHeight={screenHeight}
+          color="#333333"
+        />
+      );
+    }
 
     return (
       <mesh>
@@ -321,7 +317,6 @@ export const LiveVideoPlayer = memo(
               <VideoTexture
                 key={`${videoState.url}-${videoState.reloadKey}`}
                 url={videoState.url}
-                cacheKey={videoState.reloadKey}
                 width={width}
                 screenHeight={screenHeight}
                 playing={videoState.playing}

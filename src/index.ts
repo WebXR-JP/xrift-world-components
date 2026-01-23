@@ -95,6 +95,7 @@ export {
 export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
 export { useWebAudioVolume } from './hooks/useWebAudioVolume'
+export { useHlsVideo } from './hooks/useHlsVideo'
 
 // Types
 export {
