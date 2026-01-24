@@ -5,6 +5,7 @@ import { Mirror } from "../components/Mirror";
 import { Skybox } from "../components/Skybox";
 import { TextInput } from "../components/TextInput";
 import { TagBoard } from "../components/TagBoard";
+import { Video180Sphere } from "../components/Video180Sphere";
 
 /**
  * VideoScreenとMirrorのテストシーン
@@ -114,6 +115,15 @@ export function TestScene() {
         instanceStateKey="test-tags"
         position={[0, 2, 7]}
         rotation={[0, Math.PI, 0]}
+      />
+
+      {/* 180度ステレオ動画プレイヤー */}
+      <Video180Sphere
+        url="https://pub-840983ee6395495eb67c382a4ff6214f.r2.dev/chapter01.mp4"
+        position={[3.52, 1.25, 0]}
+        playing
+        muted
+        radius={1} rotation={[0, -1.4660765716752375, 0]}
       />
     </>
   );

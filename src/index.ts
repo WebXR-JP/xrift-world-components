@@ -91,6 +91,11 @@ export {
   type Tag,
 } from './components/TagBoard'
 
+export {
+  Video180Sphere,
+  type Video180SphereProps,
+} from './components/Video180Sphere'
+
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
