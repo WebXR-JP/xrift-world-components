@@ -6,6 +6,7 @@ import { Skybox } from "../components/Skybox";
 import { TextInput } from "../components/TextInput";
 import { TagBoard } from "../components/TagBoard";
 import { Video180Sphere } from "../components/Video180Sphere";
+import { Live180Sphere } from "../components/Live180Sphere";
 
 /**
  * VideoScreenとMirrorのテストシーン
@@ -123,8 +124,19 @@ export function TestScene() {
         position={[3.52, 1.25, 0]}
         playing
         muted
-        radius={1} rotation={[0, -1.4660765716752375, 0]}
+        radius={1}
+        rotation={[0, -1.4660765716752375, 0]}
       />
+
+      {/* 180度ライブストリームプレイヤー（コメントアウト：HLSストリームのURLが必要） */}
+      {/* <Live180Sphere
+        url="YOUR_HLS_STREAM_URL.m3u8"
+        position={[-3.52, 1.25, 0]}
+        playing
+        muted
+        radius={1}
+        rotation={[0, 1.4660765716752375, 0]}
+      /> */}
     </>
   );
 }

@@ -96,6 +96,11 @@ export {
   type Video180SphereProps,
 } from './components/Video180Sphere'
 
+export {
+  Live180Sphere,
+  type Live180SphereProps,
+} from './components/Live180Sphere'
+
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
