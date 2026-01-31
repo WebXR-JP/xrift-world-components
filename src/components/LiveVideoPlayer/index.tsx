@@ -19,6 +19,8 @@ export type { LiveVideoPlayerProps, LiveVideoState } from "./types";
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5];
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
 const DEFAULT_WIDTH = 4;
+const MAX_RETRY_COUNT = 3;
+const RETRY_DELAY_MS = 2000;
 
 /** エラー境界：子コンポーネントでエラーが発生した場合にfallbackを表示 */
 interface ErrorBoundaryProps {
@@ -271,8 +273,22 @@ export const LiveVideoPlayer = memo(
     // バッファリング状態とエラー状態もローカル
     const [isBuffering, setIsBuffering] = useState(false);
     const [hasError, setHasError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    // リトライ回数（エラー発生時に自動リトライ）
+    const [retryCount, setRetryCount] = useState(0);
+    const [isRetrying, setIsRetrying] = useState(false);
+    const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const screenHeight = width * (9 / 16);
+
+    // コンポーネントのクリーンアップ時にタイマーをクリア
+    useEffect(() => {
+      return () => {
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current);
+        }
+      };
+    }, []);
 
     const handleUrlChange = useCallback(
       (newUrl: string) => {
@@ -282,6 +298,13 @@ export const LiveVideoPlayer = memo(
           playing: !!newUrl,
         }));
         setHasError(false);
+        setErrorMessage(null);
+        setRetryCount(0);
+        setIsRetrying(false);
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current);
+          retryTimeoutRef.current = null;
+        }
       },
       [setVideoState],
     );
@@ -301,6 +324,13 @@ export const LiveVideoPlayer = memo(
       }));
       setIsBuffering(false);
       setHasError(false);
+      setErrorMessage(null);
+      setRetryCount(0);
+      setIsRetrying(false);
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
     }, [setVideoState]);
 
     const handleVolumeChange = useCallback((newVolume: number) => {
@@ -309,14 +339,43 @@ export const LiveVideoPlayer = memo(
 
     const handleBufferingChange = useCallback((buffering: boolean) => {
       setIsBuffering(buffering);
+      // 再生成功（バッファリング解除）時にリトライカウントをリセット
+      if (!buffering) {
+        setRetryCount(0);
+        setIsRetrying(false);
+        setErrorMessage(null);
+      }
     }, []);
 
     const handleError = useCallback(
       (error: Error) => {
-        setHasError(true);
-        onError?.(error);
+        console.warn(
+          `LiveVideoPlayer error (retry ${retryCount + 1}/${MAX_RETRY_COUNT}):`,
+          error.message,
+        );
+
+        if (retryCount < MAX_RETRY_COUNT) {
+          // リトライ回数内なら自動リトライ
+          setRetryCount((prev) => prev + 1);
+          setIsRetrying(true);
+          setIsBuffering(true);
+
+          // 遅延してリロード（セグメント生成を待つ）
+          retryTimeoutRef.current = setTimeout(() => {
+            setVideoState((prev) => ({
+              ...prev,
+              reloadKey: prev.reloadKey + 1,
+            }));
+          }, RETRY_DELAY_MS);
+        } else {
+          // リトライ回数を超えたらエラー状態に
+          setHasError(true);
+          setIsRetrying(false);
+          setErrorMessage(error.message);
+          onError?.(error);
+        }
       },
-      [onError],
+      [onError, retryCount, setVideoState],
     );
 
     return (
@@ -329,7 +388,7 @@ export const LiveVideoPlayer = memo(
               screenHeight={screenHeight}
               color="#000000"
             />
-            {!videoState.url && (
+            {!videoState.url && !hasError && (
               <Text
                 position={[0, 0, 0.01]}
                 fontSize={width * 0.05}
@@ -339,6 +398,19 @@ export const LiveVideoPlayer = memo(
                 textAlign="center"
               >
                 {`ライブストリームURLを入力\nHLS .m3u8 形式`}
+              </Text>
+            )}
+            {hasError && (
+              <Text
+                position={[0, 0, 0.01]}
+                fontSize={width * 0.04}
+                color="#ff6666"
+                anchorX="center"
+                anchorY="middle"
+                textAlign="center"
+                maxWidth={width * 0.9}
+              >
+                {`接続エラー\n${errorMessage || "ストリームの読み込みに失敗しました"}\n\nURLを再入力してください`}
               </Text>
             )}
           </>
@@ -375,6 +447,20 @@ export const LiveVideoPlayer = memo(
               />
             </Suspense>
           </VideoErrorBoundary>
+        )}
+
+        {/* リトライ中オーバーレイ */}
+        {isRetrying && (
+          <Text
+            position={[0, 0, 0.02]}
+            fontSize={width * 0.04}
+            color="#ffcc00"
+            anchorX="center"
+            anchorY="middle"
+            textAlign="center"
+          >
+            {`再接続中... (${retryCount}/${MAX_RETRY_COUNT})`}
+          </Text>
         )}
 
         {/* コントロールパネル（常に表示） */}
