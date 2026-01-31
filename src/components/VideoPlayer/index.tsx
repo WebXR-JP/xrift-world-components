@@ -68,6 +68,9 @@ const VideoTexture = memo(
     onDurationChange: (duration: number) => void
     onProgressChange: (progress: number) => void
   }) => {
+    // 動画のアスペクト比を管理（レターボックス/ピラーボックス用）
+    const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null)
+
     // suspend-reactのキャッシュを無効化するためにURLにcacheKeyを付与
     const urlWithCacheKey = `${url}${url.includes('?') ? '&' : '?'}_ck=${cacheKey}`
     const texture = useVideoTexture(urlWithCacheKey, {
@@ -102,10 +105,19 @@ const VideoTexture = memo(
 
       const handleLoadedMetadata = () => {
         onDurationChange(video.duration || 0)
+        // 動画のアスペクト比を取得
+        if (video.videoWidth && video.videoHeight) {
+          setVideoAspectRatio(video.videoWidth / video.videoHeight)
+        }
       }
 
       if (video.duration) {
         onDurationChange(video.duration)
+      }
+
+      // 既にメタデータが読み込まれている場合
+      if (video.videoWidth && video.videoHeight) {
+        setVideoAspectRatio(video.videoWidth / video.videoHeight)
       }
 
       video.addEventListener('loadedmetadata', handleLoadedMetadata)
@@ -141,11 +153,36 @@ const VideoTexture = memo(
       }
     }, [texture])
 
+    // 動画の表示サイズを計算（レターボックス/ピラーボックス対応）
+    const screenAspectRatio = width / screenHeight
+    let videoDisplayWidth = width
+    let videoDisplayHeight = screenHeight
+
+    if (videoAspectRatio !== null) {
+      if (videoAspectRatio > screenAspectRatio) {
+        // 動画が横長：上下に黒帯（レターボックス）
+        videoDisplayWidth = width
+        videoDisplayHeight = width / videoAspectRatio
+      } else {
+        // 動画が縦長：左右に黒帯（ピラーボックス）
+        videoDisplayHeight = screenHeight
+        videoDisplayWidth = screenHeight * videoAspectRatio
+      }
+    }
+
     return (
-      <mesh>
-        <planeGeometry args={[width, screenHeight]} />
-        <meshBasicMaterial map={texture} toneMapped={false} />
-      </mesh>
+      <group>
+        {/* 黒い背景（常に16:9） */}
+        <mesh>
+          <planeGeometry args={[width, screenHeight]} />
+          <meshBasicMaterial color="#000000" />
+        </mesh>
+        {/* 動画（アスペクト比に合わせてサイズ調整） */}
+        <mesh position={[0, 0, 0.001]}>
+          <planeGeometry args={[videoDisplayWidth, videoDisplayHeight]} />
+          <meshBasicMaterial map={texture} toneMapped={false} />
+        </mesh>
+      </group>
     )
   }
 )

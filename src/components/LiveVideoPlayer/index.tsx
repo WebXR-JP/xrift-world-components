@@ -78,6 +78,11 @@ const VideoTexture = memo(
     onError?: (error: Error) => void;
     onBufferingChange: (isBuffering: boolean) => void;
   }) => {
+    // 動画のアスペクト比を管理（レターボックス/ピラーボックス用）
+    const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(
+      null,
+    );
+
     // suspend-reactのキャッシュを無効化するためにURLにcacheKeyを付与
     const urlWithCacheKey = `${url}${url.includes("?") ? "&" : "?"}_ck=${cacheKey}`;
     const texture = useVideoTexture(urlWithCacheKey, {
@@ -126,16 +131,30 @@ const VideoTexture = memo(
         }
       };
 
+      // 動画のメタデータ読み込み時にアスペクト比を取得
+      const handleLoadedMetadata = () => {
+        if (video.videoWidth && video.videoHeight) {
+          setVideoAspectRatio(video.videoWidth / video.videoHeight);
+        }
+      };
+
+      // 既にメタデータが読み込まれている場合
+      if (video.videoWidth && video.videoHeight) {
+        setVideoAspectRatio(video.videoWidth / video.videoHeight);
+      }
+
       video.addEventListener("waiting", handleWaiting);
       video.addEventListener("playing", handlePlaying);
       video.addEventListener("canplay", handleCanPlay);
       video.addEventListener("error", handleError);
+      video.addEventListener("loadedmetadata", handleLoadedMetadata);
 
       return () => {
         video.removeEventListener("waiting", handleWaiting);
         video.removeEventListener("playing", handlePlaying);
         video.removeEventListener("canplay", handleCanPlay);
         video.removeEventListener("error", handleError);
+        video.removeEventListener("loadedmetadata", handleLoadedMetadata);
       };
     }, [texture, onError, onBufferingChange]);
 
@@ -158,11 +177,36 @@ const VideoTexture = memo(
       };
     }, [texture]);
 
+    // 動画の表示サイズを計算（レターボックス/ピラーボックス対応）
+    const screenAspectRatio = width / screenHeight;
+    let videoDisplayWidth = width;
+    let videoDisplayHeight = screenHeight;
+
+    if (videoAspectRatio !== null) {
+      if (videoAspectRatio > screenAspectRatio) {
+        // 動画が横長：上下に黒帯（レターボックス）
+        videoDisplayWidth = width;
+        videoDisplayHeight = width / videoAspectRatio;
+      } else {
+        // 動画が縦長：左右に黒帯（ピラーボックス）
+        videoDisplayHeight = screenHeight;
+        videoDisplayWidth = screenHeight * videoAspectRatio;
+      }
+    }
+
     return (
-      <mesh>
-        <planeGeometry args={[width, screenHeight]} />
-        <meshBasicMaterial map={texture} toneMapped={false} />
-      </mesh>
+      <group>
+        {/* 黒い背景（常に16:9） */}
+        <mesh>
+          <planeGeometry args={[width, screenHeight]} />
+          <meshBasicMaterial color="#000000" />
+        </mesh>
+        {/* 動画（アスペクト比に合わせてサイズ調整） */}
+        <mesh position={[0, 0, 0.001]}>
+          <planeGeometry args={[videoDisplayWidth, videoDisplayHeight]} />
+          <meshBasicMaterial map={texture} toneMapped={false} />
+        </mesh>
+      </group>
     );
   },
 );
