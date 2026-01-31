@@ -5,10 +5,12 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useMemo,
   Component,
   ReactNode,
 } from "react";
 import { useVideoTexture, Text } from "@react-three/drei";
+import * as THREE from "three";
 import { ControlPanel } from "./ControlPanel";
 import { useWebAudioVolume } from "../../hooks/useWebAudioVolume";
 import { useInstanceState } from "../../hooks/useInstanceState";
@@ -21,6 +23,42 @@ const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
 const DEFAULT_WIDTH = 4;
 const MAX_RETRY_COUNT = 3;
 const RETRY_DELAY_MS = 2000;
+
+/** レターボックス/ピラーボックス対応のシェーダー */
+const letterboxVertexShader = `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const letterboxFragmentShader = `
+  uniform sampler2D map;
+  uniform float videoAspectRatio;
+  uniform float screenAspectRatio;
+  varying vec2 vUv;
+
+  void main() {
+    vec2 uv = vUv;
+
+    if (videoAspectRatio > screenAspectRatio) {
+      // 動画が横長：上下に黒帯（レターボックス）
+      float scale = screenAspectRatio / videoAspectRatio;
+      uv.y = (uv.y - 0.5) / scale + 0.5;
+    } else {
+      // 動画が縦長：左右に黒帯（ピラーボックス）
+      float scale = videoAspectRatio / screenAspectRatio;
+      uv.x = (uv.x - 0.5) / scale + 0.5;
+    }
+
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    } else {
+      gl_FragColor = texture2D(map, uv);
+    }
+  }
+`;
 
 /** エラー境界：子コンポーネントでエラーが発生した場合にfallbackを表示 */
 interface ErrorBoundaryProps {
@@ -179,36 +217,41 @@ const VideoTexture = memo(
       };
     }, [texture]);
 
-    // 動画の表示サイズを計算（レターボックス/ピラーボックス対応）
+    // スクリーンのアスペクト比
     const screenAspectRatio = width / screenHeight;
-    let videoDisplayWidth = width;
-    let videoDisplayHeight = screenHeight;
 
-    if (videoAspectRatio !== null) {
-      if (videoAspectRatio > screenAspectRatio) {
-        // 動画が横長：上下に黒帯（レターボックス）
-        videoDisplayWidth = width;
-        videoDisplayHeight = width / videoAspectRatio;
-      } else {
-        // 動画が縦長：左右に黒帯（ピラーボックス）
-        videoDisplayHeight = screenHeight;
-        videoDisplayWidth = screenHeight * videoAspectRatio;
-      }
-    }
+    // シェーダーマテリアル（レターボックス/ピラーボックス対応）
+    const shaderMaterial = useMemo(() => {
+      return new THREE.ShaderMaterial({
+        uniforms: {
+          map: { value: texture },
+          videoAspectRatio: { value: videoAspectRatio ?? screenAspectRatio },
+          screenAspectRatio: { value: screenAspectRatio },
+        },
+        vertexShader: letterboxVertexShader,
+        fragmentShader: letterboxFragmentShader,
+        toneMapped: false,
+      });
+    }, [texture, videoAspectRatio, screenAspectRatio]);
+
+    // アスペクト比が変わったらuniformを更新
+    useEffect(() => {
+      shaderMaterial.uniforms.videoAspectRatio.value =
+        videoAspectRatio ?? screenAspectRatio;
+    }, [shaderMaterial, videoAspectRatio, screenAspectRatio]);
+
+    // クリーンアップ時にマテリアルを破棄
+    useEffect(() => {
+      return () => {
+        shaderMaterial.dispose();
+      };
+    }, [shaderMaterial]);
 
     return (
-      <group>
-        {/* 黒い背景（常に16:9） */}
-        <mesh>
-          <planeGeometry args={[width, screenHeight]} />
-          <meshBasicMaterial color="#000000" />
-        </mesh>
-        {/* 動画（アスペクト比に合わせてサイズ調整） */}
-        <mesh position={[0, 0, 0.001]}>
-          <planeGeometry args={[videoDisplayWidth, videoDisplayHeight]} />
-          <meshBasicMaterial map={texture} toneMapped={false} />
-        </mesh>
-      </group>
+      <mesh>
+        <planeGeometry args={[width, screenHeight]} />
+        <primitive object={shaderMaterial} attach="material" />
+      </mesh>
     );
   },
 );
