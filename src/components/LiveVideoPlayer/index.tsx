@@ -416,6 +416,7 @@ export const LiveVideoPlayer = memo(
           </>
         ) : (
           <VideoErrorBoundary
+            key={`error-boundary-${videoState.url}-${videoState.reloadKey}`}
             fallback={
               <PlaceholderScreen
                 width={width}
@@ -435,7 +436,6 @@ export const LiveVideoPlayer = memo(
               }
             >
               <VideoTexture
-                key={`${videoState.url}-${videoState.reloadKey}`}
                 url={videoState.url}
                 cacheKey={videoState.reloadKey}
                 width={width}
