@@ -122,6 +122,8 @@ const VideoTexture = memo(
     const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(
       null,
     );
+    // エラー報告済みフラグ（同じマウント中に複数回エラーを報告しない）
+    const errorReportedRef = useRef(false);
 
     // suspend-reactのキャッシュを無効化するためにURLにcacheKeyを付与
     const urlWithCacheKey = `${url}${url.includes("?") ? "&" : "?"}_ck=${cacheKey}`;
@@ -145,8 +147,11 @@ const VideoTexture = memo(
 
       if (playing) {
         video.play().catch((err) => {
-          console.error("Live video play error:", err);
-          onError?.(err);
+          if (!errorReportedRef.current) {
+            errorReportedRef.current = true;
+            console.error("Live video play error:", err);
+            onError?.(err);
+          }
         });
       } else {
         video.pause();
@@ -164,8 +169,10 @@ const VideoTexture = memo(
       const handlePlaying = () => onBufferingChange(false);
       const handleCanPlay = () => onBufferingChange(false);
       const handleError = (e: Event) => {
+        if (errorReportedRef.current) return;
         const error = (e.target as HTMLVideoElement).error;
         if (error) {
+          errorReportedRef.current = true;
           console.error("Live video error:", error.message);
           onError?.(new Error(error.message));
         }
