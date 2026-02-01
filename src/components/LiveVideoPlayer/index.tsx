@@ -317,9 +317,11 @@ export const LiveVideoPlayer = memo(
     const [isBuffering, setIsBuffering] = useState(false);
     const [hasError, setHasError] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    // リトライ回数（エラー発生時に自動リトライ）
-    const [retryCount, setRetryCount] = useState(0);
-    const [isRetrying, setIsRetrying] = useState(false);
+    // リトライ回数（エラー発生時に自動リトライ）- useRefで最新値を参照
+    const retryCountRef = useRef(0);
+    const [retryCountDisplay, setRetryCountDisplay] = useState(0); // 表示用
+    const isRetryingRef = useRef(false);
+    const [isRetrying, setIsRetrying] = useState(false); // 表示用
     const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const screenHeight = width * (9 / 16);
@@ -342,7 +344,9 @@ export const LiveVideoPlayer = memo(
         }));
         setHasError(false);
         setErrorMessage(null);
-        setRetryCount(0);
+        retryCountRef.current = 0;
+        setRetryCountDisplay(0);
+        isRetryingRef.current = false;
         setIsRetrying(false);
         if (retryTimeoutRef.current) {
           clearTimeout(retryTimeoutRef.current);
@@ -368,7 +372,9 @@ export const LiveVideoPlayer = memo(
       setIsBuffering(false);
       setHasError(false);
       setErrorMessage(null);
-      setRetryCount(0);
+      retryCountRef.current = 0;
+      setRetryCountDisplay(0);
+      isRetryingRef.current = false;
       setIsRetrying(false);
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
@@ -384,7 +390,9 @@ export const LiveVideoPlayer = memo(
       setIsBuffering(buffering);
       // 再生成功（バッファリング解除）時にリトライカウントをリセット
       if (!buffering) {
-        setRetryCount(0);
+        retryCountRef.current = 0;
+        setRetryCountDisplay(0);
+        isRetryingRef.current = false;
         setIsRetrying(false);
         setErrorMessage(null);
       }
@@ -392,19 +400,28 @@ export const LiveVideoPlayer = memo(
 
     const handleError = useCallback(
       (error: Error) => {
+        // リトライ中は新しいエラーを無視（タイムアウト待機中）
+        if (isRetryingRef.current) {
+          return;
+        }
+
+        const currentRetryCount = retryCountRef.current;
         console.warn(
-          `LiveVideoPlayer error (retry ${retryCount + 1}/${MAX_RETRY_COUNT}):`,
+          `LiveVideoPlayer error (retry ${currentRetryCount + 1}/${MAX_RETRY_COUNT}):`,
           error.message,
         );
 
-        if (retryCount < MAX_RETRY_COUNT) {
+        if (currentRetryCount < MAX_RETRY_COUNT) {
           // リトライ回数内なら自動リトライ
-          setRetryCount((prev) => prev + 1);
+          retryCountRef.current = currentRetryCount + 1;
+          setRetryCountDisplay(currentRetryCount + 1);
+          isRetryingRef.current = true;
           setIsRetrying(true);
           setIsBuffering(true);
 
           // 遅延してリロード（セグメント生成を待つ）
           retryTimeoutRef.current = setTimeout(() => {
+            isRetryingRef.current = false;
             setVideoState((prev) => ({
               ...prev,
               reloadKey: prev.reloadKey + 1,
@@ -413,12 +430,13 @@ export const LiveVideoPlayer = memo(
         } else {
           // リトライ回数を超えたらエラー状態に
           setHasError(true);
+          isRetryingRef.current = false;
           setIsRetrying(false);
           setErrorMessage(error.message);
           onError?.(error);
         }
       },
-      [onError, retryCount, setVideoState],
+      [onError, setVideoState],
     );
 
     return (
@@ -502,7 +520,7 @@ export const LiveVideoPlayer = memo(
             anchorY="middle"
             textAlign="center"
           >
-            {`再接続中... (${retryCount}/${MAX_RETRY_COUNT})`}
+            {`再接続中... (${retryCountDisplay}/${MAX_RETRY_COUNT})`}
           </Text>
         )}
 
