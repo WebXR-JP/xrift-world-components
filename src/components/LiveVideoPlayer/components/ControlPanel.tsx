@@ -7,7 +7,7 @@ import { useTextInputContext } from '../../../contexts/TextInputContext'
 import type { LiveControlPanelProps } from '../types'
 
 const PANEL_HEIGHT = 0.15
-const BUTTON_SIZE_RATIO = 0.6
+const BUTTON_SIZE = PANEL_HEIGHT * 0.6
 
 export const ControlPanel = memo(
   ({
@@ -24,7 +24,6 @@ export const ControlPanel = memo(
     onUrlChange,
   }: LiveControlPanelProps) => {
     const panelY = -screenHeight / 2 - PANEL_HEIGHT / 2
-    const buttonSize = PANEL_HEIGHT * BUTTON_SIZE_RATIO
 
     const { requestTextInput } = useTextInputContext()
 
@@ -53,7 +52,7 @@ export const ControlPanel = memo(
         <IconButton
           id={`${id}-url-input`}
           position={[-width * 0.45, 0, 0.01]}
-          size={buttonSize}
+          size={BUTTON_SIZE}
           icon="🔗"
           interactionText="URL変更"
           onInteract={handleUrlInput}
@@ -63,7 +62,7 @@ export const ControlPanel = memo(
         <IconButton
           id={`${id}-play-pause`}
           position={[-width * 0.38, 0, 0.01]}
-          size={buttonSize}
+          size={BUTTON_SIZE}
           icon={playing ? "||" : "▶"}
           interactionText={playing ? "一時停止" : "再生"}
           onInteract={onPlayPause}
@@ -73,14 +72,14 @@ export const ControlPanel = memo(
         <IconButton
           id={`${id}-stop`}
           position={[-width * 0.31, 0, 0.01]}
-          size={buttonSize}
+          size={BUTTON_SIZE}
           icon="■"
           interactionText="停止"
           onInteract={onStop}
         />
 
         {/* LIVEインジケータ（中央） */}
-        <LiveIndicator position={[0, 0, 0.01]} size={buttonSize} playing={playing} />
+        <LiveIndicator position={[0, 0, 0.01]} size={BUTTON_SIZE} playing={playing} />
 
         {/* バッファリング中のテキスト */}
         {isBuffering && (
@@ -99,7 +98,7 @@ export const ControlPanel = memo(
         <VolumeControl
           id={`${id}-volume`}
           position={[width * 0.4, 0, 0.01]}
-          size={buttonSize}
+          size={BUTTON_SIZE}
           volume={volume}
           onVolumeChange={onVolumeChange}
         />
