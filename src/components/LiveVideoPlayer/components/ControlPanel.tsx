@@ -1,7 +1,6 @@
 import { memo } from 'react'
 import { Text } from '@react-three/drei'
-import { PlayPauseButton } from '../../commons/PlayPauseButton'
-import { StopButton } from '../../commons/StopButton'
+import { IconButton } from '../../commons/IconButton'
 import { UrlInputButton } from '../../commons/UrlInputButton'
 import { VolumeControl } from '../../commons/VolumeControl'
 import { LiveIndicator } from './LiveIndicator'
@@ -46,19 +45,22 @@ export const ControlPanel = memo(
         />
 
         {/* 再生/一時停止ボタン */}
-        <PlayPauseButton
+        <IconButton
           id={`${id}-play-pause`}
           position={[-width * 0.38, 0, 0.01]}
           size={buttonSize}
-          playing={playing}
+          icon={playing ? "||" : "▶"}
+          interactionText={playing ? "一時停止" : "再生"}
           onInteract={onPlayPause}
         />
 
         {/* 停止ボタン */}
-        <StopButton
+        <IconButton
           id={`${id}-stop`}
           position={[-width * 0.31, 0, 0.01]}
           size={buttonSize}
+          icon="■"
+          interactionText="停止"
           onInteract={onStop}
         />
 
