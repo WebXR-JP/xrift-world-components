@@ -3,10 +3,11 @@ import { Text } from "@react-three/drei";
 import {
   ControlPanel,
   VideoErrorBoundary,
-  VideoTexture,
   PlaceholderScreen,
 } from "./components";
 import { useLiveVideoPlayer } from "./hooks";
+import { useVideoElement } from "../../hooks/useVideoElement";
+import { VideoMesh } from "../commons/VideoMesh";
 import type { LiveVideoPlayerProps } from "./types";
 
 export type { LiveVideoPlayerProps, LiveVideoState } from "./types";
@@ -14,6 +15,43 @@ export type { LiveVideoPlayerProps, LiveVideoState } from "./types";
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5];
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
 const DEFAULT_WIDTH = 4;
+
+/** ライブ動画テクスチャ（Suspense内で使用） */
+const LiveVideoTexture = memo(
+  ({
+    url,
+    cacheKey,
+    width,
+    height,
+    playing,
+    volume,
+    onError,
+    onBufferingChange,
+  }: {
+    url: string;
+    cacheKey: number;
+    width: number;
+    height: number;
+    playing: boolean;
+    volume: number;
+    onError?: (error: Error) => void;
+    onBufferingChange: (buffering: boolean) => void;
+  }) => {
+    const { texture } = useVideoElement({
+      url,
+      cacheKey,
+      playing,
+      volume,
+      loop: false,
+      onError,
+      onBufferingChange,
+    });
+
+    return <VideoMesh texture={texture} width={width} height={height} />;
+  },
+);
+
+LiveVideoTexture.displayName = "LiveVideoTexture";
 
 export const LiveVideoPlayer = memo(
   ({
@@ -86,11 +124,11 @@ export const LiveVideoPlayer = memo(
                 />
               }
             >
-              <VideoTexture
+              <LiveVideoTexture
                 url={videoState.url}
                 cacheKey={videoState.reloadKey}
                 width={width}
-                screenHeight={screenHeight}
+                height={screenHeight}
                 playing={videoState.playing}
                 volume={volume}
                 onError={handlers.onError}
