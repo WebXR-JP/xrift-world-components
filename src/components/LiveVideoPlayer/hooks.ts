@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useInstanceState } from "../../../hooks/useInstanceState";
-import type { LiveVideoState } from "../types";
+import { useInstanceState } from "../../hooks/useInstanceState";
+import type { LiveVideoState } from "./types";
 
 const RETRY_DELAY_MS = 2000;
 
