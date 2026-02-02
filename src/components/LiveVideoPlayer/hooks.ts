@@ -45,7 +45,6 @@ export const useLiveVideoPlayer = ({
   // バッファリング状態もローカル
   const [isBuffering, setIsBuffering] = useState(false);
   // リトライ状態（エラー発生時に無限自動リトライ）
-  const isRetryingRef = useRef(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -59,7 +58,6 @@ export const useLiveVideoPlayer = ({
   }, []);
 
   const clearRetryState = useCallback(() => {
-    isRetryingRef.current = false;
     setIsRetrying(false);
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
@@ -104,7 +102,6 @@ export const useLiveVideoPlayer = ({
     setIsBuffering(buffering);
     // 再生成功（バッファリング解除）時にリトライ状態をリセット
     if (!buffering) {
-      isRetryingRef.current = false;
       setIsRetrying(false);
     }
   }, []);
@@ -112,27 +109,26 @@ export const useLiveVideoPlayer = ({
   const handleError = useCallback(
     (error: Error) => {
       // リトライ中は新しいエラーを無視（タイムアウト待機中）
-      if (isRetryingRef.current) {
+      if (isRetrying) {
         return;
       }
 
       console.warn(`LiveVideoPlayer error, retrying...`, error.message);
 
       // 無限リトライ（接続成功または手動停止まで）
-      isRetryingRef.current = true;
       setIsRetrying(true);
       setIsBuffering(true);
 
       // 遅延してリロード（セグメント生成を待つ）
       retryTimeoutRef.current = setTimeout(() => {
-        isRetryingRef.current = false;
+        setIsRetrying(false);
         setVideoState((prev) => ({
           ...prev,
           reloadKey: prev.reloadKey + 1,
         }));
       }, RETRY_DELAY_MS);
     },
-    [setVideoState],
+    [setVideoState, isRetrying],
   );
 
   return {

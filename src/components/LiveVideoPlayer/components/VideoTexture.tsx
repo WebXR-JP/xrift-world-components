@@ -122,17 +122,18 @@ export const VideoTexture = memo(
         }
       };
 
-      // 動画のメタデータ読み込み時にアスペクト比を取得
-      const handleLoadedMetadata = () => {
+      // 動画のアスペクト比を更新する共通関数
+      const updateVideoAspectRatio = () => {
         if (video.videoWidth && video.videoHeight) {
           setVideoAspectRatio(video.videoWidth / video.videoHeight);
         }
       };
 
+      // メタデータ読み込み時のハンドラ
+      const handleLoadedMetadata = updateVideoAspectRatio;
+
       // 既にメタデータが読み込まれている場合
-      if (video.videoWidth && video.videoHeight) {
-        setVideoAspectRatio(video.videoWidth / video.videoHeight);
-      }
+      updateVideoAspectRatio();
 
       video.addEventListener("waiting", handleWaiting);
       video.addEventListener("playing", handlePlaying);
@@ -172,23 +173,25 @@ export const VideoTexture = memo(
     const screenAspectRatio = width / screenHeight;
 
     // シェーダーマテリアル（レターボックス/ピラーボックス対応）
+    // videoAspectRatioは依存配列から除外し、useEffectで更新することでマテリアル再作成を防ぐ
     const shaderMaterial = useMemo(() => {
       return new THREE.ShaderMaterial({
         uniforms: {
           map: { value: texture },
-          videoAspectRatio: { value: videoAspectRatio ?? screenAspectRatio },
+          videoAspectRatio: { value: screenAspectRatio },
           screenAspectRatio: { value: screenAspectRatio },
         },
         vertexShader: letterboxVertexShader,
         fragmentShader: letterboxFragmentShader,
         toneMapped: false,
       });
-    }, [texture, videoAspectRatio, screenAspectRatio]);
+    }, [texture, screenAspectRatio]);
 
-    // アスペクト比が変わったらuniformを更新
+    // アスペクト比が変わったらuniformを更新（マテリアル再作成なしで効率的に更新）
     useEffect(() => {
       shaderMaterial.uniforms.videoAspectRatio.value =
         videoAspectRatio ?? screenAspectRatio;
+      shaderMaterial.uniforms.screenAspectRatio.value = screenAspectRatio;
     }, [shaderMaterial, videoAspectRatio, screenAspectRatio]);
 
     // クリーンアップ時にマテリアルを破棄

@@ -51,14 +51,6 @@ export interface PlayPauseButtonProps {
   onInteract: () => void
 }
 
-export interface VolumeControlProps {
-  id: string
-  position: [number, number, number]
-  size: number
-  volume: number
-  onVolumeChange: (volume: number) => void
-}
-
 export interface LiveIndicatorProps {
   position: [number, number, number]
   size: number
@@ -78,9 +70,3 @@ export interface UrlInputButtonProps {
   onUrlChange: (url: string) => void
 }
 
-export interface StopButtonProps {
-  id: string
-  position: [number, number, number]
-  size: number
-  onInteract: () => void
-}
