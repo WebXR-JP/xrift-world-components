@@ -1,7 +1,16 @@
 import { memo, useCallback } from "react";
-import { IconButton } from "../commons/IconButton";
-import { useTextInputContext } from "../../contexts/TextInputContext";
-import type { UrlInputButtonProps } from "./types";
+import { IconButton } from "../IconButton";
+import { useTextInputContext } from "../../../contexts/TextInputContext";
+
+export interface UrlInputButtonProps {
+  id: string;
+  position: [number, number, number];
+  size: number;
+  currentUrl: string;
+  onUrlChange: (url: string) => void;
+  /** 入力フィールドのプレースホルダー（デフォルト: '動画のURLを入力'） */
+  placeholder?: string;
+}
 
 export const UrlInputButton = memo(
   ({

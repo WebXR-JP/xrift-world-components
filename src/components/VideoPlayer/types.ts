@@ -35,14 +35,6 @@ export interface ControlPanelProps {
   onUrlChange: (url: string) => void
 }
 
-export interface PlayPauseButtonProps {
-  id: string
-  position: [number, number, number]
-  size: number
-  playing: boolean
-  onInteract: () => void
-}
-
 export interface ProgressBarProps {
   id: string
   position: [number, number, number]
@@ -53,27 +45,3 @@ export interface ProgressBarProps {
   onSeek: (time: number) => void
 }
 
-export interface VolumeControlProps {
-  id: string
-  position: [number, number, number]
-  size: number
-  volume: number
-  onVolumeChange: (volume: number) => void
-}
-
-export interface UrlInputButtonProps {
-  id: string
-  position: [number, number, number]
-  size: number
-  currentUrl: string
-  onUrlChange: (url: string) => void
-  /** 入力フィールドのプレースホルダー（デフォルト: '動画のURLを入力'） */
-  placeholder?: string
-}
-
-export interface StopButtonProps {
-  id: string
-  position: [number, number, number]
-  size: number
-  onInteract: () => void
-}

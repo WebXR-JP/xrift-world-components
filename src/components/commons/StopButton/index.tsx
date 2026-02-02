@@ -1,6 +1,12 @@
 import { memo } from "react";
-import { IconButton } from "../commons/IconButton";
-import type { StopButtonProps } from "./types";
+import { IconButton } from "../IconButton";
+
+export interface StopButtonProps {
+  id: string;
+  position: [number, number, number];
+  size: number;
+  onInteract: () => void;
+}
 
 export const StopButton = memo(
   ({ id, position, size, onInteract }: StopButtonProps) => {
