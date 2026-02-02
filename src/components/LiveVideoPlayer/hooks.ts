@@ -42,10 +42,8 @@ export const useLiveVideoPlayer = ({
 
   // 音量は常にローカル（個人設定）
   const [volume, setVolume] = useState(initialVolume);
-  // バッファリング状態とエラー状態もローカル
+  // バッファリング状態もローカル
   const [isBuffering, setIsBuffering] = useState(false);
-  const [hasError, setHasError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // リトライ状態（エラー発生時に無限自動リトライ）
   const isRetryingRef = useRef(false);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -76,8 +74,6 @@ export const useLiveVideoPlayer = ({
         url: newUrl,
         playing: !!newUrl,
       }));
-      setHasError(false);
-      setErrorMessage(null);
       clearRetryState();
     },
     [setVideoState, clearRetryState],
@@ -97,8 +93,6 @@ export const useLiveVideoPlayer = ({
       reloadKey: prev.reloadKey + 1,
     }));
     setIsBuffering(false);
-    setHasError(false);
-    setErrorMessage(null);
     clearRetryState();
   }, [setVideoState, clearRetryState]);
 
@@ -112,7 +106,6 @@ export const useLiveVideoPlayer = ({
     if (!buffering) {
       isRetryingRef.current = false;
       setIsRetrying(false);
-      setErrorMessage(null);
     }
   }, []);
 
@@ -147,8 +140,6 @@ export const useLiveVideoPlayer = ({
     volume,
     isBuffering,
     isRetrying,
-    hasError,
-    errorMessage,
     handlers: {
       onUrlChange: handleUrlChange,
       onPlayPause: handlePlayPause,

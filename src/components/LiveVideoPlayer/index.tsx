@@ -31,8 +31,6 @@ export const LiveVideoPlayer = memo(
       volume,
       isBuffering,
       isRetrying,
-      hasError,
-      errorMessage,
       handlers,
     } = useLiveVideoPlayer({
       id,
@@ -47,14 +45,14 @@ export const LiveVideoPlayer = memo(
     return (
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
-        {!videoState.url || hasError || isRetrying ? (
+        {!videoState.url || isRetrying ? (
           <>
             <PlaceholderScreen
               width={width}
               screenHeight={screenHeight}
               color="#000000"
             />
-            {!videoState.url && !hasError && !isRetrying && (
+            {!videoState.url && !isRetrying && (
               <Text
                 position={[0, 0, 0.01]}
                 fontSize={width * 0.05}
@@ -64,19 +62,6 @@ export const LiveVideoPlayer = memo(
                 textAlign="center"
               >
                 {`ライブストリームURLを入力\nHLS .m3u8 形式`}
-              </Text>
-            )}
-            {hasError && (
-              <Text
-                position={[0, 0, 0.01]}
-                fontSize={width * 0.04}
-                color="#ff6666"
-                anchorX="center"
-                anchorY="middle"
-                textAlign="center"
-                maxWidth={width * 0.9}
-              >
-                {`接続エラー\n${errorMessage || "ストリームの読み込みに失敗しました"}\n\nURLを再入力してください`}
               </Text>
             )}
           </>
