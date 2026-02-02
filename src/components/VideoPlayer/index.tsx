@@ -1,9 +1,10 @@
-import { memo, Suspense, useState, useCallback, useRef, Component, ReactNode } from 'react'
+import { memo, Suspense, useState, useCallback, useRef } from 'react'
 import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { ControlPanel } from './ControlPanel'
 import { useVideoElement } from '../../hooks/useVideoElement'
 import { VideoMesh } from '../commons/VideoMesh'
+import { ErrorBoundary } from '../commons/ErrorBoundary'
 import type { VideoPlayerProps } from './types'
 
 export type { VideoPlayerProps } from './types'
@@ -11,40 +12,6 @@ export type { VideoPlayerProps } from './types'
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
 const DEFAULT_WIDTH = 4
-
-/** エラー境界：子コンポーネントでエラーが発生した場合にfallbackを表示 */
-interface ErrorBoundaryProps {
-  children: ReactNode
-  fallback: ReactNode
-  onError?: (error: Error) => void
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean
-}
-
-class VideoErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props)
-    this.state = { hasError: false }
-  }
-
-  static getDerivedStateFromError(): ErrorBoundaryState {
-    return { hasError: true }
-  }
-
-  componentDidCatch(error: Error) {
-    console.error('Video load error:', error)
-    this.props.onError?.(error)
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback
-    }
-    return this.props.children
-  }
-}
 
 /** 動画テクスチャを表示するコンポーネント（Suspense内で使用） */
 const VideoTextureInner = memo(
@@ -194,7 +161,7 @@ export const VideoPlayer = memo(
             )}
           </>
         ) : (
-          <VideoErrorBoundary
+          <ErrorBoundary
             fallback={<PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />}
             onError={handleError}
           >
@@ -214,7 +181,7 @@ export const VideoPlayer = memo(
                 seekTimeRef={seekTimeRef}
               />
             </Suspense>
-          </VideoErrorBoundary>
+          </ErrorBoundary>
         )}
 
         {/* コントロールパネル（常に表示） */}

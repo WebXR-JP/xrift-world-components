@@ -1,10 +1,7 @@
 import { memo, Suspense } from "react";
 import { Text } from "@react-three/drei";
-import {
-  ControlPanel,
-  VideoErrorBoundary,
-  PlaceholderScreen,
-} from "./components";
+import { ControlPanel, PlaceholderScreen } from "./components";
+import { ErrorBoundary } from "../commons/ErrorBoundary";
 import { useLiveVideoPlayer } from "./hooks";
 import { useVideoElement } from "../../hooks/useVideoElement";
 import { VideoMesh } from "../commons/VideoMesh";
@@ -104,7 +101,7 @@ export const LiveVideoPlayer = memo(
             )}
           </>
         ) : (
-          <VideoErrorBoundary
+          <ErrorBoundary
             key={`error-boundary-${videoState.url}-${videoState.reloadKey}`}
             fallback={
               <PlaceholderScreen
@@ -135,7 +132,7 @@ export const LiveVideoPlayer = memo(
                 onBufferingChange={handlers.onBufferingChange}
               />
             </Suspense>
-          </VideoErrorBoundary>
+          </ErrorBoundary>
         )}
 
         {/* リトライ中オーバーレイ */}
