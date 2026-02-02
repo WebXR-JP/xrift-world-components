@@ -1,11 +1,11 @@
 import { memo } from 'react'
 import { Text } from '@react-three/drei'
 import { PlayPauseButton } from './PlayPauseButton'
-import { StopButton } from '../VideoPlayer/StopButton'
+import { StopButton } from '../../VideoPlayer/StopButton'
 import { VolumeControl } from './VolumeControl'
 import { LiveIndicator } from './LiveIndicator'
 import { UrlInputButton } from './UrlInputButton'
-import type { LiveControlPanelProps } from './types'
+import type { LiveControlPanelProps } from '../types'
 
 const PANEL_HEIGHT = 0.15
 const BUTTON_SIZE_RATIO = 0.6

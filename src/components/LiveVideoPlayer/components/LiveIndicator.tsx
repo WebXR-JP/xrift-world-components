@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Text } from "@react-three/drei";
-import type { LiveIndicatorProps } from "./types";
+import type { LiveIndicatorProps } from "../types";
 
 export const LiveIndicator = memo(
   ({ position, size, playing }: LiveIndicatorProps) => {

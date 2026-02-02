@@ -1,8 +1,8 @@
 import { memo, useCallback } from 'react'
 import { Text } from '@react-three/drei'
-import { Interactable } from '../Interactable'
-import { useTextInputContext } from '../../contexts/TextInputContext'
-import type { UrlInputButtonProps } from './types'
+import { Interactable } from '../../Interactable'
+import { useTextInputContext } from '../../../contexts/TextInputContext'
+import type { UrlInputButtonProps } from '../types'
 
 export const UrlInputButton = memo(
   ({ id, position, size, currentUrl, onUrlChange }: UrlInputButtonProps) => {

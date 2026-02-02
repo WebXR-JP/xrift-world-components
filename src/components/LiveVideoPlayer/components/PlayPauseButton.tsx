@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Text } from '@react-three/drei'
-import { Interactable } from '../Interactable'
-import type { PlayPauseButtonProps } from './types'
+import { Interactable } from '../../Interactable'
+import type { PlayPauseButtonProps } from '../types'
 
 export const PlayPauseButton = memo(
   ({ id, position, size, playing, onInteract }: PlayPauseButtonProps) => {

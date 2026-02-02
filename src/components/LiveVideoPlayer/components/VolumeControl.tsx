@@ -1,12 +1,12 @@
 import { memo, useMemo } from 'react'
 import { Text } from '@react-three/drei'
-import { Interactable } from '../Interactable'
+import { Interactable } from '../../Interactable'
 import {
   calculateSegments,
   calculateProgressBar,
   getVolumeIcon,
-} from '../VideoPlayer/utils'
-import type { VolumeControlProps } from './types'
+} from '../../VideoPlayer/utils'
+import type { VolumeControlProps } from '../types'
 
 const SEGMENTS = 11
 
