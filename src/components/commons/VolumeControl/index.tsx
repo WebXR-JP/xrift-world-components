@@ -1,11 +1,11 @@
 import { memo, useMemo } from 'react'
 import { Text } from '@react-three/drei'
-import { Interactable } from '../Interactable'
-import {
-  calculateSegments,
-  calculateProgressBar,
-  getVolumeIcon,
-} from '../VideoPlayer/utils'
+import { Interactable } from '../../Interactable'
+import { calculateSegments, calculateProgressBar } from '../utils'
+
+const getVolumeIcon = (volume: number): string => {
+  return volume === 0 ? '🔇' : '🔈'
+}
 
 export interface VolumeControlProps {
   id: string

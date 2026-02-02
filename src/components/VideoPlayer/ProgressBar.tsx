@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react'
 import { Interactable } from '../Interactable'
-import { formatTime, calculateSegments, calculateProgressBar } from './utils'
+import { calculateSegments, calculateProgressBar } from '../commons/utils'
+import { formatTime } from './utils'
 import type { ProgressBarProps } from './types'
 
 const SEGMENTS = 20
