@@ -27,7 +27,7 @@ export interface ControlPanelProps {
   progress: number
   duration: number
   volume: number
-  currentUrl: string
+  url: string
   onPlayPause: () => void
   onStop: () => void
   onSeek: (time: number) => void

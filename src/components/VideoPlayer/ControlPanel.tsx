@@ -21,7 +21,7 @@ export const ControlPanel = memo(
     progress,
     duration,
     volume,
-    currentUrl,
+    url,
     onPlayPause,
     onStop,
     onSeek,
@@ -40,14 +40,14 @@ export const ControlPanel = memo(
       requestTextInput({
         id: `${id}-url-input`,
         placeholder: '動画のURLを入力',
-        initialValue: currentUrl,
+        initialValue: url,
         onSubmit: (value) => {
           if (value && value.trim() !== '') {
             onUrlChange(value.trim())
           }
         },
       })
-    }, [id, currentUrl, onUrlChange, requestTextInput])
+    }, [id, url, onUrlChange, requestTextInput])
 
     return (
       <group position={[0, panelY, 0]}>

@@ -17,7 +17,7 @@ export const ControlPanel = memo(
     playing,
     volume,
     isBuffering,
-    currentUrl,
+    url,
     onPlayPause,
     onStop,
     onVolumeChange,
@@ -31,14 +31,14 @@ export const ControlPanel = memo(
       requestTextInput({
         id: `${id}-url-input`,
         placeholder: 'ライブストリームのURLを入力',
-        initialValue: currentUrl,
+        initialValue: url,
         onSubmit: (value) => {
           if (value && value.trim() !== '') {
             onUrlChange(value.trim())
           }
         },
       })
-    }, [id, currentUrl, onUrlChange, requestTextInput])
+    }, [id, url, onUrlChange, requestTextInput])
 
     return (
       <group position={[0, panelY, 0]}>

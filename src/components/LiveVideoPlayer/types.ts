@@ -36,7 +36,7 @@ export interface LiveControlPanelProps {
   playing: boolean
   volume: number
   isBuffering: boolean
-  currentUrl: string
+  url: string
   onPlayPause: () => void
   onStop: () => void
   onVolumeChange: (volume: number) => void
