@@ -1,0 +1,42 @@
+import { memo } from 'react'
+import { useVideoElement } from '../../../hooks/useVideoElement'
+import { VideoMesh } from '../../commons/VideoMesh'
+
+interface LiveVideoTextureProps {
+  url: string
+  cacheKey: number
+  width: number
+  height: number
+  playing: boolean
+  volume: number
+  onError?: (error: Error) => void
+  onBufferingChange: (buffering: boolean) => void
+}
+
+/** ライブ動画テクスチャ（Suspense内で使用） */
+export const LiveVideoTexture = memo(
+  ({
+    url,
+    cacheKey,
+    width,
+    height,
+    playing,
+    volume,
+    onError,
+    onBufferingChange,
+  }: LiveVideoTextureProps) => {
+    const { texture } = useVideoElement({
+      url,
+      cacheKey,
+      playing,
+      volume,
+      loop: false,
+      onError,
+      onBufferingChange,
+    })
+
+    return <VideoMesh texture={texture} width={width} height={height} />
+  }
+)
+
+LiveVideoTexture.displayName = 'LiveVideoTexture'
