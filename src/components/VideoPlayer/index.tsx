@@ -1,52 +1,16 @@
-import { memo, Suspense, useState, useCallback, useEffect, useRef, useMemo, Component, ReactNode } from 'react'
-import { useVideoTexture, Text } from '@react-three/drei'
+import { memo, Suspense, useState, useCallback, useRef, Component, ReactNode } from 'react'
+import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { ControlPanel } from './ControlPanel'
-import { useWebAudioVolume } from '../../hooks/useWebAudioVolume'
+import { useVideoElement } from '../../hooks/useVideoElement'
+import { VideoMesh } from '../commons/VideoMesh'
 import type { VideoPlayerProps } from './types'
-import * as THREE from 'three'
 
 export type { VideoPlayerProps } from './types'
 
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
 const DEFAULT_WIDTH = 4
-
-/** レターボックス/ピラーボックス対応のシェーダー */
-const letterboxVertexShader = `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`
-
-const letterboxFragmentShader = `
-  uniform sampler2D map;
-  uniform float videoAspectRatio;
-  uniform float screenAspectRatio;
-  varying vec2 vUv;
-
-  void main() {
-    vec2 uv = vUv;
-
-    if (videoAspectRatio > screenAspectRatio) {
-      // 動画が横長：上下に黒帯（レターボックス）
-      float scale = screenAspectRatio / videoAspectRatio;
-      uv.y = (uv.y - 0.5) / scale + 0.5;
-    } else {
-      // 動画が縦長：左右に黒帯（ピラーボックス）
-      float scale = videoAspectRatio / screenAspectRatio;
-      uv.x = (uv.x - 0.5) / scale + 0.5;
-    }
-
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    } else {
-      gl_FragColor = texture2D(map, uv);
-    }
-  }
-`
 
 /** エラー境界：子コンポーネントでエラーが発生した場合にfallbackを表示 */
 interface ErrorBoundaryProps {
@@ -83,7 +47,7 @@ class VideoErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryStat
 }
 
 /** 動画テクスチャを表示するコンポーネント（Suspense内で使用） */
-const VideoTexture = memo(
+const VideoTextureInner = memo(
   ({
     url,
     cacheKey,
@@ -91,9 +55,9 @@ const VideoTexture = memo(
     screenHeight,
     playing,
     volume,
-    videoRef,
     onDurationChange,
     onProgressChange,
+    seekTimeRef,
   }: {
     url: string
     cacheKey: number
@@ -101,134 +65,42 @@ const VideoTexture = memo(
     screenHeight: number
     playing: boolean
     volume: number
-    videoRef: React.MutableRefObject<HTMLVideoElement | null>
     onDurationChange: (duration: number) => void
     onProgressChange: (progress: number) => void
+    seekTimeRef: React.MutableRefObject<number | null>
   }) => {
-    // 動画のアスペクト比を管理（レターボックス/ピラーボックス用）
-    const [videoAspectRatio, setVideoAspectRatio] = useState<number | null>(null)
-
-    // suspend-reactのキャッシュを無効化するためにURLにcacheKeyを付与
-    const urlWithCacheKey = `${url}${url.includes('?') ? '&' : '?'}_ck=${cacheKey}`
-    const texture = useVideoTexture(urlWithCacheKey, {
-      muted: false,
+    const { texture, videoRef } = useVideoElement({
+      url,
+      cacheKey,
+      playing,
+      volume,
       loop: true,
-      start: playing,
+      onDurationChange,
     })
 
-    useEffect(() => {
-      videoRef.current = texture.image as HTMLVideoElement
-    }, [texture, videoRef])
-
-    useEffect(() => {
-      const video = videoRef.current
-      if (!video) return
-
-      if (playing) {
-        video.play().catch((err) => {
-          console.error('Video play error:', err)
-        })
-      } else {
-        video.pause()
-      }
-    }, [playing, videoRef])
-
-    // Web Audio API を使用した音量制御（iOS対応）
-    useWebAudioVolume(videoRef.current, volume)
-
-    useEffect(() => {
-      const video = videoRef.current
-      if (!video) return
-
-      const handleLoadedMetadata = () => {
-        onDurationChange(video.duration || 0)
-        // 動画のアスペクト比を取得
-        if (video.videoWidth && video.videoHeight) {
-          setVideoAspectRatio(video.videoWidth / video.videoHeight)
-        }
-      }
-
-      if (video.duration) {
-        onDurationChange(video.duration)
-      }
-
-      // 既にメタデータが読み込まれている場合
-      if (video.videoWidth && video.videoHeight) {
-        setVideoAspectRatio(video.videoWidth / video.videoHeight)
-      }
-
-      video.addEventListener('loadedmetadata', handleLoadedMetadata)
-      return () => {
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata)
-      }
-    }, [texture, onDurationChange, videoRef])
-
+    // シーク処理
     useFrame(() => {
       const video = videoRef.current
-      if (!video || !video.duration) return
+      if (!video) return
 
-      const currentProgress = video.currentTime / video.duration
-      onProgressChange(currentProgress)
+      // シークリクエストがあれば処理
+      if (seekTimeRef.current !== null) {
+        video.currentTime = seekTimeRef.current
+        seekTimeRef.current = null
+      }
+
+      // 進捗更新
+      if (video.duration) {
+        const currentProgress = video.currentTime / video.duration
+        onProgressChange(currentProgress)
+      }
     })
 
-    useEffect(() => {
-      const video = texture.image as HTMLVideoElement
-      return () => {
-        // 再生を停止
-        video.pause()
-
-        // ソースを完全にクリア
-        video.src = ''
-        video.removeAttribute('src')
-        video.srcObject = null
-
-        // MediaSourceをリリースするためにloadを呼び出し
-        video.load()
-
-        // テクスチャを破棄
-        texture.dispose()
-      }
-    }, [texture])
-
-    // スクリーンのアスペクト比
-    const screenAspectRatio = width / screenHeight
-
-    // シェーダーマテリアル（レターボックス/ピラーボックス対応）
-    const shaderMaterial = useMemo(() => {
-      return new THREE.ShaderMaterial({
-        uniforms: {
-          map: { value: texture },
-          videoAspectRatio: { value: videoAspectRatio ?? screenAspectRatio },
-          screenAspectRatio: { value: screenAspectRatio },
-        },
-        vertexShader: letterboxVertexShader,
-        fragmentShader: letterboxFragmentShader,
-        toneMapped: false,
-      })
-    }, [texture, videoAspectRatio, screenAspectRatio])
-
-    // アスペクト比が変わったらuniformを更新
-    useEffect(() => {
-      shaderMaterial.uniforms.videoAspectRatio.value = videoAspectRatio ?? screenAspectRatio
-    }, [shaderMaterial, videoAspectRatio, screenAspectRatio])
-
-    // クリーンアップ時にマテリアルを破棄
-    useEffect(() => {
-      return () => {
-        shaderMaterial.dispose()
-      }
-    }, [shaderMaterial])
-
-    return (
-      <mesh>
-        <planeGeometry args={[width, screenHeight]} />
-        <primitive object={shaderMaterial} attach="material" />
-      </mesh>
-    )
+    return <VideoMesh texture={texture} width={width} height={screenHeight} />
   }
 )
 
-VideoTexture.displayName = 'VideoTexture'
+VideoTextureInner.displayName = 'VideoTextureInner'
 
 /** プレースホルダー画面（読み込み中/エラー時/URL未設定時） */
 const PlaceholderScreen = memo(
@@ -259,7 +131,7 @@ export const VideoPlayer = memo(
     const [duration, setDuration] = useState(0)
     const [hasError, setHasError] = useState(false)
     const [reloadKey, setReloadKey] = useState(0)
-    const videoRef = useRef<HTMLVideoElement | null>(null)
+    const seekTimeRef = useRef<number | null>(null)
     const screenHeight = width * (9 / 16)
 
     const handleUrlChange = useCallback((newUrl: string) => {
@@ -287,9 +159,7 @@ export const VideoPlayer = memo(
     }, [])
 
     const handleSeek = useCallback((time: number) => {
-      const video = videoRef.current
-      if (!video) return
-      video.currentTime = time
+      seekTimeRef.current = time
     }, [])
 
     const handleDurationChange = useCallback((newDuration: number) => {
@@ -331,7 +201,7 @@ export const VideoPlayer = memo(
             <Suspense
               fallback={<PlaceholderScreen width={width} screenHeight={screenHeight} color="#333333" />}
             >
-              <VideoTexture
+              <VideoTextureInner
                 key={`${currentUrl}-${reloadKey}`}
                 url={currentUrl}
                 cacheKey={reloadKey}
@@ -339,9 +209,9 @@ export const VideoPlayer = memo(
                 screenHeight={screenHeight}
                 playing={playing}
                 volume={volume}
-                videoRef={videoRef}
                 onDurationChange={handleDurationChange}
                 onProgressChange={handleProgressChange}
+                seekTimeRef={seekTimeRef}
               />
             </Suspense>
           </VideoErrorBoundary>

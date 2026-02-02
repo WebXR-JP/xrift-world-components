@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useInstanceState } from "../../hooks/useInstanceState";
+import { useSyncState, type SyncMode } from "../../hooks/useSyncState";
 import type { LiveVideoState } from "./types";
 
 const RETRY_DELAY_MS = 2000;
@@ -9,7 +9,7 @@ interface UseLiveVideoPlayerOptions {
   initialUrl?: string;
   initialPlaying?: boolean;
   initialVolume?: number;
-  sync?: "global" | "local";
+  sync?: SyncMode;
 }
 
 export const useLiveVideoPlayer = ({
@@ -19,26 +19,15 @@ export const useLiveVideoPlayer = ({
   initialVolume = 1,
   sync = "global",
 }: UseLiveVideoPlayerOptions) => {
-  // グローバル同期用の状態
-  const [globalState, setGlobalState] = useInstanceState<LiveVideoState>(
+  const [videoState, setVideoState] = useSyncState<LiveVideoState>(
     `live-video-${id}`,
     {
       url: initialUrl,
       playing: initialPlaying,
       reloadKey: 0,
     },
+    sync,
   );
-
-  // ローカル専用の状態
-  const [localState, setLocalState] = useState<LiveVideoState>({
-    url: initialUrl,
-    playing: initialPlaying,
-    reloadKey: 0,
-  });
-
-  // sync modeに応じて使用する状態を切り替え
-  const videoState = sync === "global" ? globalState : localState;
-  const setVideoState = sync === "global" ? setGlobalState : setLocalState;
 
   // 音量は常にローカル（個人設定）
   const [volume, setVolume] = useState(initialVolume);
@@ -109,9 +98,7 @@ export const useLiveVideoPlayer = ({
   const handleError = useCallback(
     (error: Error) => {
       // リトライ中は新しいエラーを無視（タイムアウト待機中）
-      if (isRetrying) {
-        return;
-      }
+      if (isRetrying) return;
 
       console.warn(`LiveVideoPlayer error, retrying...`, error.message);
 
