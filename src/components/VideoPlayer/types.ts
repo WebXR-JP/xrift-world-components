@@ -67,6 +67,8 @@ export interface UrlInputButtonProps {
   size: number
   currentUrl: string
   onUrlChange: (url: string) => void
+  /** 入力フィールドのプレースホルダー（デフォルト: '動画のURLを入力'） */
+  placeholder?: string
 }
 
 export interface StopButtonProps {

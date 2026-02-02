@@ -1,10 +1,10 @@
 import { memo } from 'react'
 import { Text } from '@react-three/drei'
-import { PlayPauseButton } from './PlayPauseButton'
+import { PlayPauseButton } from '../../VideoPlayer/PlayPauseButton'
 import { StopButton } from '../../VideoPlayer/StopButton'
+import { UrlInputButton } from '../../VideoPlayer/UrlInputButton'
 import { VolumeControl } from '../../commons/VolumeControl'
 import { LiveIndicator } from './LiveIndicator'
-import { UrlInputButton } from './UrlInputButton'
 import type { LiveControlPanelProps } from '../types'
 
 const PANEL_HEIGHT = 0.15
@@ -42,6 +42,7 @@ export const ControlPanel = memo(
           size={buttonSize}
           currentUrl={currentUrl}
           onUrlChange={onUrlChange}
+          placeholder="ライブストリームのURLを入力"
         />
 
         {/* 再生/一時停止ボタン */}

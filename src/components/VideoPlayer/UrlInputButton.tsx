@@ -1,50 +1,43 @@
-import { memo, useCallback } from 'react'
-import { Text } from '@react-three/drei'
-import { Interactable } from '../Interactable'
-import { useTextInputContext } from '../../contexts/TextInputContext'
-import type { UrlInputButtonProps } from './types'
+import { memo, useCallback } from "react";
+import { IconButton } from "../commons/IconButton";
+import { useTextInputContext } from "../../contexts/TextInputContext";
+import type { UrlInputButtonProps } from "./types";
 
 export const UrlInputButton = memo(
-  ({ id, position, size, currentUrl, onUrlChange }: UrlInputButtonProps) => {
-    const { requestTextInput } = useTextInputContext()
+  ({
+    id,
+    position,
+    size,
+    currentUrl,
+    onUrlChange,
+    placeholder = "動画のURLを入力",
+  }: UrlInputButtonProps) => {
+    const { requestTextInput } = useTextInputContext();
 
     const handleInteract = useCallback(() => {
       requestTextInput({
         id: `${id}-url-input`,
-        placeholder: '動画のURLを入力',
+        placeholder,
         initialValue: currentUrl,
         onSubmit: (value) => {
-          if (value && value.trim() !== '') {
-            onUrlChange(value.trim())
+          if (value && value.trim() !== "") {
+            onUrlChange(value.trim());
           }
         },
-      })
-    }, [id, currentUrl, onUrlChange, requestTextInput])
+      });
+    }, [id, currentUrl, onUrlChange, requestTextInput, placeholder]);
 
     return (
-      <group position={position}>
-        <Interactable
-          id={id}
-          onInteract={handleInteract}
-          interactionText="URL変更"
-        >
-          <mesh>
-            <circleGeometry args={[size / 2, 32]} />
-            <meshBasicMaterial color="#444444" />
-          </mesh>
-        </Interactable>
-        <Text
-          position={[0, 0, 0.01]}
-          fontSize={size * 0.4}
-          color="#ffffff"
-          anchorX="center"
-          anchorY="middle"
-        >
-          🔗
-        </Text>
-      </group>
-    )
-  }
-)
+      <IconButton
+        id={id}
+        position={position}
+        size={size}
+        icon="🔗"
+        interactionText="URL変更"
+        onInteract={handleInteract}
+      />
+    );
+  },
+);
 
-UrlInputButton.displayName = 'UrlInputButton'
+UrlInputButton.displayName = "UrlInputButton";

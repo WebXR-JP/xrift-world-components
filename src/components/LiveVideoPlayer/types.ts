@@ -43,30 +43,9 @@ export interface LiveControlPanelProps {
   onUrlChange: (url: string) => void
 }
 
-export interface PlayPauseButtonProps {
-  id: string
-  position: [number, number, number]
-  size: number
-  playing: boolean
-  onInteract: () => void
-}
-
 export interface LiveIndicatorProps {
   position: [number, number, number]
   size: number
   playing: boolean
-}
-
-export interface LoadingSpinnerProps {
-  position: [number, number, number]
-  size: number
-}
-
-export interface UrlInputButtonProps {
-  id: string
-  position: [number, number, number]
-  size: number
-  currentUrl: string
-  onUrlChange: (url: string) => void
 }
 
