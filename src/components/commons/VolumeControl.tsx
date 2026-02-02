@@ -1,8 +1,19 @@
 import { memo, useMemo } from 'react'
 import { Text } from '@react-three/drei'
 import { Interactable } from '../Interactable'
-import { calculateSegments, calculateProgressBar, getVolumeIcon } from './utils'
-import type { VolumeControlProps } from './types'
+import {
+  calculateSegments,
+  calculateProgressBar,
+  getVolumeIcon,
+} from '../VideoPlayer/utils'
+
+export interface VolumeControlProps {
+  id: string
+  position: [number, number, number]
+  size: number
+  volume: number
+  onVolumeChange: (volume: number) => void
+}
 
 const SEGMENTS = 11
 
@@ -11,7 +22,10 @@ export const VolumeControl = memo(
     const barWidth = size * 3
     const barHeight = size * 0.2
     const segmentWidth = barWidth / SEGMENTS
-    const { width: volumeWidth, offset: volumeOffset } = calculateProgressBar(volume, barWidth)
+    const { width: volumeWidth, offset: volumeOffset } = calculateProgressBar(
+      volume,
+      barWidth,
+    )
 
     const segments = useMemo(() => {
       return calculateSegments({
@@ -68,7 +82,7 @@ export const VolumeControl = memo(
         ))}
       </group>
     )
-  }
+  },
 )
 
 VolumeControl.displayName = 'VolumeControl'
