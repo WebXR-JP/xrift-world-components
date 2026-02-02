@@ -1,10 +1,10 @@
-import { memo } from 'react'
+import { memo, useCallback } from 'react'
 import { Text } from '@react-three/drei'
 import { IconButton } from '../commons/IconButton'
-import { UrlInputButton } from '../commons/UrlInputButton'
 import { VolumeControl } from '../commons/VolumeControl'
 import { ProgressBar } from './ProgressBar'
 import { formatTime } from './utils'
+import { useTextInputContext } from '../../contexts/TextInputContext'
 import type { ControlPanelProps } from './types'
 
 const PANEL_HEIGHT = 0.15
@@ -35,6 +35,21 @@ export const ControlPanel = memo(
     const currentTime = progress * duration
     const timeText = `${formatTime(currentTime)} / ${formatTime(duration)}`
 
+    const { requestTextInput } = useTextInputContext()
+
+    const handleUrlInput = useCallback(() => {
+      requestTextInput({
+        id: `${id}-url-input`,
+        placeholder: '動画のURLを入力',
+        initialValue: currentUrl,
+        onSubmit: (value) => {
+          if (value && value.trim() !== '') {
+            onUrlChange(value.trim())
+          }
+        },
+      })
+    }, [id, currentUrl, onUrlChange, requestTextInput])
+
     return (
       <group position={[0, panelY, 0]}>
         {/* パネル背景 */}
@@ -44,12 +59,13 @@ export const ControlPanel = memo(
         </mesh>
 
         {/* URL入力ボタン（左端） */}
-        <UrlInputButton
+        <IconButton
           id={`${id}-url-input`}
           position={[-width * 0.45, 0, 0.01]}
           size={buttonSize}
-          currentUrl={currentUrl}
-          onUrlChange={onUrlChange}
+          icon="🔗"
+          interactionText="URL変更"
+          onInteract={handleUrlInput}
         />
 
         {/* 再生/一時停止ボタン */}

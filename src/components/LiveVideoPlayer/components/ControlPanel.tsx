@@ -1,9 +1,9 @@
-import { memo } from 'react'
+import { memo, useCallback } from 'react'
 import { Text } from '@react-three/drei'
 import { IconButton } from '../../commons/IconButton'
-import { UrlInputButton } from '../../commons/UrlInputButton'
 import { VolumeControl } from '../../commons/VolumeControl'
 import { LiveIndicator } from './LiveIndicator'
+import { useTextInputContext } from '../../../contexts/TextInputContext'
 import type { LiveControlPanelProps } from '../types'
 
 const PANEL_HEIGHT = 0.15
@@ -26,6 +26,21 @@ export const ControlPanel = memo(
     const panelY = -screenHeight / 2 - PANEL_HEIGHT / 2
     const buttonSize = PANEL_HEIGHT * BUTTON_SIZE_RATIO
 
+    const { requestTextInput } = useTextInputContext()
+
+    const handleUrlInput = useCallback(() => {
+      requestTextInput({
+        id: `${id}-url-input`,
+        placeholder: 'ライブストリームのURLを入力',
+        initialValue: currentUrl,
+        onSubmit: (value) => {
+          if (value && value.trim() !== '') {
+            onUrlChange(value.trim())
+          }
+        },
+      })
+    }, [id, currentUrl, onUrlChange, requestTextInput])
+
     return (
       <group position={[0, panelY, 0]}>
         {/* パネル背景 */}
@@ -35,13 +50,13 @@ export const ControlPanel = memo(
         </mesh>
 
         {/* URL入力ボタン（左端） */}
-        <UrlInputButton
+        <IconButton
           id={`${id}-url-input`}
           position={[-width * 0.45, 0, 0.01]}
           size={buttonSize}
-          currentUrl={currentUrl}
-          onUrlChange={onUrlChange}
-          placeholder="ライブストリームのURLを入力"
+          icon="🔗"
+          interactionText="URL変更"
+          onInteract={handleUrlInput}
         />
 
         {/* 再生/一時停止ボタン */}
