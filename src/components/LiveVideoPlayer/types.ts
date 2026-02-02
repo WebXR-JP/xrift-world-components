@@ -43,9 +43,3 @@ export interface LiveControlPanelProps {
   onUrlChange: (url: string) => void
 }
 
-export interface LiveIndicatorProps {
-  position: [number, number, number]
-  size: number
-  playing: boolean
-}
-

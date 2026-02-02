@@ -2,12 +2,44 @@ import { memo, useCallback } from 'react'
 import { Text } from '@react-three/drei'
 import { IconButton } from '../../commons/IconButton'
 import { VolumeControl } from '../../commons/VolumeControl'
-import { LiveIndicator } from './LiveIndicator'
 import { useTextInputContext } from '../../../contexts/TextInputContext'
 import type { LiveControlPanelProps } from '../types'
 
 const PANEL_HEIGHT = 0.15
 const BUTTON_SIZE = PANEL_HEIGHT * 0.6
+
+interface LiveIndicatorProps {
+  position: [number, number, number]
+  size: number
+  playing: boolean
+}
+
+const LiveIndicator = memo(({ position, size, playing }: LiveIndicatorProps) => {
+  const dotSize = size * 0.15
+  const fontSize = size * 0.4
+  const dotColor = playing ? '#ff0000' : '#666666'
+
+  return (
+    <group position={position}>
+      <mesh position={[-size * 0.5, 0, 0]}>
+        <circleGeometry args={[dotSize, 16]} />
+        <meshBasicMaterial key={playing ? 'playing' : 'paused'} color={dotColor} />
+      </mesh>
+      <Text
+        position={[size * 0.15, 0, 0]}
+        fontSize={fontSize}
+        color="#ffffff"
+        anchorX="center"
+        anchorY="middle"
+        fontWeight="bold"
+      >
+        LIVE
+      </Text>
+    </group>
+  )
+})
+
+LiveIndicator.displayName = 'LiveIndicator'
 
 export const ControlPanel = memo(
   ({
