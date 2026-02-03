@@ -1,7 +1,8 @@
 import { memo, Suspense } from "react";
 import { Text } from "@react-three/drei";
-import { ControlPanel, PlaceholderScreen, LiveVideoTexture } from "./components";
+import { ControlPanel, LiveVideoTexture } from "./components";
 import { ErrorBoundary } from "../commons/ErrorBoundary";
+import { PlaceholderScreen } from "../commons/PlaceholderScreen";
 import { useLiveVideoPlayer } from "./hooks";
 import type { LiveVideoPlayerProps } from "./types";
 

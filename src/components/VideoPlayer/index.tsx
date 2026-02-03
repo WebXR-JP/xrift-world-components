@@ -5,6 +5,7 @@ import { ControlPanel } from './ControlPanel'
 import { useVideoElement } from '../../hooks/useVideoElement'
 import { VideoMesh } from '../commons/VideoMesh'
 import { ErrorBoundary } from '../commons/ErrorBoundary'
+import { PlaceholderScreen } from '../commons/PlaceholderScreen'
 import type { VideoPlayerProps } from './types'
 
 export type { VideoPlayerProps } from './types'
@@ -68,18 +69,6 @@ const VideoTextureInner = memo(
 )
 
 VideoTextureInner.displayName = 'VideoTextureInner'
-
-/** プレースホルダー画面（読み込み中/エラー時/URL未設定時） */
-const PlaceholderScreen = memo(
-  ({ width, screenHeight, color }: { width: number; screenHeight: number; color: string }) => (
-    <mesh>
-      <planeGeometry args={[width, screenHeight]} />
-      <meshBasicMaterial color={color} />
-    </mesh>
-  )
-)
-
-PlaceholderScreen.displayName = 'PlaceholderScreen'
 
 export const VideoPlayer = memo(
   ({
