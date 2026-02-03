@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { useVideoElement } from '../../../hooks/useVideoElement'
+import { useHlsVideo } from '../../../hooks/useHlsVideo'
 import { VideoMesh } from '../../commons/VideoMesh'
 
 interface LiveVideoTextureProps {
@@ -25,12 +25,11 @@ export const LiveVideoTexture = memo(
     onError,
     onBufferingChange,
   }: LiveVideoTextureProps) => {
-    const { texture } = useVideoElement({
+    const { texture } = useHlsVideo({
       url,
       cacheKey,
       playing,
       volume,
-      loop: false,
       onError,
       onBufferingChange,
     })
