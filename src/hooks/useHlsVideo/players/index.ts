@@ -18,6 +18,7 @@ export type CreatePlayerResult =
 export async function createHlsPlayer(
   options: HlsPlayerOptions
 ): Promise<CreatePlayerResult> {
+  // hls.js を優先
   try {
     const Hls = (await import('hls.js')).default
 
@@ -31,6 +32,7 @@ export async function createHlsPlayer(
     console.warn('[createHlsPlayer] Failed to load hls.js:', err)
   }
 
+  // ネイティブ HLS にフォールバック
   if (canPlayHlsNatively()) {
     return {
       player: new NativeHlsPlayer(options),

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { VideoTexture } from 'three'
 import { useWebAudioVolume } from '../useWebAudioVolume'
-import { isHlsUrl, appendCacheKey, createVideoTexture } from './utils'
+import { appendCacheKey, createVideoTexture } from './utils'
 import { RecoveryTracker } from './RecoveryTracker'
 import { createHlsPlayer, type HlsPlayerStrategy } from './players'
 
@@ -65,20 +65,6 @@ export function useHlsVideo({
     const tracker = recoveryTrackerRef.current
     tracker.reset()
 
-    // HLS URLでない場合はネイティブ再生
-    if (!isHlsUrl(url)) {
-      video.src = urlWithCacheKey
-      if (playing) {
-        video.play().catch((err) => console.error('[useHlsVideo] Play error:', err))
-      }
-      return () => {
-        video.pause()
-        video.src = ''
-        video.load()
-      }
-    }
-
-    // HLS プレイヤーを作成
     let player: HlsPlayerStrategy | null = null
 
     const init = async () => {
