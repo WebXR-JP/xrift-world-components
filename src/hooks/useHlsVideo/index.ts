@@ -1,8 +1,9 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { VideoTexture } from 'three'
 import { useWebAudioVolume } from '../useWebAudioVolume'
-import { isHlsUrl, canPlayHlsNatively, appendCacheKey, createVideoTexture } from './utils'
+import { isHlsUrl, appendCacheKey, createVideoTexture } from './utils'
 import { RecoveryTracker } from './RecoveryTracker'
+import { createHlsPlayer, type HlsPlayerStrategy } from './players'
 
 export interface UseHlsVideoOptions {
   /** HLS動画URL */
@@ -43,8 +44,8 @@ export function useHlsVideo({
   onBufferingChange,
 }: UseHlsVideoOptions): UseHlsVideoReturn {
   const videoRef = useRef<HTMLVideoElement>(null!)
-  const hlsRef = useRef<import('hls.js').default | null>(null)
   const textureRef = useRef<VideoTexture | null>(null)
+  const playerRef = useRef<HlsPlayerStrategy | null>(null)
   const recoveryTrackerRef = useRef(new RecoveryTracker())
 
   // テクスチャを状態として保持（初回レンダリング時に同期的に作成）
@@ -55,25 +56,7 @@ export function useHlsVideo({
     return tex
   })
 
-  // hls.js のエラーリカバリを試行
-  const attemptHlsRecovery = useCallback(() => {
-    const hls = hlsRef.current
-    if (!hls) return false
-
-    if (!recoveryTrackerRef.current.shouldAttemptRecovery()) {
-      return false
-    }
-
-    try {
-      hls.recoverMediaError()
-      return true
-    } catch (e) {
-      console.error('[useHlsVideo] recoverMediaError() failed:', e)
-      return false
-    }
-  }, [])
-
-  // hls.js の初期化
+  // プレイヤーの初期化
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
@@ -95,117 +78,48 @@ export function useHlsVideo({
       }
     }
 
-    let hls: import('hls.js').default | null = null
-    let useNative = false
+    // HLS プレイヤーを作成
+    let player: HlsPlayerStrategy | null = null
 
-    // ネイティブ HLS 用のエラーハンドラー
-    const handleNativeError = () => {
-      const error = video.error
-      if (!error) return
-
-      if (error.code === MediaError.MEDIA_ERR_DECODE) {
-        if (tracker.shouldAttemptRecovery()) {
-          video.currentTime = video.currentTime + 0.5
-          video.play().catch(() => {})
-          return
-        }
-      }
-
-      if (!tracker.isErrorReported) {
-        tracker.markErrorReported()
-        console.error('[useHlsVideo] Native video error:', error.message)
-        onError?.(new Error(error.message))
-      }
-    }
-
-    const setupNativeHls = () => {
-      video.src = urlWithCacheKey
-      video.addEventListener('error', handleNativeError)
-      if (playing) {
-        video.play().catch((err) => console.error('[useHlsVideo] Play error:', err))
-      }
-    }
-
-    const initHls = async () => {
-      try {
-        const Hls = (await import('hls.js')).default
-
-        if (Hls.isSupported()) {
-          console.log('[useHlsVideo] Using hls.js')
-          hls = new Hls({ enableWorker: true, lowLatencyMode: true })
-          hlsRef.current = hls
-
-          // エラーハンドリング
-          hls.on(Hls.Events.ERROR, (_event, data) => {
-            if (!data.fatal) {
-              console.log('[useHlsVideo] Non-fatal error:', data.details)
-              return
-            }
-
-            console.warn('[useHlsVideo] Fatal error:', data.type, data.details)
-
-            if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-              const recovered = attemptHlsRecovery()
-              if (!recovered && !tracker.isErrorReported) {
-                tracker.markErrorReported()
-                onError?.(new Error(`HLS media error: ${data.details}`))
-              }
-            } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-              console.log('[useHlsVideo] Network error, starting load...')
-              hls?.startLoad()
-            } else {
-              if (!tracker.isErrorReported) {
-                tracker.markErrorReported()
-                onError?.(new Error(`HLS error: ${data.type} - ${data.details}`))
-              }
-            }
-          })
-
-          hls.on(Hls.Events.FRAG_BUFFERED, () => onBufferingChange?.(false))
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
+    const init = async () => {
+      const result = await createHlsPlayer({
+        video,
+        tracker,
+        callbacks: {
+          onError,
+          onBufferingChange,
+          onManifestParsed: () => {
             if (playing) {
               video.play().catch((err) =>
                 console.error('[useHlsVideo] Play error after manifest parsed:', err)
               )
             }
-          })
+          },
+        },
+      })
 
-          hls.loadSource(urlWithCacheKey)
-          hls.attachMedia(video)
-        } else if (canPlayHlsNatively()) {
-          console.log('[useHlsVideo] hls.js not supported, using native HLS')
-          useNative = true
-          setupNativeHls()
-        } else {
-          console.error('[useHlsVideo] HLS is not supported in this browser')
-          onError?.(new Error('HLS is not supported in this browser'))
-        }
-      } catch (err) {
-        console.warn('[useHlsVideo] Failed to load hls.js, trying native:', err)
-        if (canPlayHlsNatively()) {
-          useNative = true
-          setupNativeHls()
-        } else {
-          onError?.(new Error('HLS playback is not available'))
-        }
+      if (result.type === 'unsupported') {
+        onError?.(result.error)
+        return
       }
+
+      player = result.player
+      playerRef.current = player
+      player.load(urlWithCacheKey)
     }
 
-    initHls()
+    init()
 
     return () => {
-      if (hls) {
-        hls.destroy()
-        hlsRef.current = null
-      }
-      if (useNative) {
-        video.removeEventListener('error', handleNativeError)
+      if (player) {
+        player.destroy()
+        playerRef.current = null
       }
       video.pause()
       video.src = ''
       video.load()
     }
-  }, [url, cacheKey, onError, onBufferingChange, playing, attemptHlsRecovery])
+  }, [url, cacheKey, onError, onBufferingChange, playing])
 
   // 再生/停止制御
   useEffect(() => {
