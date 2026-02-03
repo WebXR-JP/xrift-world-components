@@ -1,5 +1,8 @@
 import type { HlsPlayerStrategy, HlsPlayerOptions } from './types'
 
+// MediaError.MEDIA_ERR_DECODE の値（テスト環境での互換性のため直接定義）
+const MEDIA_ERR_DECODE = 3
+
 /** ブラウザネイティブの HLS 再生を使用するプレイヤー（主に Safari 向け） */
 export class NativeHlsPlayer implements HlsPlayerStrategy {
   private video: HTMLVideoElement
@@ -24,7 +27,7 @@ export class NativeHlsPlayer implements HlsPlayerStrategy {
 
     const { onError } = this.callbacks
 
-    if (error.code === MediaError.MEDIA_ERR_DECODE) {
+    if (error.code === MEDIA_ERR_DECODE) {
       if (this.attemptRecovery()) {
         return
       }
