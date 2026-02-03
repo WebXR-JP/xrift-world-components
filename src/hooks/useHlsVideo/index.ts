@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { VideoTexture, SRGBColorSpace, LinearFilter } from 'three'
+import { VideoTexture } from 'three'
 import { useWebAudioVolume } from '../useWebAudioVolume'
-import { isHlsUrl, canPlayHlsNatively, appendCacheKey } from './utils'
+import { isHlsUrl, canPlayHlsNatively, appendCacheKey, createVideoTexture } from './utils'
 import { RecoveryTracker } from './RecoveryTracker'
 
 export interface UseHlsVideoOptions {
@@ -49,16 +49,8 @@ export function useHlsVideo({
 
   // テクスチャを状態として保持（初回レンダリング時に同期的に作成）
   const [texture] = useState<VideoTexture>(() => {
-    const video = document.createElement('video')
-    video.crossOrigin = 'anonymous'
-    video.playsInline = true
-    video.muted = false
+    const { video, texture: tex } = createVideoTexture()
     videoRef.current = video
-
-    const tex = new VideoTexture(video)
-    tex.colorSpace = SRGBColorSpace
-    tex.minFilter = LinearFilter
-    tex.magFilter = LinearFilter
     textureRef.current = tex
     return tex
   })
