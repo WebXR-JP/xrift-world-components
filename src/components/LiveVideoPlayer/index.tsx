@@ -5,9 +5,25 @@ import { LiveVideoTexture } from "./components/LiveVideoTexture";
 import { ErrorBoundary } from "../commons/ErrorBoundary";
 import { PlaceholderScreen } from "../commons/PlaceholderScreen";
 import { useLiveVideoPlayer } from "./hooks/useLiveVideoPlayer";
-import type { LiveVideoPlayerProps } from "./types";
 
-export type { LiveVideoPlayerProps, LiveVideoState } from "./types";
+interface Props {
+  /** スクリーンの一意なID（必須） */
+  id: string
+  /** スクリーンの位置 */
+  position?: [number, number, number]
+  /** スクリーンの回転 */
+  rotation?: [number, number, number]
+  /** スクリーンの幅（高さは16:9で自動計算、デフォルト: 4） */
+  width?: number
+  /** ライブストリームのURL（HLS .m3u8 形式） */
+  url?: string
+  /** 初期再生状態（デフォルト: false） */
+  playing?: boolean
+  /** 初期音量 0〜1（デフォルト: 1） */
+  volume?: number
+  /** 同期モード（デフォルト: 'global'） */
+  sync?: 'global' | 'local'
+}
 
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5];
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
@@ -23,7 +39,7 @@ export const LiveVideoPlayer = memo(
     playing: initialPlaying = false,
     volume: initialVolume = 1,
     sync = "global",
-  }: LiveVideoPlayerProps) => {
+  }: Props) => {
     const {
       videoState,
       volume,

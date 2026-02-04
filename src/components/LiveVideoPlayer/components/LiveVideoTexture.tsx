@@ -2,7 +2,7 @@ import { memo } from 'react'
 import { useHlsVideo } from '../hooks/useHlsVideo'
 import { VideoMesh } from '../../commons/VideoMesh'
 
-interface LiveVideoTextureProps {
+interface Props {
   url: string
   cacheKey: number
   width: number
@@ -24,7 +24,7 @@ export const LiveVideoTexture = memo(
     volume,
     onError,
     onBufferingChange,
-  }: LiveVideoTextureProps) => {
+  }: Props) => {
     const { texture } = useHlsVideo({
       url,
       cacheKey,

@@ -4,7 +4,20 @@ import { IconButton } from '../../../commons/IconButton'
 import { VolumeControl } from '../../../commons/VolumeControl'
 import { useTextInputContext } from '../../../../contexts/TextInputContext'
 import { LiveIndicator } from './LiveIndicator'
-import type { LiveControlPanelProps } from '../../types'
+
+interface Props {
+  id: string
+  width: number
+  screenHeight: number
+  playing: boolean
+  volume: number
+  isBuffering: boolean
+  url: string
+  onPlayPause: () => void
+  onStop: () => void
+  onVolumeChange: (volume: number) => void
+  onUrlChange: (url: string) => void
+}
 
 const PANEL_HEIGHT = 0.15
 const BUTTON_SIZE = PANEL_HEIGHT * 0.6
@@ -22,7 +35,7 @@ export const ControlPanel = memo(
     onStop,
     onVolumeChange,
     onUrlChange,
-  }: LiveControlPanelProps) => {
+  }: Props) => {
     const panelY = -screenHeight / 2 - PANEL_HEIGHT / 2
 
     const { requestTextInput } = useTextInputContext()

@@ -65,10 +65,7 @@ export {
   type VideoPlayerProps,
 } from './components/VideoPlayer'
 
-export {
-  LiveVideoPlayer,
-  type LiveVideoPlayerProps,
-} from './components/LiveVideoPlayer'
+export { LiveVideoPlayer } from './components/LiveVideoPlayer'
 
 export {
   ScreenShareDisplay,

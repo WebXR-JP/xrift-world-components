@@ -1,13 +1,13 @@
 import { memo } from 'react'
 import { Text } from '@react-three/drei'
 
-interface LiveIndicatorProps {
+interface Props {
   position: [number, number, number]
   size: number
   playing: boolean
 }
 
-export const LiveIndicator = memo(({ position, size, playing }: LiveIndicatorProps) => {
+export const LiveIndicator = memo(({ position, size, playing }: Props) => {
   const dotSize = size * 0.15
   const fontSize = size * 0.4
   const dotColor = playing ? '#ff0000' : '#666666'
