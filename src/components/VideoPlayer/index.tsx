@@ -24,6 +24,9 @@ interface Props {
   volume?: number
 }
 
+/** @public */
+export type VideoPlayerProps = Props
+
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
 const DEFAULT_WIDTH = 4
