@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useSyncState, type SyncMode } from "../../hooks/useSyncState";
-import type { LiveVideoState } from "./types";
+import { useSyncState, type SyncMode } from "../../../hooks/useSyncState";
+import type { LiveVideoState } from "../types";
 
 const RETRY_DELAY_MS = 2000;
 

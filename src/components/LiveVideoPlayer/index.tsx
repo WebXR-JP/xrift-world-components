@@ -3,7 +3,7 @@ import { Text } from "@react-three/drei";
 import { ControlPanel, LiveVideoTexture } from "./components";
 import { ErrorBoundary } from "../commons/ErrorBoundary";
 import { PlaceholderScreen } from "../commons/PlaceholderScreen";
-import { useLiveVideoPlayer } from "./hooks";
+import { useLiveVideoPlayer } from "./hooks/useLiveVideoPlayer";
 import type { LiveVideoPlayerProps } from "./types";
 
 export type { LiveVideoPlayerProps, LiveVideoState } from "./types";
