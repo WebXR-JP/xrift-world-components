@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { VideoTexture } from 'three'
-import { useWebAudioVolume } from '../useWebAudioVolume'
+import { useWebAudioVolume } from '../../../../hooks/useWebAudioVolume'
 import { appendCacheKey, createVideoTexture, createHlsPlayer } from './utils'
 import { RecoveryTracker } from './classes/RecoveryTracker'
 import type { HlsPlayerStrategy } from './types'

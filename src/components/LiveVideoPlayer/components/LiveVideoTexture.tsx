@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { useHlsVideo } from '../../../hooks/useHlsVideo'
+import { useHlsVideo } from '../hooks/useHlsVideo'
 import { VideoMesh } from '../../commons/VideoMesh'
 
 interface LiveVideoTextureProps {
