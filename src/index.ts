@@ -60,10 +60,7 @@ export {
   type VideoState,
 } from './components/VideoScreen'
 
-export {
-  VideoPlayer,
-  type VideoPlayerProps,
-} from './components/VideoPlayer'
+export { VideoPlayer } from './components/VideoPlayer'
 
 export { LiveVideoPlayer } from './components/LiveVideoPlayer'
 

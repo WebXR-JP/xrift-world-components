@@ -2,7 +2,16 @@ import { memo, useMemo } from 'react'
 import { Interactable } from '../../Interactable'
 import { calculateSegments, calculateProgressBar } from '../../commons/utils'
 import { formatTime } from '../utils'
-import type { ProgressBarProps } from '../types'
+
+interface Props {
+  id: string
+  position: [number, number, number]
+  width: number
+  height: number
+  progress: number
+  duration: number
+  onSeek: (time: number) => void
+}
 
 const SEGMENTS = 20
 
@@ -15,7 +24,7 @@ export const ProgressBar = memo(
     progress,
     duration,
     onSeek,
-  }: ProgressBarProps) => {
+  }: Props) => {
     const { width: progressWidth, offset: progressOffset } = calculateProgressBar(progress, width)
     const segmentWidth = width / SEGMENTS
 

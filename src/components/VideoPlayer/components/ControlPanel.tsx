@@ -5,7 +5,22 @@ import { VolumeControl } from '../../commons/VolumeControl'
 import { ProgressBar } from './ProgressBar'
 import { formatTime } from '../utils'
 import { useTextInputContext } from '../../../contexts/TextInputContext'
-import type { ControlPanelProps } from '../types'
+
+interface Props {
+  id: string
+  width: number
+  screenHeight: number
+  playing: boolean
+  progress: number
+  duration: number
+  volume: number
+  url: string
+  onPlayPause: () => void
+  onStop: () => void
+  onSeek: (time: number) => void
+  onVolumeChange: (volume: number) => void
+  onUrlChange: (url: string) => void
+}
 
 const PANEL_HEIGHT = 0.15
 const BUTTON_SIZE = PANEL_HEIGHT * 0.6
@@ -27,7 +42,7 @@ export const ControlPanel = memo(
     onSeek,
     onVolumeChange,
     onUrlChange,
-  }: ControlPanelProps) => {
+  }: Props) => {
     const panelY = -screenHeight / 2 - PANEL_HEIGHT / 2
     const progressBarWidth = width * PROGRESS_BAR_WIDTH_RATIO
 

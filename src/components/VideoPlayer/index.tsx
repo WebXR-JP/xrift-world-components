@@ -6,9 +6,23 @@ import { useVideoElement } from '../../hooks/useVideoElement'
 import { VideoMesh } from '../commons/VideoMesh'
 import { ErrorBoundary } from '../commons/ErrorBoundary'
 import { PlaceholderScreen } from '../commons/PlaceholderScreen'
-import type { VideoPlayerProps } from './types'
 
-export type { VideoPlayerProps } from './types'
+interface Props {
+  /** スクリーンの一意なID（必須） */
+  id: string
+  /** スクリーンの位置 */
+  position?: [number, number, number]
+  /** スクリーンの回転 */
+  rotation?: [number, number, number]
+  /** スクリーンの幅（高さは16:9で自動計算、デフォルト: 4） */
+  width?: number
+  /** 動画のURL */
+  url?: string
+  /** 初期再生状態（デフォルト: true） */
+  playing?: boolean
+  /** 初期音量 0〜1（デフォルト: 1） */
+  volume?: number
+}
 
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
@@ -79,7 +93,7 @@ export const VideoPlayer = memo(
     url: initialUrl,
     playing: initialPlaying = true,
     volume: initialVolume = 1,
-  }: VideoPlayerProps) => {
+  }: Props) => {
     const [currentUrl, setCurrentUrl] = useState(initialUrl)
     const [playing, setPlaying] = useState(initialPlaying)
     const [volume, setVolume] = useState(initialVolume)
