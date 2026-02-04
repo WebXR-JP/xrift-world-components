@@ -1,4 +1,5 @@
-import type { RecoveryTracker } from '../RecoveryTracker'
+import type { VideoTexture } from 'three'
+import type { RecoveryTracker } from './classes/RecoveryTracker'
 
 export interface HlsPlayerCallbacks {
   onError?: (error: Error) => void
@@ -21,3 +22,12 @@ export interface HlsPlayerStrategy {
   /** メディアエラーからのリカバリを試行 */
   attemptRecovery(): boolean
 }
+
+export interface VideoTextureResult {
+  video: HTMLVideoElement
+  texture: VideoTexture
+}
+
+export type CreatePlayerResult =
+  | { player: HlsPlayerStrategy; type: 'hlsjs' | 'native' }
+  | { player: null; type: 'unsupported'; error: Error }

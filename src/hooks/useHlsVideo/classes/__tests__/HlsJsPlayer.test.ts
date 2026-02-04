@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { HlsJsPlayer } from '../HlsJsPlayer'
-import { RecoveryTracker } from '../../RecoveryTracker'
+import { RecoveryTracker } from '../RecoveryTracker'
 
 // hls.js のモック
 function createMockHls() {

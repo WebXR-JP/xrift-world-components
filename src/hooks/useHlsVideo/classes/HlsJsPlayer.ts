@@ -1,5 +1,5 @@
 import type Hls from 'hls.js'
-import type { HlsPlayerStrategy, HlsPlayerOptions } from './types'
+import type { HlsPlayerStrategy, HlsPlayerOptions } from '../types'
 
 /** hls.js を使用した HLS プレイヤー */
 export class HlsJsPlayer implements HlsPlayerStrategy {

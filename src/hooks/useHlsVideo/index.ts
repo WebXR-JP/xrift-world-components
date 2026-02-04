@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { VideoTexture } from 'three'
 import { useWebAudioVolume } from '../useWebAudioVolume'
-import { appendCacheKey, createVideoTexture } from './utils'
-import { RecoveryTracker } from './RecoveryTracker'
-import { createHlsPlayer, type HlsPlayerStrategy } from './players'
+import { appendCacheKey, createVideoTexture, createHlsPlayer } from './utils'
+import { RecoveryTracker } from './classes/RecoveryTracker'
+import type { HlsPlayerStrategy } from './types'
 
 export interface UseHlsVideoOptions {
   /** HLS動画URL */

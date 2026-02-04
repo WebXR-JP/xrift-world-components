@@ -1,4 +1,4 @@
-import type { HlsPlayerStrategy, HlsPlayerOptions } from './types'
+import type { HlsPlayerStrategy, HlsPlayerOptions } from '../types'
 
 // MediaError.MEDIA_ERR_DECODE の値（テスト環境での互換性のため直接定義）
 const MEDIA_ERR_DECODE = 3
