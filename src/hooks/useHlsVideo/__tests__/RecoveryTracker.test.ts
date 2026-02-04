@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { RecoveryTracker } from './RecoveryTracker'
+import { RecoveryTracker } from '../RecoveryTracker'
 
 describe('RecoveryTracker', () => {
   beforeEach(() => {

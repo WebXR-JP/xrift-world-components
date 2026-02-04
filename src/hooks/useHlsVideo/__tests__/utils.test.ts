@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isHlsUrl, appendCacheKey } from './utils'
+import { isHlsUrl, appendCacheKey } from '../utils'
 
 describe('isHlsUrl', () => {
   it('.m3u8 を含む URL は true', () => {

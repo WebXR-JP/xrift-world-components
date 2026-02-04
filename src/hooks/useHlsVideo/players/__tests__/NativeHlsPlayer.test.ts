@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { NativeHlsPlayer } from './NativeHlsPlayer'
-import { RecoveryTracker } from '../RecoveryTracker'
+import { NativeHlsPlayer } from '../NativeHlsPlayer'
+import { RecoveryTracker } from '../../RecoveryTracker'
 
 // MediaError 定数（jsdom にないため定義）
 const MEDIA_ERR_DECODE = 3
