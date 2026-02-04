@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatTime } from './utils'
+import { formatTime } from '../utils'
 
 describe('formatTime', () => {
   it('0秒を0:00にフォーマット', () => {

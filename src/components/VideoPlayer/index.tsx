@@ -1,7 +1,7 @@
 import { memo, Suspense, useState, useCallback, useRef } from 'react'
 import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
-import { ControlPanel } from './ControlPanel'
+import { ControlPanel } from './components'
 import { useVideoElement } from '../../hooks/useVideoElement'
 import { VideoMesh } from '../commons/VideoMesh'
 import { ErrorBoundary } from '../commons/ErrorBoundary'

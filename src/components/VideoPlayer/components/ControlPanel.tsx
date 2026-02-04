@@ -1,11 +1,11 @@
 import { memo, useCallback } from 'react'
 import { Text } from '@react-three/drei'
-import { IconButton } from '../commons/IconButton'
-import { VolumeControl } from '../commons/VolumeControl'
+import { IconButton } from '../../commons/IconButton'
+import { VolumeControl } from '../../commons/VolumeControl'
 import { ProgressBar } from './ProgressBar'
-import { formatTime } from './utils'
-import { useTextInputContext } from '../../contexts/TextInputContext'
-import type { ControlPanelProps } from './types'
+import { formatTime } from '../utils'
+import { useTextInputContext } from '../../../contexts/TextInputContext'
+import type { ControlPanelProps } from '../types'
 
 const PANEL_HEIGHT = 0.15
 const BUTTON_SIZE = PANEL_HEIGHT * 0.6
