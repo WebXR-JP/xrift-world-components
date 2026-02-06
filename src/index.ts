@@ -95,6 +95,9 @@ export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
 export { useWebAudioVolume } from './hooks/useWebAudioVolume'
 
+// Constants
+export { LAYERS, type LayerName, type LayerNumber } from './constants/layers'
+
 // Types
 export {
   type PlayerMovement,
