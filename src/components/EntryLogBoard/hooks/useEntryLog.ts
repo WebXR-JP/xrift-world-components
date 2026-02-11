@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useUsers } from '../../../contexts/UsersContext'
 import { useInstanceState } from '../../../hooks/useInstanceState'
 
 import { DEFAULT_KNOWN_USERS, DEFAULT_LOGS } from '../constants'
 import type { KnownUser, LogEntry } from '../types'
-import { buildLeaveEntry, getLeaderUserId, mergeLogs, processJoins } from '../utils'
+import { getLeaderUserId, mergeLogs, processJoins } from '../utils'
+import { useHydration } from './useHydration'
+import { useLeaveDetection } from './useLeaveDetection'
 
 interface Params {
   stateNamespace: string
@@ -23,25 +25,20 @@ export const useEntryLog = ({
   displayNameFallback,
   formatTimestamp,
 }: Params) => {
-  const logsStateKey = `${stateNamespace}-logs`
-  const knownUsersStateKey = `${stateNamespace}-known-users`
-
   const { localUser, remoteUsers } = useUsers()
-  const [logs, setLogs] = useInstanceState<LogEntry[]>(logsStateKey, DEFAULT_LOGS)
-  const [knownUsers, setKnownUsers] = useInstanceState<KnownUser[]>(knownUsersStateKey, DEFAULT_KNOWN_USERS)
-  const [leaderReady, setLeaderReady] = useState(false)
+  const [logs, setLogs] = useInstanceState<LogEntry[]>(`${stateNamespace}-logs`, DEFAULT_LOGS)
+  const [knownUsers, setKnownUsers] = useInstanceState<KnownUser[]>(`${stateNamespace}-known-users`, DEFAULT_KNOWN_USERS)
 
-  const leaderRef = useRef<string | null>(null)
-  const leaderSinceMsRef = useRef<number>(0)
-  const isLeaderRef = useRef(false)
-  const currentUserIdsRef = useRef<Set<string>>(new Set())
-  const leaveTimersRef = useRef<Map<string, number>>(new Map())
-  const leaderReadyTimerRef = useRef<number | null>(null)
-  const initialLogsRef = useRef<LogEntry[] | null>(null)
-  const initialKnownUsersRef = useRef<KnownUser[] | null>(null)
-  const hasHydratedRef = useRef(false)
   const formatTimestampRef = useRef(formatTimestamp)
   const maxEntriesRef = useRef(maxEntries)
+  const leaderRef = useRef<string | null>(null)
+  const leaderSinceMsRef = useRef<number>(0)
+  const leaderReadyTimerRef = useRef<number | null>(null)
+
+  useEffect(() => { formatTimestampRef.current = formatTimestamp }, [formatTimestamp])
+  useEffect(() => { maxEntriesRef.current = maxEntries }, [maxEntries])
+
+  const { hasHydratedRef, leaderReady, setLeaderReady } = useHydration(logs, knownUsers)
 
   const allUsers = useMemo(() => {
     const list = [...remoteUsers]
@@ -54,65 +51,24 @@ export const useEntryLog = ({
     [displayNameFallback],
   )
 
-  // --- ref 同期 ---
-
-  useEffect(() => {
-    formatTimestampRef.current = formatTimestamp
-  }, [formatTimestamp])
-
-  useEffect(() => {
-    maxEntriesRef.current = maxEntries
-  }, [maxEntries])
-
-  // --- ハイドレーション検出 ---
-
-  useEffect(() => {
-    if (initialLogsRef.current === null) {
-      initialLogsRef.current = logs
-      if (logs.length > 0) hasHydratedRef.current = true
-    }
-  }, [logs])
-
-  useEffect(() => {
-    if (initialKnownUsersRef.current === null) {
-      initialKnownUsersRef.current = knownUsers
-      if (knownUsers.length > 0) hasHydratedRef.current = true
-    }
-  }, [knownUsers])
-
-  useEffect(() => {
-    if (initialLogsRef.current && logs !== initialLogsRef.current) {
-      hasHydratedRef.current = true
-    }
-  }, [logs])
-
-  useEffect(() => {
-    if (initialKnownUsersRef.current && knownUsers !== initialKnownUsersRef.current) {
-      hasHydratedRef.current = true
-    }
-  }, [knownUsers])
-
-  useEffect(() => {
-    if (hasHydratedRef.current) {
-      setLeaderReady(true)
-    }
-  }, [logs, knownUsers])
-
-  // --- タイマー管理 ---
-
-  const clearLeaveTimers = useCallback(() => {
-    for (const timerId of leaveTimersRef.current.values()) {
-      clearTimeout(timerId)
-    }
-    leaveTimersRef.current.clear()
-  }, [])
-
   const appendLogs = useCallback((newEntries: LogEntry[]) => {
     if (newEntries.length === 0) return
     setLogs((prev) => mergeLogs(prev, newEntries, maxEntriesRef.current))
   }, [setLogs])
 
-  // --- JOIN 処理 ---
+  const { clearLeaveTimers } = useLeaveDetection({
+    allUsers,
+    knownUsers,
+    localUser,
+    leaderReady,
+    leaveGraceMs,
+    hasHydratedRef,
+    formatTimestampRef,
+    appendLogs,
+    setKnownUsers,
+  })
+
+  // --- JOIN 処理 + リーダー遷移 ---
 
   useEffect(() => {
     if (!localUser) return
@@ -121,8 +77,6 @@ export const useEntryLog = ({
     const nowMs = Date.now()
     const leaderUserId = getLeaderUserId(allUsers)
     const isLeader = leaderUserId === localUser.id
-
-    isLeaderRef.current = isLeader
 
     if (leaderRef.current !== leaderUserId) {
       leaderRef.current = leaderUserId
@@ -154,7 +108,6 @@ export const useEntryLog = ({
         avatarUrl: user.avatarUrl,
       })
     }
-    currentUserIdsRef.current = new Set(currentUsersById.keys())
 
     setKnownUsers((prev) => {
       const { nextKnownUsers, joinEntries } = processJoins(prev, currentUsersById, formatTimestampRef.current)
@@ -165,68 +118,13 @@ export const useEntryLog = ({
     allUsers,
     appendLogs,
     clearLeaveTimers,
+    hasHydratedRef,
     leaderReady,
     leaderHydrationGraceMs,
     localUser,
     resolveDisplayName,
     setKnownUsers,
-  ])
-
-  // --- LEAVE 処理 ---
-
-  useEffect(() => {
-    if (!localUser) return
-    if (allUsers.length === 0) return
-    const leaderUserId = getLeaderUserId(allUsers)
-    const isLeader = leaderUserId === localUser.id
-    isLeaderRef.current = isLeader
-    if (!isLeader) return
-
-    const canWrite = hasHydratedRef.current || (leaderReady && allUsers.length === 1)
-    if (!canWrite) return
-
-    const currentUserIds = new Set(allUsers.map((u) => u.id))
-    currentUserIdsRef.current = currentUserIds
-
-    for (const userId of currentUserIds) {
-      const timerId = leaveTimersRef.current.get(userId)
-      if (timerId !== undefined) {
-        clearTimeout(timerId)
-        leaveTimersRef.current.delete(userId)
-      }
-    }
-
-    for (const known of knownUsers) {
-      if (currentUserIds.has(known.userId)) continue
-      if (leaveTimersRef.current.has(known.userId)) continue
-
-      const timerId = window.setTimeout(() => {
-        if (!isLeaderRef.current) return
-        if (currentUserIdsRef.current.has(known.userId)) return
-
-        const leftAt = formatTimestampRef.current()
-
-        setKnownUsers((prev) => {
-          const stillThere = prev.some((u) => u.userId === known.userId)
-          if (!stillThere) return prev
-
-          appendLogs([buildLeaveEntry(known, leftAt)])
-          return prev.filter((u) => u.userId !== known.userId)
-        })
-
-        leaveTimersRef.current.delete(known.userId)
-      }, leaveGraceMs)
-
-      leaveTimersRef.current.set(known.userId, timerId)
-    }
-  }, [
-    allUsers,
-    appendLogs,
-    knownUsers,
-    leaderReady,
-    leaveGraceMs,
-    localUser,
-    setKnownUsers,
+    setLeaderReady,
   ])
 
   // --- クリーンアップ ---
@@ -237,9 +135,8 @@ export const useEntryLog = ({
         clearTimeout(leaderReadyTimerRef.current)
         leaderReadyTimerRef.current = null
       }
-      clearLeaveTimers()
     }
-  }, [clearLeaveTimers])
+  }, [])
 
   return { logs }
 }
