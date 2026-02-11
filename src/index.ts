@@ -90,6 +90,13 @@ export {
   type Video180SphereProps,
 } from './components/Video180Sphere'
 
+export {
+  DevEnvironment,
+  type DevEnvironmentProps,
+} from './components/DevEnvironment'
+
+export { type PhysicsConfig } from './components/DevEnvironment/types'
+
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
