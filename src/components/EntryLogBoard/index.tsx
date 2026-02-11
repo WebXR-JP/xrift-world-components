@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { RigidBody } from '@react-three/rapier'
 import { Text } from '@react-three/drei'
 
 import { DEFAULT_COLORS, DEFAULT_LABELS, DEFAULT_PLACEHOLDER_ENTRIES } from './constants'
@@ -95,12 +94,7 @@ export const EntryLogBoard: React.FC<Props> = ({
   const startY = (boardHeight / 2) - headerHeight - padding - (lineHeight / 2)
 
   return (
-    <RigidBody
-      type="fixed"
-      colliders="cuboid"
-      position={position}
-      rotation={rotation}
-    >
+    <group position={position} rotation={rotation}>
       <mesh>
         <boxGeometry args={[boardWidth, boardHeight, 0.01 * scale]} />
         <meshStandardMaterial color={resolvedColors.background} />
@@ -140,6 +134,6 @@ export const EntryLogBoard: React.FC<Props> = ({
           resolvedColors={resolvedColors}
         />
       ))}
-    </RigidBody>
+    </group>
   )
 }
