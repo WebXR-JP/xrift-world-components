@@ -91,6 +91,15 @@ export {
 } from './components/Video180Sphere'
 
 export {
+  EntryLogBoard,
+  type EntryLogBoardProps,
+  type EntryLogBoardLabels,
+  type EntryLogBoardColors,
+  type KnownUser,
+  type LogEntry,
+} from './components/EntryLogBoard'
+
+export {
   DevEnvironment,
   type DevEnvironmentProps,
 } from './components/DevEnvironment'
