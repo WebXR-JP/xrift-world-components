@@ -301,5 +301,5 @@ export const useEntryLog = ({
     }
   }, [clearLeaveTimers])
 
-  return { logs, localUser }
+  return { logs }
 }

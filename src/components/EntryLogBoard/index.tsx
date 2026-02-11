@@ -1,13 +1,11 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { RigidBody } from '@react-three/rapier'
 import { Text } from '@react-three/drei'
-import { useXRift } from '../../contexts/XRiftContext'
 
 import { DEFAULT_COLORS, DEFAULT_LABELS, DEFAULT_PLACEHOLDER_ENTRIES } from './constants'
-import type { Props } from './types'
+import type { LogEntry, Props } from './types'
 import { defaultFormatTimestamp } from './utils'
 import { useEntryLog } from './hooks/useEntryLog'
-import { useChime } from './hooks/useChime'
 import { LogRow } from './components/LogRow'
 
 export type {
@@ -26,12 +24,13 @@ export const EntryLogBoard: React.FC<Props> = ({
   stateNamespace = 'entry-log',
   leaveGraceMs = 5_000,
   leaderHydrationGraceMs = 3_000,
-  chimeFileName = 'chime.mp3',
   labels,
   colors,
   placeholderEntries,
   displayNameFallback = 'ユーザー',
   formatTimestamp = defaultFormatTimestamp,
+  onJoin,
+  onLeave,
 }) => {
   const resolvedLabels = useMemo(() => ({ ...DEFAULT_LABELS, ...labels }), [labels])
   const resolvedColors = useMemo(() => ({ ...DEFAULT_COLORS, ...colors }), [colors])
@@ -40,13 +39,7 @@ export const EntryLogBoard: React.FC<Props> = ({
     [placeholderEntries],
   )
 
-  const { baseUrl } = useXRift()
-  const chimeUrl = useMemo(() => {
-    const normalized = chimeFileName.startsWith('/') ? chimeFileName.slice(1) : chimeFileName
-    return `${baseUrl}${normalized}`
-  }, [baseUrl, chimeFileName])
-
-  const { logs, localUser } = useEntryLog({
+  const { logs } = useEntryLog({
     stateNamespace,
     maxEntries,
     leaveGraceMs,
@@ -55,7 +48,29 @@ export const EntryLogBoard: React.FC<Props> = ({
     formatTimestamp,
   })
 
-  useChime({ logs, localUserId: localUser?.id, chimeUrl })
+  // --- イベントコールバック ---
+
+  const onJoinRef = useRef(onJoin)
+  const onLeaveRef = useRef(onLeave)
+  const prevLogsLenRef = useRef<number | null>(null)
+
+  useEffect(() => { onJoinRef.current = onJoin }, [onJoin])
+  useEffect(() => { onLeaveRef.current = onLeave }, [onLeave])
+
+  useEffect(() => {
+    const prevLen = prevLogsLenRef.current
+    prevLogsLenRef.current = logs.length
+
+    // 初回レンダーではコールバックを発火しない
+    if (prevLen === null) return
+    if (logs.length <= prevLen) return
+
+    const delta = logs.slice(prevLen)
+    for (const entry of delta) {
+      if (entry.type === 'join') onJoinRef.current?.(entry)
+      if (entry.type === 'leave') onLeaveRef.current?.(entry)
+    }
+  }, [logs])
 
   // --- レイアウト計算 ---
 

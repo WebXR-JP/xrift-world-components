@@ -58,6 +58,8 @@ export interface Props {
   displayNameFallback?: string
   /** タイムスタンプ生成をカスタムしたい場合に渡す。 */
   formatTimestamp?: () => string
-  /** チャイム音ファイル名（public配下）。`${baseUrl}{chimeFileName}` で読み込みます。 */
-  chimeFileName?: string
+  /** ユーザー入室時のコールバック。 */
+  onJoin?: (entry: LogEntry) => void
+  /** ユーザー退室時のコールバック。 */
+  onLeave?: (entry: LogEntry) => void
 }
