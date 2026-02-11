@@ -6,6 +6,7 @@ import { Skybox } from "../components/Skybox";
 import { TextInput } from "../components/TextInput";
 import { TagBoard } from "../components/TagBoard";
 import { Video180Sphere } from "../components/Video180Sphere";
+import { EntryLogBoard } from "../components/EntryLogBoard";
 
 /**
  * VideoScreenとMirrorのテストシーン
@@ -115,6 +116,14 @@ export function TestScene() {
         instanceStateKey="test-tags"
         position={[0, 2, 7]}
         rotation={[0, Math.PI, 0]}
+      />
+
+      {/* 入退室ログボード */}
+      <EntryLogBoard
+        position={[5, 1.5, 3]}
+        rotation={[0, -Math.PI / 4, 0]}
+        onJoin={(entry) => console.log(`[EntryLogBoard] join: ${entry.displayName}`)}
+        onLeave={(entry) => console.log(`[EntryLogBoard] leave: ${entry.displayName}`)}
       />
 
       {/* 180度ステレオ動画プレイヤー */}
