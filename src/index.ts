@@ -44,6 +44,14 @@ export {
   type TextInputRequest,
 } from './contexts/TextInputContext'
 
+export {
+  WorldEventContext,
+  WorldEventProvider,
+  useWorldEventContext,
+  createDefaultWorldEventImplementation,
+  type WorldEventContextValue,
+} from './contexts/WorldEventContext'
+
 // Components
 export {
   Interactable,
@@ -101,6 +109,7 @@ export { type PhysicsConfig } from './components/DevEnvironment/types'
 export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
 export { useWebAudioVolume } from './hooks/useWebAudioVolume'
+export { useWorldEvent } from './hooks/useWorldEvent'
 
 // Constants
 export { LAYERS, type LayerName, type LayerNumber } from './constants/layers'
