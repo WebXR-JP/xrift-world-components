@@ -4,7 +4,7 @@ import { useInstanceState } from '../../../hooks/useInstanceState'
 
 import { DEFAULT_KNOWN_USERS, DEFAULT_LOGS } from '../constants'
 import type { KnownUser, LogEntry } from '../types'
-import { getLeaderUserId } from '../utils'
+import { buildLeaveEntry, getLeaderUserId, mergeLogs, processJoins } from '../utils'
 
 interface Params {
   stateNamespace: string
@@ -109,17 +109,7 @@ export const useEntryLog = ({
 
   const appendLogs = useCallback((newEntries: LogEntry[]) => {
     if (newEntries.length === 0) return
-
-    setLogs((prevLogs) => {
-      const seen = new Set(prevLogs.map((e) => e.id))
-      const merged = [...prevLogs]
-      for (const entry of newEntries) {
-        if (seen.has(entry.id)) continue
-        seen.add(entry.id)
-        merged.push(entry)
-      }
-      return merged.slice(-maxEntriesRef.current)
-    })
+    setLogs((prev) => mergeLogs(prev, newEntries, maxEntriesRef.current))
   }, [setLogs])
 
   // --- JOIN 処理 ---
@@ -144,9 +134,6 @@ export const useEntryLog = ({
         leaderReadyTimerRef.current = null
       }
       setLeaderReady(false)
-      // タイマーでの書き込み解禁は「自分だけがいる」場合のみに限定する。
-      // 既に他ユーザーがいるのに未ハイドレーションのまま書き込むと、
-      // 既存ログ/knownUsers を空で上書きする事故が起こり得る。
       if (isLeader && allUsers.length === 1 && !hasHydratedRef.current) {
         leaderReadyTimerRef.current = window.setTimeout(() => {
           setLeaderReady(true)
@@ -169,45 +156,8 @@ export const useEntryLog = ({
     }
     currentUserIdsRef.current = new Set(currentUsersById.keys())
 
-    setKnownUsers((prevKnownUsers) => {
-      const prevByUserId = new Map(prevKnownUsers.map((u) => [u.userId, u]))
-      const nextKnownUsers: KnownUser[] = [...prevKnownUsers]
-      const joinEntries: LogEntry[] = []
-
-      for (let i = 0; i < nextKnownUsers.length; i += 1) {
-        const user = nextKnownUsers[i]
-        const current = currentUsersById.get(user.userId)
-        if (!current) continue
-        if (user.displayName !== current.displayName || user.avatarUrl !== current.avatarUrl) {
-          nextKnownUsers[i] = {
-            ...user,
-            displayName: current.displayName,
-            avatarUrl: current.avatarUrl,
-          }
-        }
-      }
-
-      for (const [userId, current] of currentUsersById) {
-        if (prevByUserId.has(userId)) continue
-
-        const joinedAt = formatTimestampRef.current()
-        nextKnownUsers.push({
-          userId,
-          displayName: current.displayName,
-          avatarUrl: current.avatarUrl,
-          joinedAt,
-        })
-
-        joinEntries.push({
-          id: `join-${userId}-${joinedAt}`,
-          userId,
-          displayName: current.displayName,
-          type: 'join',
-          timestamp: formatTimestampRef.current(),
-          avatarUrl: current.avatarUrl,
-        })
-      }
-
+    setKnownUsers((prev) => {
+      const { nextKnownUsers, joinEntries } = processJoins(prev, currentUsersById, formatTimestampRef.current)
       appendLogs(joinEntries)
       return nextKnownUsers
     })
@@ -256,22 +206,12 @@ export const useEntryLog = ({
 
         const leftAt = formatTimestampRef.current()
 
-        setKnownUsers((prevKnownUsers) => {
-          const stillThere = prevKnownUsers.some((u) => u.userId === known.userId)
-          if (!stillThere) return prevKnownUsers
+        setKnownUsers((prev) => {
+          const stillThere = prev.some((u) => u.userId === known.userId)
+          if (!stillThere) return prev
 
-          appendLogs([
-            {
-              id: `leave-${known.userId}-${known.joinedAt}`,
-              userId: known.userId,
-              displayName: known.displayName,
-              type: 'leave',
-              timestamp: leftAt,
-              avatarUrl: known.avatarUrl,
-            },
-          ])
-
-          return prevKnownUsers.filter((u) => u.userId !== known.userId)
+          appendLogs([buildLeaveEntry(known, leftAt)])
+          return prev.filter((u) => u.userId !== known.userId)
         })
 
         leaveTimersRef.current.delete(known.userId)
