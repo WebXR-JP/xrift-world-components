@@ -1,12 +1,14 @@
 import { useMemo } from 'react'
 import { RigidBody } from '@react-three/rapier'
-import { Text, useTexture } from '@react-three/drei'
+import { Text } from '@react-three/drei'
 import { useXRift } from '../../contexts/XRiftContext'
 
 import { DEFAULT_COLORS, DEFAULT_LABELS, DEFAULT_PLACEHOLDER_ENTRIES } from './constants'
-import type { LogEntry, Props } from './types'
+import type { Props } from './types'
 import { defaultFormatTimestamp } from './utils'
-import { useChime, useEntryLog } from './hooks'
+import { useEntryLog } from './hooks/useEntryLog'
+import { useChime } from './hooks/useChime'
+import { LogRow } from './components/LogRow'
 
 export type {
   Colors as EntryLogBoardColors,
@@ -15,20 +17,6 @@ export type {
   KnownUser,
   LogEntry,
 } from './types'
-
-const AvatarIcon: React.FC<{
-  url: string
-  size: number
-  position: [number, number, number]
-}> = ({ url, size, position }) => {
-  const texture = useTexture(url)
-  return (
-    <mesh position={position}>
-      <circleGeometry args={[size / 2, 32]} />
-      <meshStandardMaterial map={texture} />
-    </mesh>
-  )
-}
 
 export const EntryLogBoard: React.FC<Props> = ({
   position = [0, 1.5, 0],
@@ -138,72 +126,5 @@ export const EntryLogBoard: React.FC<Props> = ({
         />
       ))}
     </RigidBody>
-  )
-}
-
-// --- LogRow ---
-
-const LogRow: React.FC<{
-  entry: LogEntry
-  y: number
-  scale: number
-  textZ: number
-  timestampX: number
-  typeX: number
-  avatarX: number
-  avatarSize: number
-  nameX: number
-  boardWidth: number
-  padding: number
-  resolvedLabels: Required<{ title: string; join: string; leave: string }>
-  resolvedColors: Required<{
-    background: string; header: string; title: string
-    timestamp: string; text: string; join: string; leave: string
-  }>
-}> = ({
-  entry, y, scale, textZ,
-  timestampX, typeX, avatarX, avatarSize, nameX,
-  boardWidth, padding, resolvedLabels, resolvedColors,
-}) => {
-  const typeLabel = entry.type === 'join' ? resolvedLabels.join : resolvedLabels.leave
-  const typeColor = entry.type === 'join' ? resolvedColors.join : resolvedColors.leave
-
-  return (
-    <group position={[0, 0, textZ]}>
-      <Text
-        position={[timestampX, y, 0]}
-        color={resolvedColors.timestamp}
-        fontSize={0.0711 * scale}
-        anchorX="left"
-        anchorY="middle"
-      >
-        {entry.timestamp}
-      </Text>
-
-      <Text
-        position={[typeX, y, 0]}
-        color={typeColor}
-        fontSize={0.0711 * scale}
-        anchorX="left"
-        anchorY="middle"
-      >
-        {typeLabel}
-      </Text>
-
-      {entry.avatarUrl && (
-        <AvatarIcon url={entry.avatarUrl} size={avatarSize} position={[avatarX, y, textZ]} />
-      )}
-
-      <Text
-        position={[nameX, y, 0]}
-        color={resolvedColors.text}
-        fontSize={0.0711 * scale}
-        anchorX="left"
-        anchorY="middle"
-        maxWidth={boardWidth - (nameX - (-boardWidth / 2)) - padding}
-      >
-        {entry.displayName}
-      </Text>
-    </group>
   )
 }
