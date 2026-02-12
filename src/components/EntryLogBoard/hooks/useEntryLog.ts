@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { useUsers } from '../../../contexts/UsersContext'
 import { useInstanceState } from '../../../hooks/useInstanceState'
 import { useWorldEvent } from '../../../hooks/useWorldEvent'
@@ -35,23 +35,22 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
   optionsRef.current = options
 
   // ユーザー情報キャッシュ（退室時に useUsers から消えている可能性があるため）
+  // レンダー本体で同期的に更新し、イベントコールバックより先にキャッシュを確定させる
   const userCacheRef = useRef(
     new Map<string, { displayName: string; avatarUrl: string | null }>(),
   )
-  useEffect(() => {
-    if (localUser) {
-      userCacheRef.current.set(localUser.id, {
-        displayName: localUser.displayName,
-        avatarUrl: localUser.avatarUrl,
-      })
-    }
-    for (const user of remoteUsers) {
-      userCacheRef.current.set(user.id, {
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-      })
-    }
-  }, [localUser, remoteUsers])
+  if (localUser) {
+    userCacheRef.current.set(localUser.id, {
+      displayName: localUser.displayName,
+      avatarUrl: localUser.avatarUrl,
+    })
+  }
+  for (const user of remoteUsers) {
+    userCacheRef.current.set(user.id, {
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+    })
+  }
 
   // user-joined イベント
   useWorldEvent<UserJoinedEvent>('user-joined', (data) => {
