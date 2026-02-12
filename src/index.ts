@@ -103,6 +103,11 @@ export {
   type DevEnvironmentProps,
 } from './components/DevEnvironment'
 
+export {
+  EntryLogBoard,
+  type EntryLogBoardProps,
+} from './components/EntryLogBoard'
+
 export { type PhysicsConfig } from './components/DevEnvironment/types'
 
 // Hooks
