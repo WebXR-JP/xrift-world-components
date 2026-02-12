@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useUsers } from '../../../contexts/UsersContext'
 import { useInstanceState } from '../../../hooks/useInstanceState'
 import { useWorldEvent } from '../../../hooks/useWorldEvent'
@@ -51,6 +51,26 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
       avatarUrl: user.avatarUrl,
     })
   }
+
+  // 自分自身の入室ログ補完
+  // コンポーネントマウントより前に user-joined が発火するため、
+  // localUser が確定した時点で自分の join ログがなければ追加する
+  const selfJoinedRef = useRef(false)
+  useEffect(() => {
+    if (!localUser || selfJoinedRef.current) return
+    selfJoinedRef.current = true
+    const opts = optionsRef.current
+    const entry = createLogEntry(
+      'join',
+      localUser.id,
+      localUser.displayName,
+      localUser.avatarUrl,
+      logsRef.current,
+      opts.formatTimestamp,
+    )
+    setLogs((prev) => mergeLogs(prev, entry, opts.maxEntries))
+    opts.onJoin?.(entry)
+  }, [localUser, setLogs])
 
   // user-joined イベント
   useWorldEvent<UserJoinedEvent>('user-joined', (data) => {

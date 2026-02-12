@@ -2,7 +2,7 @@ import { type Colors, type Labels, type LogEntry } from './types'
 
 export const DEFAULT_STATE_NAMESPACE = 'entry-log'
 
-export const DEFAULT_MAX_ENTRIES = 20
+export const DEFAULT_MAX_ENTRIES = 10
 
 export const DEFAULT_DISPLAY_NAME_FALLBACK = 'Unknown'
 
