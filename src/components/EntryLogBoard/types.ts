@@ -3,7 +3,7 @@ export type LogType = 'join' | 'leave'
 
 /** 入退室ログの1件分 */
 export interface LogEntry {
-  /** 決定論的に生成されるID（冪等なマージ用） */
+  /** エントリを一意に識別するID */
   id: string
   /** ログ種別 */
   type: LogType
@@ -50,8 +50,6 @@ export interface UserLeftEvent {
 
 /** EntryLogBoard のプロパティ */
 export interface Props {
-  /** インスタンス状態のキー（複数ボード設置時の識別用） */
-  stateNamespace?: string
   /** 最大表示件数 */
   maxEntries?: number
   /** タイムスタンプのフォーマット関数 */

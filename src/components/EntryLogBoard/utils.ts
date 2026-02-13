@@ -1,34 +1,30 @@
 import { type LogEntry, type LogType } from './types'
 
 /**
+ * キャッシュからユーザー情報を解決する
+ *
+ * キャッシュにヒットすればその情報を返し、
+ * ミスした場合は fallbackName と null を返す。
+ */
+export const resolveUserInfo = (
+  userId: string,
+  cache: Map<string, { displayName: string; avatarUrl: string | null }>,
+  fallbackName: string,
+): { displayName: string; avatarUrl: string | null } => {
+  const cached = cache.get(userId)
+  return {
+    displayName: cached?.displayName ?? fallbackName,
+    avatarUrl: cached?.avatarUrl ?? null,
+  }
+}
+
+/**
  * デフォルトのタイムスタンプフォーマット（HH:MM 形式）
  */
 export const defaultFormatTimestamp = (date: Date): string => {
   const hours = date.getHours().toString().padStart(2, '0')
   const minutes = date.getMinutes().toString().padStart(2, '0')
   return `${hours}:${minutes}`
-}
-
-/**
- * 決定論的なログエントリIDを生成する
- *
- * 全クライアントが同じ既存ログから同じIDを計算するため、
- * リーダー選出なしで冪等なマージが可能になる。
- *
- * @param type ログ種別（join / leave）
- * @param userId ユーザーID
- * @param existingLogs 既存のログエントリ一覧
- * @returns 決定論的ID（例: "join-user123-2"）
- */
-export const buildLogEntryId = (
-  type: LogType,
-  userId: string,
-  existingLogs: LogEntry[],
-): string => {
-  const sameTypeCount = existingLogs.filter(
-    (log) => log.type === type && log.userId === userId,
-  ).length
-  return `${type}-${userId}-${sameTypeCount}`
 }
 
 /**
@@ -39,10 +35,9 @@ export const createLogEntry = (
   userId: string,
   displayName: string,
   avatarUrl: string | null,
-  existingLogs: LogEntry[],
   formatTimestamp: (date: Date) => string,
 ): LogEntry => ({
-  id: buildLogEntryId(type, userId, existingLogs),
+  id: crypto.randomUUID(),
   type,
   userId,
   displayName,
@@ -51,15 +46,38 @@ export const createLogEntry = (
 })
 
 /**
- * 既存ログに新しいエントリをマージする（重複排除・件数制限）
+ * ログ内の Unknown 表示名をキャッシュで補完する
  *
- * 同じIDのエントリが既に存在する場合は追加しない（冪等性）。
+ * user-joined イベント発火時にまだ remoteUsers が更新されておらず
+ * キャッシュミスで Unknown になったエントリを、後から修復する。
+ * 変更がなければ元の配列をそのまま返す（参照同一性を維持）。
  */
-export const mergeLogs = (
-  existingLogs: LogEntry[],
-  newEntry: LogEntry,
-  maxEntries: number,
+export const enrichLogsWithCache = (
+  logs: LogEntry[],
+  fallbackName: string,
+  cache: Map<string, { displayName: string; avatarUrl: string | null }>,
 ): LogEntry[] => {
-  if (existingLogs.some((log) => log.id === newEntry.id)) return existingLogs
-  return [...existingLogs, newEntry].slice(-maxEntries)
+  let needsEnrich = false
+  for (const log of logs) {
+    if (log.displayName === fallbackName && cache.has(log.userId)) {
+      needsEnrich = true
+      break
+    }
+  }
+  if (!needsEnrich) return logs
+  return logs.map((log) => {
+    if (log.displayName !== fallbackName) return log
+    const cached = cache.get(log.userId)
+    if (!cached) return log
+    return { ...log, displayName: cached.displayName, avatarUrl: cached.avatarUrl }
+  })
 }
+
+/**
+ * ログに新しいエントリを追加する（件数制限付き）
+ */
+export const appendLog = (
+  logs: LogEntry[],
+  entry: LogEntry,
+  maxEntries: number,
+): LogEntry[] => [...logs, entry].slice(-maxEntries)

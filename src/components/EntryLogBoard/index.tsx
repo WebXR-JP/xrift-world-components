@@ -3,7 +3,7 @@
  *
  * ワールドへの入退室ログを3D空間のボードに表示する。
  * useWorldEvent でプラットフォームの user-joined / user-left イベントを受信し、
- * useInstanceState でログを全クライアント間で同期する。
+ * ローカルの state にログを蓄積する。
  */
 import { useMemo } from 'react'
 import { Text } from '@react-three/drei'
@@ -14,7 +14,6 @@ import {
   DEFAULT_DISPLAY_NAME_FALLBACK,
   DEFAULT_LABELS,
   DEFAULT_MAX_ENTRIES,
-  DEFAULT_STATE_NAMESPACE,
 } from './constants'
 import { useEntryLog } from './hooks/useEntryLog'
 import { type Colors, type Labels, type Props } from './types'
@@ -27,7 +26,6 @@ const BOARD_PADDING = 0.15
 const TITLE_HEIGHT = 0.35
 
 export const EntryLogBoard = ({
-  stateNamespace = DEFAULT_STATE_NAMESPACE,
   maxEntries = DEFAULT_MAX_ENTRIES,
   formatTimestamp = defaultFormatTimestamp,
   displayNameFallback = DEFAULT_DISPLAY_NAME_FALLBACK,
@@ -49,7 +47,6 @@ export const EntryLogBoard = ({
   )
 
   const logs = useEntryLog({
-    stateNamespace,
     maxEntries,
     displayNameFallback,
     formatTimestamp,
