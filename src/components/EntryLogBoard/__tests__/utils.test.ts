@@ -5,6 +5,7 @@ import {
   buildLogEntryId,
   createLogEntry,
   defaultFormatTimestamp,
+  enrichLogsWithCache,
   isWriterAmong,
   mergeLogs,
 } from '../utils'
@@ -184,6 +185,58 @@ describe('isWriterAmong', () => {
 
   it('候補が1つだけでtargetIdと一致する場合はtrueを返す', () => {
     expect(isWriterAmong(['user-a'], 'user-a')).toBe(true)
+  })
+})
+
+describe('enrichLogsWithCache', () => {
+  const unknownEntry: LogEntry = {
+    id: 'join-user-1-0',
+    type: 'join',
+    userId: 'user-1',
+    displayName: 'Unknown',
+    avatarUrl: null,
+    timestamp: '10:00',
+  }
+
+  const knownEntry: LogEntry = {
+    id: 'join-user-2-0',
+    type: 'join',
+    userId: 'user-2',
+    displayName: 'Bob',
+    avatarUrl: 'https://example.com/bob.png',
+    timestamp: '10:01',
+  }
+
+  it('Unknown エントリをキャッシュの情報で補完する', () => {
+    const cache = new Map([
+      ['user-1', { displayName: 'Alice', avatarUrl: 'https://example.com/alice.png' }],
+    ])
+    const result = enrichLogsWithCache([unknownEntry], 'Unknown', cache)
+    expect(result[0].displayName).toBe('Alice')
+    expect(result[0].avatarUrl).toBe('https://example.com/alice.png')
+  })
+
+  it('Unknown でないエントリはそのまま返す', () => {
+    const logs = [knownEntry]
+    const cache = new Map([
+      ['user-2', { displayName: 'Bob2', avatarUrl: null }],
+    ])
+    const result = enrichLogsWithCache(logs, 'Unknown', cache)
+    expect(result).toBe(logs)
+  })
+
+  it('キャッシュにないユーザーの Unknown はそのまま', () => {
+    const logs = [unknownEntry]
+    const cache = new Map<string, { displayName: string; avatarUrl: string | null }>()
+    const result = enrichLogsWithCache(logs, 'Unknown', cache)
+    expect(result).toBe(logs)
+  })
+
+  it('変更がなければ元の配列参照を返す', () => {
+    const logs = [knownEntry]
+    const cache = new Map<string, { displayName: string; avatarUrl: string | null }>()
+    const result = enrichLogsWithCache(logs, 'Unknown', cache)
+    expect(result).toBe(logs)
   })
 })
 

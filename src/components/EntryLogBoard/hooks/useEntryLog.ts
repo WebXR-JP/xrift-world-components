@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useUsers } from '../../../contexts/UsersContext'
 import { useInstanceState } from '../../../hooks/useInstanceState'
 import { useWorldEvent } from '../../../hooks/useWorldEvent'
@@ -8,7 +8,7 @@ import {
   type UserJoinedEvent,
   type UserLeftEvent,
 } from '../types'
-import { createLogEntry, isWriterAmong, mergeLogs } from '../utils'
+import { createLogEntry, enrichLogsWithCache, isWriterAmong, mergeLogs } from '../utils'
 
 interface UseEntryLogOptions {
   stateNamespace: string
@@ -127,5 +127,38 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
     opts.onLeave?.(entry)
   })
 
-  return logs
+  // Unknown ログの永続修復（ライターのみ）
+  // user-joined 発火時に remoteUsers 未更新でキャッシュミスした Unknown エントリを、
+  // 次のレンダーでキャッシュが更新された後に修正する
+  useEffect(() => {
+    if (!localUser) return
+    const fallback = optionsRef.current.displayNameFallback
+    const currentLogs = logsRef.current
+    if (!currentLogs.some((log) => log.displayName === fallback)) return
+
+    const allIds = [localUser.id, ...remoteUsers.map((u) => u.id)]
+    if (!isWriterAmong(allIds, localUser.id)) return
+
+    const fixedLogs = enrichLogsWithCache(
+      currentLogs,
+      fallback,
+      userCacheRef.current,
+    )
+    if (fixedLogs !== currentLogs) {
+      setLogs(fixedLogs)
+    }
+  }, [localUser, remoteUsers, setLogs])
+
+  // Unknown ログをキャッシュで補完して返す（表示の即時修正）
+  // 永続修復が走る前でも表示上は正しい名前を出す
+  const cacheSize = userCacheRef.current.size
+  return useMemo(
+    () =>
+      enrichLogsWithCache(
+        logs,
+        options.displayNameFallback,
+        userCacheRef.current,
+      ),
+    [logs, options.displayNameFallback, cacheSize],
+  )
 }

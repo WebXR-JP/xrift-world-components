@@ -66,6 +66,34 @@ export const isWriterAmong = (
 }
 
 /**
+ * ログ内の Unknown 表示名をキャッシュで補完する
+ *
+ * user-joined イベント発火時にまだ remoteUsers が更新されておらず
+ * キャッシュミスで Unknown になったエントリを、後から修復する。
+ * 変更がなければ元の配列をそのまま返す（参照同一性を維持）。
+ */
+export const enrichLogsWithCache = (
+  logs: LogEntry[],
+  fallbackName: string,
+  cache: Map<string, { displayName: string; avatarUrl: string | null }>,
+): LogEntry[] => {
+  let needsEnrich = false
+  for (const log of logs) {
+    if (log.displayName === fallbackName && cache.has(log.userId)) {
+      needsEnrich = true
+      break
+    }
+  }
+  if (!needsEnrich) return logs
+  return logs.map((log) => {
+    if (log.displayName !== fallbackName) return log
+    const cached = cache.get(log.userId)
+    if (!cached) return log
+    return { ...log, displayName: cached.displayName, avatarUrl: cached.avatarUrl }
+  })
+}
+
+/**
  * 既存ログに新しいエントリをマージする（重複排除・件数制限）
  *
  * 同じIDのエントリが既に存在する場合は追加しない（冪等性）。
