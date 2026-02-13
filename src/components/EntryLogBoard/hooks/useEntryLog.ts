@@ -52,18 +52,20 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
     })
   }
 
-  // 自分自身の入室ログ補完
-  // コンポーネントマウントより前に user-joined が発火するため、
-  // localUser が確定した時点で自分の join ログがなければ追加する
+  // 自分自身の入室ログ補完（最初のユーザーのみ）
+  // 他のユーザーがいる場合はライターが user-joined イベントで書いてくれるため、
+  // ここでは自分しかいない（＝最初のユーザー）場合のみ自分の入室ログを追加する。
+  // 自分で書くと未同期のローカル状態で上書きしてしまうため。
   const selfJoinedRef = useRef(false)
   useEffect(() => {
     if (!localUser || selfJoinedRef.current) return
     selfJoinedRef.current = true
-    // user-joined イベントが先に処理済みなら追加しない
     const alreadyJoined = logsRef.current.some(
       (log) => log.type === 'join' && log.userId === localUser.id,
     )
     if (alreadyJoined) return
+    // 他のユーザーがいる場合、ライターが user-joined で書くので自分では書かない
+    if (remoteUsers.length > 0) return
     const opts = optionsRef.current
     const entry = createLogEntry(
       'join',
