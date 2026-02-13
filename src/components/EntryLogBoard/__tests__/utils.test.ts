@@ -5,6 +5,7 @@ import {
   buildLogEntryId,
   createLogEntry,
   defaultFormatTimestamp,
+  isWriterAmong,
   mergeLogs,
 } from '../utils'
 
@@ -157,6 +158,32 @@ describe('createLogEntry', () => {
     )
 
     expect(entry.id).toBe('join-user-1-1')
+  })
+})
+
+describe('isWriterAmong', () => {
+  it('辞書順最小のIDがtargetIdと一致する場合はtrueを返す', () => {
+    expect(isWriterAmong(['user-b', 'user-a', 'user-c'], 'user-a')).toBe(true)
+  })
+
+  it('辞書順最小のIDがtargetIdと一致しない場合はfalseを返す', () => {
+    expect(isWriterAmong(['user-b', 'user-a', 'user-c'], 'user-b')).toBe(false)
+  })
+
+  it('targetIdがundefinedの場合はfalseを返す', () => {
+    expect(isWriterAmong(['user-a', 'user-b'], undefined)).toBe(false)
+  })
+
+  it('候補が空配列の場合はfalseを返す', () => {
+    expect(isWriterAmong([], 'user-a')).toBe(false)
+  })
+
+  it('候補にundefinedが含まれていてもフィルタして判定する', () => {
+    expect(isWriterAmong([undefined, 'user-b', 'user-a'], 'user-a')).toBe(true)
+  })
+
+  it('候補が1つだけでtargetIdと一致する場合はtrueを返す', () => {
+    expect(isWriterAmong(['user-a'], 'user-a')).toBe(true)
   })
 })
 

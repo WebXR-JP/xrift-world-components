@@ -51,6 +51,21 @@ export const createLogEntry = (
 })
 
 /**
+ * 候補ID群の中で辞書順最小のIDがtargetIdと一致するかを判定する
+ *
+ * 暗黙的ライター選出に使用。全クライアントが同じ候補群を持つため、
+ * 辞書順最小のクライアントだけが書き込みを行う。
+ */
+export const isWriterAmong = (
+  candidateIds: (string | undefined)[],
+  targetId: string | undefined,
+): boolean => {
+  if (!targetId) return false
+  const sorted = candidateIds.filter((id): id is string => id != null).sort()
+  return sorted.length > 0 && sorted[0] === targetId
+}
+
+/**
  * 既存ログに新しいエントリをマージする（重複排除・件数制限）
  *
  * 同じIDのエントリが既に存在する場合は追加しない（冪等性）。

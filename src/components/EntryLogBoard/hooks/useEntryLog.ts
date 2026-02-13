@@ -8,7 +8,7 @@ import {
   type UserJoinedEvent,
   type UserLeftEvent,
 } from '../types'
-import { createLogEntry, mergeLogs } from '../utils'
+import { createLogEntry, isWriterAmong, mergeLogs } from '../utils'
 
 interface UseEntryLogOptions {
   stateNamespace: string
@@ -78,7 +78,15 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
   }, [localUser, setLogs])
 
   // user-joined イベント
+  // 入室者を除いた既存ユーザーの中で辞書順最小のクライアントだけが書き込む
   useWorldEvent<UserJoinedEvent>('user-joined', (data) => {
+    if (!localUser) return
+    const existingIds = [
+      localUser.id,
+      ...remoteUsers.filter((u) => u.id !== data.userId).map((u) => u.id),
+    ]
+    if (!isWriterAmong(existingIds, localUser.id)) return
+
     const opts = optionsRef.current
     const cached = userCacheRef.current.get(data.userId)
     const entry = createLogEntry(
@@ -94,7 +102,15 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
   })
 
   // user-left イベント
+  // 退室者を除いた残存ユーザーの中で辞書順最小のクライアントだけが書き込む
   useWorldEvent<UserLeftEvent>('user-left', (data) => {
+    if (!localUser) return
+    const remainingIds = [
+      localUser.id,
+      ...remoteUsers.filter((u) => u.id !== data.userId).map((u) => u.id),
+    ]
+    if (!isWriterAmong(remainingIds, localUser.id)) return
+
     const opts = optionsRef.current
     const cached = userCacheRef.current.get(data.userId)
     const entry = createLogEntry(
