@@ -59,6 +59,11 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
   useEffect(() => {
     if (!localUser || selfJoinedRef.current) return
     selfJoinedRef.current = true
+    // user-joined イベントが先に処理済みなら追加しない
+    const alreadyJoined = logsRef.current.some(
+      (log) => log.type === 'join' && log.userId === localUser.id,
+    )
+    if (alreadyJoined) return
     const opts = optionsRef.current
     const entry = createLogEntry(
       'join',
