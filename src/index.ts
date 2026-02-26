@@ -45,6 +45,15 @@ export {
 } from './contexts/TextInputContext'
 
 export {
+  TeleportContext,
+  TeleportProvider,
+  useTeleportContext,
+  createDefaultTeleportImplementation,
+  type TeleportContextValue,
+  type TeleportDestination,
+} from './contexts/TeleportContext'
+
+export {
   WorldEventContext,
   WorldEventProvider,
   useWorldEventContext,
@@ -113,6 +122,7 @@ export { type PhysicsConfig } from './components/DevEnvironment/types'
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
+export { useTeleport } from './hooks/useTeleport'
 export { useWebAudioVolume } from './hooks/useWebAudioVolume'
 export { useWorldEvent } from './hooks/useWorldEvent'
 

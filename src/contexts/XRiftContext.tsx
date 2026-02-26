@@ -4,6 +4,11 @@ import { InstanceStateProvider, type InstanceStateContextValue } from './Instanc
 import { ScreenShareProvider, type ScreenShareContextValue } from './ScreenShareContext'
 import { SpawnPointProvider, type SpawnPointContextValue } from './SpawnPointContext'
 import {
+  TeleportProvider,
+  createDefaultTeleportImplementation,
+  type TeleportContextValue,
+} from './TeleportContext'
+import {
   TextInputProvider,
   createDefaultTextInputImplementation,
   type TextInputContextValue,
@@ -73,6 +78,11 @@ interface Props {
    */
   spawnPointImplementation?: SpawnPointContextValue
   /**
+   * テレポート機能の実装（オプション）
+   * 指定しない場合はデフォルト実装（console.log）が使用される
+   */
+  teleportImplementation?: TeleportContextValue
+  /**
    * テキスト入力の実装（オプション）
    * 指定しない場合はデフォルト実装（ブラウザのprompt）が使用される
    */
@@ -100,6 +110,7 @@ export const XRiftProvider = ({
   instanceStateImplementation,
   screenShareImplementation,
   spawnPointImplementation,
+  teleportImplementation,
   textInputImplementation,
   usersImplementation,
   worldEventImplementation,
@@ -118,6 +129,12 @@ export const XRiftProvider = ({
   const textInputImpl = useMemo(
     () => textInputImplementation ?? createDefaultTextInputImplementation(),
     [textInputImplementation],
+  )
+
+  // テレポートの実装（指定がない場合はデフォルト実装を使用）
+  const teleportImpl = useMemo(
+    () => teleportImplementation ?? createDefaultTeleportImplementation(),
+    [teleportImplementation],
   )
 
   // ワールドイベントの実装（指定がない場合はデフォルト実装を使用）
@@ -151,7 +168,9 @@ export const XRiftProvider = ({
             <SpawnPointProvider implementation={spawnPointImplementation}>
               <UsersProvider implementation={usersImplementation}>
                 <WorldEventProvider value={worldEventImpl}>
-                  {children}
+                  <TeleportProvider value={teleportImpl}>
+                    {children}
+                  </TeleportProvider>
                 </WorldEventProvider>
               </UsersProvider>
             </SpawnPointProvider>
