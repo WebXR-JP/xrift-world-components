@@ -126,6 +126,8 @@ export {
   type EntryLogBoardProps,
 } from './components/EntryLogBoard'
 
+export { Portal, type PortalProps } from './components/Portal'
+
 export { type PhysicsConfig } from './components/DevEnvironment/types'
 
 // Hooks
