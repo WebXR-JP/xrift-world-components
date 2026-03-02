@@ -4,6 +4,11 @@ import { InstanceStateProvider, type InstanceStateContextValue } from './Instanc
 import { ScreenShareProvider, type ScreenShareContextValue } from './ScreenShareContext'
 import { SpawnPointProvider, type SpawnPointContextValue } from './SpawnPointContext'
 import {
+  ConfirmProvider,
+  createDefaultConfirmImplementation,
+  type ConfirmContextValue,
+} from './ConfirmContext'
+import {
   TeleportProvider,
   createDefaultTeleportImplementation,
   type TeleportContextValue,
@@ -78,6 +83,11 @@ interface Props {
    */
   spawnPointImplementation?: SpawnPointContextValue
   /**
+   * 確認モーダルの実装（オプション）
+   * 指定しない場合はデフォルト実装（window.confirm）が使用される
+   */
+  confirmImplementation?: ConfirmContextValue
+  /**
    * テレポート機能の実装（オプション）
    * 指定しない場合はデフォルト実装（console.log）が使用される
    */
@@ -107,6 +117,7 @@ interface Props {
  */
 export const XRiftProvider = ({
   baseUrl,
+  confirmImplementation,
   instanceStateImplementation,
   screenShareImplementation,
   spawnPointImplementation,
@@ -129,6 +140,12 @@ export const XRiftProvider = ({
   const textInputImpl = useMemo(
     () => textInputImplementation ?? createDefaultTextInputImplementation(),
     [textInputImplementation],
+  )
+
+  // 確認モーダルの実装（指定がない場合はデフォルト実装を使用）
+  const confirmImpl = useMemo(
+    () => confirmImplementation ?? createDefaultConfirmImplementation(),
+    [confirmImplementation],
   )
 
   // テレポートの実装（指定がない場合はデフォルト実装を使用）
@@ -169,7 +186,9 @@ export const XRiftProvider = ({
               <UsersProvider implementation={usersImplementation}>
                 <WorldEventProvider value={worldEventImpl}>
                   <TeleportProvider value={teleportImpl}>
-                    {children}
+                    <ConfirmProvider value={confirmImpl}>
+                      {children}
+                    </ConfirmProvider>
                   </TeleportProvider>
                 </WorldEventProvider>
               </UsersProvider>
