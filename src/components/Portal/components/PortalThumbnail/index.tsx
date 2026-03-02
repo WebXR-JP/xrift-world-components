@@ -67,13 +67,14 @@ const createBlackTexture = (): DataTexture => {
   return tex
 }
 
-const INITIAL_UNIFORMS = {
+const createUniforms = () => ({
   uTexture: { value: null as Texture | null },
   uGlowColor: { value: [0.6, 0.33, 1.0] as [number, number, number] },
   uTime: { value: 0 },
-}
+})
 
 export const PortalThumbnail = ({ thumbnailUrl, portalRadius }: Props) => {
+  const [uniforms] = useState(createUniforms)
   const [texture, setTexture] = useState<Texture | null>(null)
   const meshRef = useRef<Group>(null)
   const geometryRef = useRef<PlaneGeometry>(null)
@@ -154,7 +155,7 @@ export const PortalThumbnail = ({ thumbnailUrl, portalRadius }: Props) => {
           ref={materialRef}
           vertexShader={vertexShader}
           fragmentShader={fragmentShader}
-          uniforms={INITIAL_UNIFORMS}
+          uniforms={uniforms}
           transparent
         />
       </mesh>

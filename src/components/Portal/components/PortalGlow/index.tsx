@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AdditiveBlending, Color, DoubleSide, type PlaneGeometry, type ShaderMaterial } from 'three'
 
 interface Props {
@@ -42,13 +42,14 @@ void main() {
 }
 `
 
-const INITIAL_UNIFORMS = {
+const createUniforms = () => ({
   uTime: { value: 0 },
   uColor: { value: [0.6, 0.33, 1.0] as [number, number, number] },
   uIntensity: { value: 1.5 },
-}
+})
 
 export const PortalGlow = ({ color, intensity }: Props) => {
+  const [uniforms] = useState(createUniforms)
   const materialRef = useRef<ShaderMaterial>(null)
   const geometryRef = useRef<PlaneGeometry>(null)
 
@@ -77,7 +78,7 @@ export const PortalGlow = ({ color, intensity }: Props) => {
         ref={materialRef}
         vertexShader={glowVertexShader}
         fragmentShader={glowFragmentShader}
-        uniforms={INITIAL_UNIFORMS}
+        uniforms={uniforms}
         transparent
         blending={AdditiveBlending}
         depthWrite={false}

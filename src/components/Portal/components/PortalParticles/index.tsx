@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AdditiveBlending, type BufferAttribute, type BufferGeometry, Color, type Points, type ShaderMaterial } from 'three'
 
 interface Props {
@@ -34,9 +34,9 @@ void main() {
 }
 `
 
-const INITIAL_UNIFORMS = {
+const createUniforms = () => ({
   uColor: { value: [0.73, 0.53, 1.0] as [number, number, number] },
-}
+})
 
 const initParticles = (count: number, radius: number) => {
   const positions = new Float32Array(count * 3)
@@ -63,6 +63,7 @@ const MAX_HEIGHT = 1.0
 const FADE_START = 0.7
 
 export const PortalParticles = ({ particleCount, color, portalRadius, rotationSpeed }: Props) => {
+  const [uniforms] = useState(createUniforms)
   const pointsRef = useRef<Points>(null)
   const geometryRef = useRef<BufferGeometry>(null)
   const materialRef = useRef<ShaderMaterial>(null)
@@ -154,7 +155,7 @@ export const PortalParticles = ({ particleCount, color, portalRadius, rotationSp
         ref={materialRef}
         vertexShader={particleVertexShader}
         fragmentShader={particleFragmentShader}
-        uniforms={INITIAL_UNIFORMS}
+        uniforms={uniforms}
         transparent
         blending={AdditiveBlending}
         depthWrite={false}

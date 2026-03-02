@@ -1,5 +1,5 @@
 import { CuboidCollider, RigidBody } from '@react-three/rapier'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { type CylinderGeometry, DoubleSide, type ShaderMaterial } from 'three'
 import { simplexNoise3D } from '../../shaders/noise'
 
@@ -41,7 +41,7 @@ void main() {
 }
 `
 
-const INITIAL_UNIFORMS = {}
+const createUniforms = () => ({})
 
 const SENSOR_HALF_WIDTH = TOP_RADIUS * 0.6
 const SENSOR_HALF_HEIGHT = 0.8
@@ -51,6 +51,7 @@ interface Props {
 }
 
 export const PortalPedestal = ({ onEnter }: Props) => {
+  const [uniforms] = useState(createUniforms)
   const materialRef = useRef<ShaderMaterial>(null)
   const geometryRef = useRef<CylinderGeometry>(null)
 
@@ -71,7 +72,7 @@ export const PortalPedestal = ({ onEnter }: Props) => {
           ref={materialRef}
           vertexShader={vertexShader}
           fragmentShader={fragmentShader}
-          uniforms={INITIAL_UNIFORMS}
+          uniforms={uniforms}
           side={DoubleSide}
         />
       </mesh>

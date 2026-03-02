@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AdditiveBlending, Color, type ConeGeometry, DoubleSide, type Mesh, type ShaderMaterial } from 'three'
 import { portalFragmentShader } from '../../shaders/portalFragment'
 import { portalVertexShader } from '../../shaders/portalVertex'
@@ -12,17 +12,18 @@ interface Props {
   portalRadius: number
 }
 
-const INITIAL_UNIFORMS = {
+const createUniforms = () => ({
   uTime: { value: 0 },
   uColor: { value: [0.6, 0.33, 1.0] as [number, number, number] },
   uSecondaryColor: { value: [0.73, 0.53, 1.0] as [number, number, number] },
   uIntensity: { value: 1.5 },
-}
+})
 
 const CONE_SEGMENTS = 24
 const CONE_HEIGHT_SEGMENTS = 12
 
 export const PortalVortex = ({ color, secondaryColor, intensity, rotationSpeed, portalRadius }: Props) => {
+  const [uniforms] = useState(createUniforms)
   const meshRef = useRef<Mesh>(null)
   const materialRef = useRef<ShaderMaterial>(null)
   const geometryRef = useRef<ConeGeometry>(null)
@@ -62,7 +63,7 @@ export const PortalVortex = ({ color, secondaryColor, intensity, rotationSpeed, 
         ref={materialRef}
         vertexShader={portalVertexShader}
         fragmentShader={portalFragmentShader}
-        uniforms={INITIAL_UNIFORMS}
+        uniforms={uniforms}
         transparent
         blending={AdditiveBlending}
         depthWrite={false}
