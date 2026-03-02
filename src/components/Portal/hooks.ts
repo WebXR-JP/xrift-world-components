@@ -6,16 +6,14 @@ import type { Props } from './types'
  */
 export const usePortalProps = (props: Props) => {
   const {
+    instanceId,
     position = PORTAL_DEFAULTS.position,
     rotation = PORTAL_DEFAULTS.rotation,
-    thumbnailUrl,
-    onEnter,
   } = props
 
   return {
+    instanceId,
     position,
     rotation,
-    thumbnailUrl,
-    onEnter,
   }
 }

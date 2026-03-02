@@ -54,6 +54,15 @@ export {
 } from './contexts/ConfirmContext'
 
 export {
+  InstanceInfoContext,
+  InstanceInfoProvider,
+  useInstanceInfoContext,
+  createDefaultInstanceInfoImplementation,
+  type InstanceInfoContextValue,
+  type InstanceInfo,
+} from './contexts/InstanceInfoContext'
+
+export {
   TeleportContext,
   TeleportProvider,
   useTeleportContext,
@@ -135,6 +144,7 @@ export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
 export { useConfirm } from './hooks/useConfirm'
 export { useTeleport } from './hooks/useTeleport'
+export { usePortalNavigation } from './hooks/usePortalNavigation'
 export { useWebAudioVolume } from './hooks/useWebAudioVolume'
 export { useWorldEvent } from './hooks/useWorldEvent'
 

@@ -9,6 +9,11 @@ import {
   type ConfirmContextValue,
 } from './ConfirmContext'
 import {
+  InstanceInfoProvider,
+  createDefaultInstanceInfoImplementation,
+  type InstanceInfoContextValue,
+} from './InstanceInfoContext'
+import {
   TeleportProvider,
   createDefaultTeleportImplementation,
   type TeleportContextValue,
@@ -88,6 +93,11 @@ interface Props {
    */
   confirmImplementation?: ConfirmContextValue
   /**
+   * インスタンス情報取得・遷移の実装（オプション）
+   * 指定しない場合はデフォルト実装（console.log）が使用される
+   */
+  instanceInfoImplementation?: InstanceInfoContextValue
+  /**
    * テレポート機能の実装（オプション）
    * 指定しない場合はデフォルト実装（console.log）が使用される
    */
@@ -119,6 +129,7 @@ export const XRiftProvider = ({
   baseUrl,
   confirmImplementation,
   instanceStateImplementation,
+  instanceInfoImplementation,
   screenShareImplementation,
   spawnPointImplementation,
   teleportImplementation,
@@ -146,6 +157,12 @@ export const XRiftProvider = ({
   const confirmImpl = useMemo(
     () => confirmImplementation ?? createDefaultConfirmImplementation(),
     [confirmImplementation],
+  )
+
+  // インスタンス情報の実装（指定がない場合はデフォルト実装を使用）
+  const instanceInfoImpl = useMemo(
+    () => instanceInfoImplementation ?? createDefaultInstanceInfoImplementation(),
+    [instanceInfoImplementation],
   )
 
   // テレポートの実装（指定がない場合はデフォルト実装を使用）
@@ -187,7 +204,9 @@ export const XRiftProvider = ({
                 <WorldEventProvider value={worldEventImpl}>
                   <TeleportProvider value={teleportImpl}>
                     <ConfirmProvider value={confirmImpl}>
-                      {children}
+                      <InstanceInfoProvider value={instanceInfoImpl}>
+                        {children}
+                      </InstanceInfoProvider>
                     </ConfirmProvider>
                   </TeleportProvider>
                 </WorldEventProvider>

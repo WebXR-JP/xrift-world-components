@@ -1,10 +1,9 @@
 import type { Vector3Tuple } from 'three'
 
 export interface Props {
+  instanceId: string
   position?: Vector3Tuple
   rotation?: Vector3Tuple
-  thumbnailUrl?: string
-  onEnter?: () => void
 }
 
 export interface PortalUniforms {

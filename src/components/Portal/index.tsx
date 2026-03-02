@@ -1,3 +1,4 @@
+import { usePortalNavigation } from '../../hooks/usePortalNavigation'
 import { PortalGlow } from './components/PortalGlow'
 import { PortalParticles } from './components/PortalParticles'
 import { PortalPedestal } from './components/PortalPedestal'
@@ -13,11 +14,12 @@ const PARTICLE_COUNT = 30
 
 export const Portal = (props: Props) => {
   const {
+    instanceId,
     position,
     rotation,
-    thumbnailUrl,
-    onEnter,
   } = usePortalProps(props)
+
+  const { info, enterPortal } = usePortalNavigation(instanceId)
 
   return (
     <group position={position} rotation={rotation}>
@@ -29,7 +31,7 @@ export const Portal = (props: Props) => {
         portalRadius={PORTAL_DEFAULTS.portalRadius}
       />
       <PortalThumbnail
-        thumbnailUrl={thumbnailUrl}
+        thumbnailUrl={info?.thumbnailUrl ?? undefined}
         portalRadius={PORTAL_DEFAULTS.portalRadius}
       />
       <PortalGlow
@@ -42,7 +44,7 @@ export const Portal = (props: Props) => {
         portalRadius={PORTAL_DEFAULTS.portalRadius}
         rotationSpeed={PORTAL_DEFAULTS.rotationSpeed}
       />
-      <PortalPedestal onEnter={onEnter} />
+      <PortalPedestal onEnter={enterPortal} />
     </group>
   )
 }
