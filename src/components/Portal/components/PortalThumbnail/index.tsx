@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
-import { type Group, type PlaneGeometry, type ShaderMaterial, Texture, TextureLoader } from 'three'
+import { DataTexture, type Group, type PlaneGeometry, type ShaderMaterial, Texture, TextureLoader } from 'three'
 import { simplexNoise3D } from '../../shaders/noise'
 
 interface Props {
@@ -59,6 +59,14 @@ const fragmentShader = /* glsl */ `
   }
 `
 
+/** サムネイルがない場合の黒プレースホルダー */
+const createBlackTexture = (): DataTexture => {
+  const data = new Uint8Array([0, 0, 0, 255])
+  const tex = new DataTexture(data, 1, 1)
+  tex.needsUpdate = true
+  return tex
+}
+
 const INITIAL_UNIFORMS = {
   uTexture: { value: null as Texture | null },
   uGlowColor: { value: [0.6, 0.33, 1.0] as [number, number, number] },
@@ -72,7 +80,14 @@ export const PortalThumbnail = ({ thumbnailUrl, portalRadius }: Props) => {
   const materialRef = useRef<ShaderMaterial>(null)
 
   useEffect(() => {
-    if (!thumbnailUrl) return
+    if (!thumbnailUrl) {
+      const black = createBlackTexture()
+      setTexture(black)
+      return () => {
+        black.dispose()
+        setTexture(null)
+      }
+    }
 
     const loader = new TextureLoader()
     loader.setCrossOrigin('anonymous')
@@ -87,6 +102,10 @@ export const PortalThumbnail = ({ thumbnailUrl, portalRadius }: Props) => {
       undefined,
       (err) => {
         console.error('PortalThumbnail: texture load failed', err)
+        if (!cancelled) {
+          const black = createBlackTexture()
+          setTexture(black)
+        }
       },
     )
 
@@ -123,9 +142,9 @@ export const PortalThumbnail = ({ thumbnailUrl, portalRadius }: Props) => {
     }
   })
 
-  if (!texture) return null
-
   const size = portalRadius * (2 / 3) * 2
+
+  if (!texture) return null
 
   return (
     <group ref={meshRef} position={[0, baseY, 0]}>
