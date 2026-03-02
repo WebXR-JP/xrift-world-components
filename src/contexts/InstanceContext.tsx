@@ -1,11 +1,11 @@
 import { createContext, type ReactNode, useContext } from 'react'
+import type { WorldInfo } from './WorldContext'
 
 export interface InstanceInfo {
-  instanceName: string
-  worldName: string
-  thumbnailUrl: string | null
+  name: string
   currentUsers: number
   maxCapacity: number
+  world: WorldInfo
 }
 
 export interface InstanceContextValue {
@@ -23,11 +23,13 @@ export const createDefaultInstanceImplementation = (): InstanceContextValue => (
   getInstanceInfo: async (instanceId) => {
     console.log('[Instance] getInstanceInfo called', instanceId)
     return {
-      instanceName: '',
-      worldName: '',
-      thumbnailUrl: null,
+      name: '',
       currentUsers: 0,
       maxCapacity: 0,
+      world: {
+        name: '',
+        thumbnailUrl: null,
+      },
     }
   },
   navigateToInstance: (instanceId) =>

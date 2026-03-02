@@ -31,7 +31,7 @@ export const Portal = (props: Props) => {
         portalRadius={PORTAL_DEFAULTS.portalRadius}
       />
       <PortalThumbnail
-        thumbnailUrl={info?.thumbnailUrl ?? undefined}
+        thumbnailUrl={info?.world.thumbnailUrl ?? undefined}
         portalRadius={PORTAL_DEFAULTS.portalRadius}
       />
       <PortalGlow

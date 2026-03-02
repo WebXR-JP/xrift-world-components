@@ -9,7 +9,7 @@ import { type InstanceInfo, useInstanceContext } from '../contexts/InstanceConte
  * const { info, navigateWithConfirm } = useInstance('instance-id')
  *
  * // インスタンス情報を表示
- * <Text>{info?.worldName}</Text>
+ * <Text>{info?.world.name}</Text>
  *
  * // 確認モーダル付きで遷移
  * <PortalPedestal onEnter={navigateWithConfirm} />
@@ -39,8 +39,8 @@ export const useInstance = (instanceId: string) => {
     try {
       const latestInfo = await getInstanceInfo(instanceId)
       const confirmed = await requestConfirm({
-        title: latestInfo.worldName,
-        message: `「${latestInfo.instanceName}」に移動しますか？\n👥 ${latestInfo.currentUsers}/${latestInfo.maxCapacity}`,
+        title: latestInfo.world.name,
+        message: `「${latestInfo.name}」に移動しますか？\n👥 ${latestInfo.currentUsers}/${latestInfo.maxCapacity}`,
         confirmLabel: '移動する',
         cancelLabel: 'キャンセル',
       })

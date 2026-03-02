@@ -63,6 +63,15 @@ export {
 } from './contexts/InstanceContext'
 
 export {
+  WorldContext,
+  WorldProvider,
+  useWorldContext,
+  createDefaultWorldImplementation,
+  type WorldContextValue,
+  type WorldInfo,
+} from './contexts/WorldContext'
+
+export {
   TeleportContext,
   TeleportProvider,
   useTeleportContext,
