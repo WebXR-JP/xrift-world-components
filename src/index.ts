@@ -144,7 +144,7 @@ export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
 export { useConfirm } from './hooks/useConfirm'
 export { useTeleport } from './hooks/useTeleport'
-export { usePortalNavigation } from './hooks/usePortalNavigation'
+export { useInstance } from './hooks/useInstance'
 export { useWebAudioVolume } from './hooks/useWebAudioVolume'
 export { useWorldEvent } from './hooks/useWorldEvent'
 

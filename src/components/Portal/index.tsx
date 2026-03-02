@@ -1,4 +1,4 @@
-import { usePortalNavigation } from '../../hooks/usePortalNavigation'
+import { useInstance } from '../../hooks/useInstance'
 import { PortalGlow } from './components/PortalGlow'
 import { PortalParticles } from './components/PortalParticles'
 import { PortalPedestal } from './components/PortalPedestal'
@@ -19,7 +19,7 @@ export const Portal = (props: Props) => {
     rotation,
   } = usePortalProps(props)
 
-  const { info, enterPortal } = usePortalNavigation(instanceId)
+  const { info, navigateWithConfirm } = useInstance(instanceId)
 
   return (
     <group position={position} rotation={rotation}>
@@ -44,7 +44,7 @@ export const Portal = (props: Props) => {
         portalRadius={PORTAL_DEFAULTS.portalRadius}
         rotationSpeed={PORTAL_DEFAULTS.rotationSpeed}
       />
-      <PortalPedestal onEnter={enterPortal} />
+      <PortalPedestal onEnter={navigateWithConfirm} />
     </group>
   )
 }

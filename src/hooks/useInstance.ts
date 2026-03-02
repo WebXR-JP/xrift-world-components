@@ -3,10 +3,18 @@ import { useConfirmContext } from '../contexts/ConfirmContext'
 import { type InstanceInfo, useInstanceInfoContext } from '../contexts/InstanceInfoContext'
 
 /**
- * Portal 内部で使うヘルパーフック
- * instanceId からインスタンス情報を取得し、台座進入時に確認モーダル → 遷移を行う
+ * インスタンス情報の取得・確認付き遷移を提供するフック
+ *
+ * @example
+ * const { info, navigateWithConfirm } = useInstance('instance-id')
+ *
+ * // インスタンス情報を表示
+ * <Text>{info?.worldName}</Text>
+ *
+ * // 確認モーダル付きで遷移
+ * <PortalPedestal onEnter={navigateWithConfirm} />
  */
-export const usePortalNavigation = (instanceId: string) => {
+export const useInstance = (instanceId: string) => {
   const { getInstanceInfo, navigateToInstance } = useInstanceInfoContext()
   const { requestConfirm } = useConfirmContext()
   const [info, setInfo] = useState<InstanceInfo | null>(null)
@@ -19,15 +27,15 @@ export const usePortalNavigation = (instanceId: string) => {
         if (!cancelled) setInfo(result)
       })
       .catch((err) => {
-        console.warn('[Portal] Failed to fetch instance info:', err)
+        console.warn('[useInstance] Failed to fetch instance info:', err)
       })
     return () => {
       cancelled = true
     }
   }, [instanceId, getInstanceInfo])
 
-  // 台座進入時の処理
-  const enterPortal = useCallback(async () => {
+  // 確認モーダル付きのインスタンス遷移
+  const navigateWithConfirm = useCallback(async () => {
     try {
       const latestInfo = await getInstanceInfo(instanceId)
       const confirmed = await requestConfirm({
@@ -38,9 +46,9 @@ export const usePortalNavigation = (instanceId: string) => {
       })
       if (confirmed) navigateToInstance(instanceId)
     } catch (err) {
-      console.warn('[Portal] Failed to enter portal:', err)
+      console.warn('[useInstance] Failed to navigate:', err)
     }
   }, [instanceId, getInstanceInfo, navigateToInstance, requestConfirm])
 
-  return { info, enterPortal }
+  return { info, navigateWithConfirm }
 }
