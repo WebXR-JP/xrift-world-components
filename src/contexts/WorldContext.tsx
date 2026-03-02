@@ -1,8 +1,20 @@
 import { createContext, type ReactNode, useContext } from 'react'
 
 export interface WorldInfo {
+  id: string
   name: string
+  description: string | null
   thumbnailUrl: string | null
+  isPublic: boolean
+  instanceCount: number
+  totalVisitCount: number
+  uniqueVisitorCount: number
+  favoriteCount: number
+  owner?: {
+    id: string
+    displayName: string
+    userIconUrl?: string | null
+  }
 }
 
 export interface WorldContextValue {
@@ -18,8 +30,15 @@ export const createDefaultWorldImplementation = (): WorldContextValue => ({
   getWorldInfo: async (worldId) => {
     console.log('[World] getWorldInfo called', worldId)
     return {
+      id: '',
       name: '',
+      description: null,
       thumbnailUrl: null,
+      isPublic: false,
+      instanceCount: 0,
+      totalVisitCount: 0,
+      uniqueVisitorCount: 0,
+      favoriteCount: 0,
     }
   },
 })

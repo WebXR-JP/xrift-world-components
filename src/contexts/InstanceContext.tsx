@@ -2,9 +2,18 @@ import { createContext, type ReactNode, useContext } from 'react'
 import type { WorldInfo } from './WorldContext'
 
 export interface InstanceInfo {
+  id: string
   name: string
+  description: string | null
   currentUsers: number
   maxCapacity: number
+  isPublic: boolean
+  allowGuests: boolean
+  owner?: {
+    id: string
+    displayName: string
+    userIconUrl?: string | null
+  }
   world: WorldInfo
 }
 
@@ -23,12 +32,23 @@ export const createDefaultInstanceImplementation = (): InstanceContextValue => (
   getInstanceInfo: async (instanceId) => {
     console.log('[Instance] getInstanceInfo called', instanceId)
     return {
+      id: '',
       name: '',
+      description: null,
       currentUsers: 0,
       maxCapacity: 0,
+      isPublic: false,
+      allowGuests: false,
       world: {
+        id: '',
         name: '',
+        description: null,
         thumbnailUrl: null,
+        isPublic: false,
+        instanceCount: 0,
+        totalVisitCount: 0,
+        uniqueVisitorCount: 0,
+        favoriteCount: 0,
       },
     }
   },
