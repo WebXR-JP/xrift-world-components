@@ -45,6 +45,15 @@ export {
 } from './contexts/TextInputContext'
 
 export {
+  ConfirmContext,
+  ConfirmProvider,
+  useConfirmContext,
+  createDefaultConfirmImplementation,
+  type ConfirmContextValue,
+  type ConfirmOptions,
+} from './contexts/ConfirmContext'
+
+export {
   TeleportContext,
   TeleportProvider,
   useTeleportContext,
@@ -122,6 +131,7 @@ export { type PhysicsConfig } from './components/DevEnvironment/types'
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
+export { useConfirm } from './hooks/useConfirm'
 export { useTeleport } from './hooks/useTeleport'
 export { useWebAudioVolume } from './hooks/useWebAudioVolume'
 export { useWorldEvent } from './hooks/useWorldEvent'
