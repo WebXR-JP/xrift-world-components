@@ -54,13 +54,13 @@ export {
 } from './contexts/ConfirmContext'
 
 export {
-  InstanceInfoContext,
-  InstanceInfoProvider,
-  useInstanceInfoContext,
-  createDefaultInstanceInfoImplementation,
-  type InstanceInfoContextValue,
+  InstanceContext,
+  InstanceProvider,
+  useInstanceContext,
+  createDefaultInstanceImplementation,
+  type InstanceContextValue,
   type InstanceInfo,
-} from './contexts/InstanceInfoContext'
+} from './contexts/InstanceContext'
 
 export {
   TeleportContext,

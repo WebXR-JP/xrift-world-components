@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useConfirmContext } from '../contexts/ConfirmContext'
-import { type InstanceInfo, useInstanceInfoContext } from '../contexts/InstanceInfoContext'
+import { type InstanceInfo, useInstanceContext } from '../contexts/InstanceContext'
 
 /**
  * インスタンス情報の取得・確認付き遷移を提供するフック
@@ -15,7 +15,7 @@ import { type InstanceInfo, useInstanceInfoContext } from '../contexts/InstanceI
  * <PortalPedestal onEnter={navigateWithConfirm} />
  */
 export const useInstance = (instanceId: string) => {
-  const { getInstanceInfo, navigateToInstance } = useInstanceInfoContext()
+  const { getInstanceInfo, navigateToInstance } = useInstanceContext()
   const { requestConfirm } = useConfirmContext()
   const [info, setInfo] = useState<InstanceInfo | null>(null)
 
