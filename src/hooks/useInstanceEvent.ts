@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { useWorldEventContext } from '../contexts/WorldEventContext'
+import { useInstanceEventContext } from '../contexts/InstanceEventContext'
 
 /** プラットフォームが管理する予約イベント（ワールド側から emit 不可） */
 const PLATFORM_EVENTS = new Set(['user-joined', 'user-left'])
 
 /**
- * ワールドイベントの送受信を行う hook
+ * インスタンスイベントの送受信を行う hook
  *
  * プラットフォームイベント（user-joined, user-left）を受信したり、
  * ワールド独自のカスタムイベントを送受信できます。
@@ -16,22 +16,22 @@ const PLATFORM_EVENTS = new Set(['user-joined', 'user-left'])
  *
  * @example
  * // ユーザー入室イベントを受信
- * useWorldEvent('user-joined', (data) => {
+ * useInstanceEvent('user-joined', (data) => {
  *   console.log('User joined:', data)
  * })
  *
  * @example
  * // カスタムイベントの送受信
- * const emitReaction = useWorldEvent('reaction', (data) => {
+ * const emitReaction = useInstanceEvent('reaction', (data) => {
  *   console.log('Reaction received:', data)
  * })
  * emitReaction({ emoji: '👍', userId: 'user-1' })
  */
-export function useWorldEvent<T = unknown>(
+export function useInstanceEvent<T = unknown>(
   eventName: string,
   callback: (data: T) => void,
 ): (data: T) => void {
-  const { subscribe, emit } = useWorldEventContext()
+  const { subscribe, emit } = useInstanceEventContext()
   const callbackRef = useRef(callback)
 
   // コールバック参照を常に最新に保持（stale closure 回避）

@@ -81,12 +81,12 @@ export {
 } from './contexts/TeleportContext'
 
 export {
-  WorldEventContext,
-  WorldEventProvider,
-  useWorldEventContext,
-  createDefaultWorldEventImplementation,
-  type WorldEventContextValue,
-} from './contexts/WorldEventContext'
+  InstanceEventContext,
+  InstanceEventProvider,
+  useInstanceEventContext,
+  createDefaultInstanceEventImplementation,
+  type InstanceEventContextValue,
+} from './contexts/InstanceEventContext'
 
 // Components
 export {
@@ -156,7 +156,7 @@ export { useTeleport } from './hooks/useTeleport'
 export { useInstance } from './hooks/useInstance'
 export { useWorld } from './hooks/useWorld'
 export { useWebAudioVolume } from './hooks/useWebAudioVolume'
-export { useWorldEvent } from './hooks/useWorldEvent'
+export { useInstanceEvent } from './hooks/useInstanceEvent'
 
 // Constants
 export { LAYERS, type LayerName, type LayerNumber } from './constants/layers'

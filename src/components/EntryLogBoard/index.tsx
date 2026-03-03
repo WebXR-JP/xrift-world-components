@@ -2,7 +2,7 @@
  * EntryLogBoard コンポーネント
  *
  * ワールドへの入退室ログを3D空間のボードに表示する。
- * useWorldEvent でプラットフォームの user-joined / user-left イベントを受信し、
+ * useInstanceEvent でプラットフォームの user-joined / user-left イベントを受信し、
  * useInstanceState でログを全クライアント間で同期する。
  */
 import { useMemo } from 'react'

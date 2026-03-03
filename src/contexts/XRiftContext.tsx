@@ -30,10 +30,10 @@ import {
 } from './TextInputContext'
 import { UsersProvider, type UsersContextValue } from './UsersContext'
 import {
-  WorldEventProvider,
-  createDefaultWorldEventImplementation,
-  type WorldEventContextValue,
-} from './WorldEventContext'
+  InstanceEventProvider,
+  createDefaultInstanceEventImplementation,
+  type InstanceEventContextValue,
+} from './InstanceEventContext'
 
 // デフォルトの画面共有実装（開発環境用）
 const createDefaultScreenShareImplementation = (): ScreenShareContextValue => ({
@@ -123,10 +123,10 @@ interface Props {
    */
   worldImplementation?: WorldContextValue
   /**
-   * ワールドイベントの実装（オプション）
+   * インスタンスイベントの実装（オプション）
    * 指定しない場合はデフォルト実装（ローカル EventEmitter）が使用される
    */
-  worldEventImplementation?: WorldEventContextValue
+  instanceEventImplementation?: InstanceEventContextValue
   children: ReactNode
 }
 
@@ -146,7 +146,7 @@ export const XRiftProvider = ({
   textInputImplementation,
   usersImplementation,
   worldImplementation,
-  worldEventImplementation,
+  instanceEventImplementation,
   children,
 }: Props) => {
   // インタラクト可能なオブジェクトの管理
@@ -188,10 +188,10 @@ export const XRiftProvider = ({
     [teleportImplementation],
   )
 
-  // ワールドイベントの実装（指定がない場合はデフォルト実装を使用）
-  const worldEventImpl = useMemo(
-    () => worldEventImplementation ?? createDefaultWorldEventImplementation(),
-    [worldEventImplementation],
+  // インスタンスイベントの実装（指定がない場合はデフォルト実装を使用）
+  const instanceEventImpl = useMemo(
+    () => instanceEventImplementation ?? createDefaultInstanceEventImplementation(),
+    [instanceEventImplementation],
   )
 
   // オブジェクトの登録
@@ -218,7 +218,7 @@ export const XRiftProvider = ({
           <InstanceStateProvider implementation={instanceStateImplementation}>
             <SpawnPointProvider implementation={spawnPointImplementation}>
               <UsersProvider implementation={usersImplementation}>
-                <WorldEventProvider value={worldEventImpl}>
+                <InstanceEventProvider value={instanceEventImpl}>
                   <TeleportProvider value={teleportImpl}>
                     <ConfirmProvider value={confirmImpl}>
                       <WorldProvider value={worldImpl}>
@@ -228,7 +228,7 @@ export const XRiftProvider = ({
                       </WorldProvider>
                     </ConfirmProvider>
                   </TeleportProvider>
-                </WorldEventProvider>
+                </InstanceEventProvider>
               </UsersProvider>
             </SpawnPointProvider>
           </InstanceStateProvider>

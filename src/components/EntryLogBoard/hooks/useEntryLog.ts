@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useUsers } from '../../../contexts/UsersContext'
 import { useInstanceState } from '../../../hooks/useInstanceState'
-import { useWorldEvent } from '../../../hooks/useWorldEvent'
+import { useInstanceEvent } from '../../../hooks/useInstanceEvent'
 import { DEFAULT_LOGS } from '../constants'
 import {
   type LogEntry,
@@ -81,7 +81,7 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
 
   // user-joined イベント
   // 入室者を除いた既存ユーザーの中で辞書順最小のクライアントだけが書き込む
-  useWorldEvent<UserJoinedEvent>('user-joined', (data) => {
+  useInstanceEvent<UserJoinedEvent>('user-joined', (data) => {
     if (!localUser) return
     const existingIds = [
       localUser.id,
@@ -105,7 +105,7 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
 
   // user-left イベント
   // 退室者を除いた残存ユーザーの中で辞書順最小のクライアントだけが書き込む
-  useWorldEvent<UserLeftEvent>('user-left', (data) => {
+  useInstanceEvent<UserLeftEvent>('user-left', (data) => {
     if (!localUser) return
     const remainingIds = [
       localUser.id,
