@@ -23,6 +23,7 @@ const fragmentShader = /* glsl */ `
   uniform sampler2D uTexture;
   uniform vec3 uGlowColor;
   uniform float uTime;
+  uniform float uAspect;
   varying vec2 vUv;
   void main() {
     vec2 center = vUv - 0.5;
@@ -47,6 +48,16 @@ const fragmentShader = /* glsl */ `
     // UVを円の範囲に合わせてスケーリング
     float scale = 0.42 / 0.5;
     vec2 scaledUv = (vUv - 0.5) / scale + 0.5;
+
+    // アスペクト比補正（cover: 円形領域を埋めつつ比率を維持）
+    vec2 aspectUv = scaledUv - 0.5;
+    if (uAspect > 1.0) {
+      aspectUv.x /= uAspect;
+    } else {
+      aspectUv.y *= uAspect;
+    }
+    scaledUv = aspectUv + 0.5;
+
     vec4 texColor = texture2D(uTexture, scaledUv);
 
     // 縁に近いほどグローを強くする
@@ -72,6 +83,7 @@ const createUniforms = () => ({
   uTexture: { value: null as Texture | null },
   uGlowColor: { value: [0.6, 0.33, 1.0] as [number, number, number] },
   uTime: { value: 0 },
+  uAspect: { value: 1.0 },
 })
 
 export const PortalThumbnail = ({ thumbnailUrl, portalRadius }: Props) => {
@@ -123,6 +135,10 @@ export const PortalThumbnail = ({ thumbnailUrl, portalRadius }: Props) => {
   useEffect(() => {
     if (!materialRef.current || !texture) return
     materialRef.current.uniforms.uTexture.value = texture
+    const image = texture.image as { width?: number; height?: number } | undefined
+    if (image?.width && image?.height) {
+      materialRef.current.uniforms.uAspect.value = image.width / image.height
+    }
   }, [texture])
 
   useEffect(() => {
