@@ -1,4 +1,6 @@
+import { Text } from "@react-three/drei";
 import { useState } from "react";
+import { BillboardY } from "../components/BillboardY";
 import { VideoPlayer } from "../components/VideoPlayer";
 import { LiveVideoPlayer } from "../components/LiveVideoPlayer";
 import { Mirror } from "../components/Mirror";
@@ -116,6 +118,22 @@ export function TestScene() {
         position={[0, 2, 7]}
         rotation={[0, Math.PI, 0]}
       />
+
+      {/* BillboardY テスト */}
+      <BillboardY position={[0, 2, 3]}>
+        <mesh>
+          <planeGeometry args={[1.2, 1.6]} />
+          <meshStandardMaterial color="#8b5cf6" />
+        </mesh>
+        <Text
+          position={[0, 1.0, 0.01]}
+          fontSize={0.12}
+          color="white"
+          anchorX="center"
+        >
+          BillboardY
+        </Text>
+      </BillboardY>
 
       {/* 180度ステレオ動画プレイヤー */}
       <Video180Sphere
