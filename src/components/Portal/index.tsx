@@ -1,4 +1,5 @@
 import { Text } from '@react-three/drei'
+import { BillboardY } from '../BillboardY'
 import { useInstance } from '../../hooks/useInstance'
 import { PortalGlow } from './components/PortalGlow'
 import { PortalParticles } from './components/PortalParticles'
@@ -53,9 +54,9 @@ export const Portal = (props: Props) => {
       />
       <PortalPedestal onEnter={navigateWithConfirm} />
 
-      {/* ワールド名 */}
+      {/* ワールド名・インスタンス名 */}
       {info && (
-        <>
+        <BillboardY>
           <Text
             position={[0, LABEL_BASE_Y + 0.3, 0]}
             fontSize={0.12}
@@ -66,7 +67,6 @@ export const Portal = (props: Props) => {
           >
             {info.world.name}
           </Text>
-          {/* インスタンス名 */}
           <Text
             position={[0, LABEL_BASE_Y + 0.17, 0]}
             fontSize={0.07}
@@ -77,7 +77,7 @@ export const Portal = (props: Props) => {
           >
             {info.name}
           </Text>
-        </>
+        </BillboardY>
       )}
     </group>
   )

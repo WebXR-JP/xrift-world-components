@@ -146,6 +146,12 @@ export {
 
 export { Portal, type PortalProps } from './components/Portal'
 
+export {
+  BillboardY,
+  useBillboardY,
+  getBillboardYRotation,
+} from './components/BillboardY'
+
 export { type PhysicsConfig } from './components/DevEnvironment/types'
 
 // Hooks

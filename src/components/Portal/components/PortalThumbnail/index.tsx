@@ -1,3 +1,4 @@
+import { BillboardY } from '../../../BillboardY'
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import { DataTexture, type Group, type PlaneGeometry, type ShaderMaterial, Texture, TextureLoader } from 'three'
@@ -149,16 +150,18 @@ export const PortalThumbnail = ({ thumbnailUrl, portalRadius }: Props) => {
 
   return (
     <group ref={meshRef} position={[0, baseY, 0]}>
-      <mesh>
-        <planeGeometry ref={geometryRef} args={[size, size]} />
-        <shaderMaterial
-          ref={materialRef}
-          vertexShader={vertexShader}
-          fragmentShader={fragmentShader}
-          uniforms={uniforms}
-          transparent
-        />
-      </mesh>
+      <BillboardY>
+        <mesh>
+          <planeGeometry ref={geometryRef} args={[size, size]} />
+          <shaderMaterial
+            ref={materialRef}
+            vertexShader={vertexShader}
+            fragmentShader={fragmentShader}
+            uniforms={uniforms}
+            transparent
+          />
+        </mesh>
+      </BillboardY>
     </group>
   )
 }
