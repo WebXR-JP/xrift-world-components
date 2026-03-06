@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState, useSyncExternalStore } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
@@ -25,6 +25,17 @@ const containerStyle: React.CSSProperties = {
   position: 'relative',
 }
 
+function subscribePointerLock(listener: () => void): () => void {
+  document.addEventListener('pointerlockchange', listener)
+  return () => {
+    document.removeEventListener('pointerlockchange', listener)
+  }
+}
+
+function getPointerLockSnapshot(): boolean {
+  return document.pointerLockElement !== null
+}
+
 export function DevEnvironment({
   children,
   camera,
@@ -35,7 +46,11 @@ export function DevEnvironment({
   physicsConfig,
 }: Props) {
   const [isHit, setIsHit] = useState(false)
-  const [isPointerLocked, setIsPointerLocked] = useState(false)
+  const isPointerLocked = useSyncExternalStore(
+    subscribePointerLock,
+    getPointerLockSnapshot,
+    () => false,
+  )
   const handleHitChange = useCallback((hit: boolean) => setIsHit(hit), [])
 
   const gravity = physicsConfig?.gravity ?? DEFAULT_GRAVITY
@@ -44,16 +59,6 @@ export function DevEnvironment({
 
   const cameraPosition = camera?.position ?? spawnPosition
   const cameraFov = camera?.fov ?? 50
-
-  useEffect(() => {
-    const handleChange = () => {
-      setIsPointerLocked(document.pointerLockElement !== null)
-    }
-    document.addEventListener('pointerlockchange', handleChange)
-    return () => {
-      document.removeEventListener('pointerlockchange', handleChange)
-    }
-  }, [])
 
   return (
     <div style={containerStyle}>
