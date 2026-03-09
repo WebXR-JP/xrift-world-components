@@ -88,6 +88,13 @@ export {
   type InstanceEventContextValue,
 } from './contexts/InstanceEventContext'
 
+export {
+  PlacementStateProvider,
+  usePlacementState,
+  type PlacementMode,
+  type PlacementStateContextValue,
+} from './contexts/PlacementStateContext'
+
 // Components
 export {
   Interactable,

@@ -34,6 +34,7 @@ import {
   createDefaultInstanceEventImplementation,
   type InstanceEventContextValue,
 } from './InstanceEventContext'
+import { PlacementStateProvider, type PlacementMode } from './PlacementStateContext'
 
 // デフォルトの画面共有実装（開発環境用）
 const createDefaultScreenShareImplementation = (): ScreenShareContextValue => ({
@@ -127,6 +128,12 @@ interface Props {
    * 指定しない場合はデフォルト実装（ローカル EventEmitter）が使用される
    */
   instanceEventImplementation?: InstanceEventContextValue
+  /**
+   * アイテムの配置状態（オプション）
+   * 'preview': プレビュー中、'placed': 設置済み
+   * 指定しない場合は Provider をスキップ（フォールバックで 'placed' が返る）
+   */
+  placementMode?: PlacementMode
   children: ReactNode
 }
 
@@ -147,6 +154,7 @@ export const XRiftProvider = ({
   usersImplementation,
   worldImplementation,
   instanceEventImplementation,
+  placementMode,
   children,
 }: Props) => {
   // インタラクト可能なオブジェクトの管理
@@ -223,7 +231,13 @@ export const XRiftProvider = ({
                     <ConfirmProvider value={confirmImpl}>
                       <WorldProvider value={worldImpl}>
                         <InstanceProvider value={instanceImpl}>
-                          {children}
+                          {placementMode ? (
+                            <PlacementStateProvider mode={placementMode}>
+                              {children}
+                            </PlacementStateProvider>
+                          ) : (
+                            children
+                          )}
                         </InstanceProvider>
                       </WorldProvider>
                     </ConfirmProvider>
