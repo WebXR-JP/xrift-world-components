@@ -25,6 +25,7 @@ export const Portal = (props: Props) => {
     instanceId,
     position,
     rotation,
+    disabled,
   } = usePortalProps(props)
 
   const { info, navigateWithConfirm } = useInstance(instanceId)
@@ -52,7 +53,7 @@ export const Portal = (props: Props) => {
         portalRadius={PORTAL_DEFAULTS.portalRadius}
         rotationSpeed={PORTAL_DEFAULTS.rotationSpeed}
       />
-      <PortalPedestal onEnter={navigateWithConfirm} />
+      <PortalPedestal onEnter={disabled ? undefined : navigateWithConfirm} />
 
       {/* ワールド名・インスタンス名 */}
       {info && (

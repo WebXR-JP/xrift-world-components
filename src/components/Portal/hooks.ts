@@ -9,11 +9,13 @@ export const usePortalProps = (props: Props) => {
     instanceId,
     position = PORTAL_DEFAULTS.position,
     rotation = PORTAL_DEFAULTS.rotation,
+    disabled = false,
   } = props
 
   return {
     instanceId,
     position,
     rotation,
+    disabled,
   }
 }
