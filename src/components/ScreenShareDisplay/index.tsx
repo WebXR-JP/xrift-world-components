@@ -26,7 +26,7 @@ export const ScreenShareDisplay = memo(({
   const { videoElement, isSharing, startScreenShare, stopScreenShare, isRoomConnected } = useScreenShareContext()
   const interactionText = isSharing ? '画面共有を停止' : '画面共有を開始'
   const screenSize = useMemo<[number, number]>(() => [width, width * (9 / 16)], [width])
-  const { texture, hasVideo, materialRef, videoSize } = useVideoTexture(videoElement, screenSize)
+  const { texture, hasVideo, videoSize } = useVideoTexture(videoElement, screenSize)
 
   const handleInteract = useCallback(() => {
     if (isSharing) {
@@ -56,7 +56,6 @@ export const ScreenShareDisplay = memo(({
         <mesh visible={hasVideo}>
           <planeGeometry args={[videoSize[0], videoSize[1]]} />
           <meshBasicMaterial
-            ref={materialRef}
             map={texture}
             side={THREE.FrontSide}
             toneMapped={false}
