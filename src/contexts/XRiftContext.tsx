@@ -212,15 +212,15 @@ export const XRiftProvider = ({
     interactableObjects.delete(object)
   }, [interactableObjects])
 
+  const xriftContextValue = useMemo<XRiftContextValue>(() => ({
+    baseUrl,
+    interactableObjects,
+    registerInteractable,
+    unregisterInteractable,
+  }), [baseUrl, interactableObjects, registerInteractable, unregisterInteractable])
+
   return (
-    <XRiftContext.Provider
-      value={{
-        baseUrl,
-        interactableObjects,
-        registerInteractable,
-        unregisterInteractable,
-      }}
-    >
+    <XRiftContext.Provider value={xriftContextValue}>
       <ScreenShareProvider value={screenShareImpl}>
         <TextInputProvider value={textInputImpl}>
           <InstanceStateProvider implementation={instanceStateImplementation}>

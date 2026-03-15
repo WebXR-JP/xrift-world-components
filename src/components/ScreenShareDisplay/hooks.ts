@@ -59,22 +59,26 @@ export const useVideoTexture = (
     )
   }, [videoResolution, screenSize])
 
-  // video要素が一時停止していたら再生を試みる
+  // video要素が一時停止したら自動で再生を試みる
   useEffect(() => {
     if (!videoElement) return
 
-    const checkAndPlay = () => {
-      if (videoElement.paused) {
-        videoElement.play().catch(() => {
-          // 再生失敗は無視
-        })
-      }
+    const handlePause = () => {
+      videoElement.play().catch(() => {
+        // 再生失敗は無視
+      })
     }
 
-    checkAndPlay()
-    const interval = setInterval(checkAndPlay, 1000)
+    // 初回チェック
+    if (videoElement.paused) {
+      handlePause()
+    }
 
-    return () => clearInterval(interval)
+    videoElement.addEventListener('pause', handlePause)
+
+    return () => {
+      videoElement.removeEventListener('pause', handlePause)
+    }
   }, [videoElement])
 
   return { texture, hasVideo, videoSize }
