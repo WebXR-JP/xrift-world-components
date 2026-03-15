@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useFrame } from '@react-three/fiber'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { calculateContainSize } from './utils'
 
@@ -13,13 +14,14 @@ export const useVideoTexture = (
   screenSize: [number, number],
   targetFps?: number,
 ) => {
-  const [texture, setTexture] = useState<THREE.Texture | null>(null)
+  const [texture, setTexture] = useState<THREE.VideoTexture | null>(null)
   const [videoResolution, setVideoResolution] = useState<
     [number, number] | null
   >(null)
+  const lastUpdateRef = useRef(0)
   const hasVideo = texture !== null
 
-  // テクスチャの作成（videoElement のみに依存）
+  // VideoTextureの作成（videoElement のみに依存）
   useEffect(() => {
     if (!videoElement) {
       setTexture(null)
@@ -27,38 +29,11 @@ export const useVideoTexture = (
       return
     }
 
-    let tex: THREE.Texture
-    let rVFCId = 0
-
-    if (
-      targetFps &&
-      'requestVideoFrameCallback' in videoElement
-    ) {
-      // フレームレート制限付き: VideoTexture を使わず手動で更新を制御
-      tex = new THREE.Texture(videoElement)
-      tex.generateMipmaps = false
-
-      const frameIntervalMs = 1000 / targetFps
-      let lastUpdate = 0
-
-      const update = () => {
-        const now = performance.now()
-        if (now - lastUpdate >= frameIntervalMs) {
-          tex.needsUpdate = true
-          lastUpdate = now
-        }
-        rVFCId = videoElement.requestVideoFrameCallback(update)
-      }
-      rVFCId = videoElement.requestVideoFrameCallback(update)
-    } else {
-      // デフォルト: VideoTexture の自動更新（毎ビデオフレーム更新）
-      tex = new THREE.VideoTexture(videoElement)
-    }
-
-    tex.minFilter = THREE.LinearFilter
-    tex.magFilter = THREE.LinearFilter
-    tex.colorSpace = THREE.SRGBColorSpace
-    setTexture(tex)
+    const videoTexture = new THREE.VideoTexture(videoElement)
+    videoTexture.minFilter = THREE.LinearFilter
+    videoTexture.magFilter = THREE.LinearFilter
+    videoTexture.colorSpace = THREE.SRGBColorSpace
+    setTexture(videoTexture)
 
     // 映像のメタデータがロードされたら解像度を記録
     const handleLoadedMetadata = () => {
@@ -73,12 +48,22 @@ export const useVideoTexture = (
 
     return () => {
       videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata)
-      if (rVFCId) {
-        videoElement.cancelVideoFrameCallback(rVFCId)
-      }
-      tex.dispose()
+      videoTexture.dispose()
     }
-  }, [videoElement, targetFps])
+  }, [videoElement])
+
+  // targetFps 指定時: VideoTexture の自動更新を間引く
+  // VideoTexture は rVFC で毎ビデオフレーム source.needsUpdate = true を設定する。
+  // useFrame は gl.render() の直前に実行されるため、間隔内の更新を抑制できる。
+  useFrame(() => {
+    if (!texture || !targetFps) return
+    const now = performance.now()
+    if (now - lastUpdateRef.current < 1000 / targetFps) {
+      texture.source.needsUpdate = false
+    } else {
+      lastUpdateRef.current = now
+    }
+  })
 
   // 映像サイズの計算（screenSize や videoResolution の変更時のみ再計算）
   const videoSize = useMemo<[number, number]>(() => {
