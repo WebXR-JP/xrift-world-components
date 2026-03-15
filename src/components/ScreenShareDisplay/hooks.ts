@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { calculateContainSize } from './utils'
 
@@ -12,14 +12,16 @@ export const useVideoTexture = (
   screenSize: [number, number],
 ) => {
   const [texture, setTexture] = useState<THREE.VideoTexture | null>(null)
-  const [videoSize, setVideoSize] = useState<[number, number]>(screenSize)
+  const [videoResolution, setVideoResolution] = useState<
+    [number, number] | null
+  >(null)
   const hasVideo = texture !== null
 
-  // VideoTextureの作成と更新
+  // VideoTextureの作成（videoElement のみに依存）
   useEffect(() => {
     if (!videoElement) {
       setTexture(null)
-      setVideoSize(screenSize)
+      setVideoResolution(null)
       return
     }
 
@@ -29,15 +31,9 @@ export const useVideoTexture = (
     videoTexture.colorSpace = THREE.SRGBColorSpace
     setTexture(videoTexture)
 
-    // 映像のメタデータがロードされたらサイズを計算
+    // 映像のメタデータがロードされたら解像度を記録
     const handleLoadedMetadata = () => {
-      const size = calculateContainSize(
-        videoElement.videoWidth,
-        videoElement.videoHeight,
-        screenSize[0],
-        screenSize[1],
-      )
-      setVideoSize(size)
+      setVideoResolution([videoElement.videoWidth, videoElement.videoHeight])
     }
 
     if (videoElement.videoWidth > 0) {
@@ -50,7 +46,18 @@ export const useVideoTexture = (
       videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata)
       videoTexture.dispose()
     }
-  }, [videoElement, screenSize])
+  }, [videoElement])
+
+  // 映像サイズの計算（screenSize や videoResolution の変更時のみ再計算）
+  const videoSize = useMemo<[number, number]>(() => {
+    if (!videoResolution) return screenSize
+    return calculateContainSize(
+      videoResolution[0],
+      videoResolution[1],
+      screenSize[0],
+      screenSize[1],
+    )
+  }, [videoResolution, screenSize])
 
   // video要素が一時停止していたら再生を試みる
   useEffect(() => {
