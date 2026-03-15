@@ -22,11 +22,12 @@ export const ScreenShareDisplay = memo(({
   position = DEFAULT_POSITION,
   rotation = DEFAULT_ROTATION,
   width = DEFAULT_WIDTH,
+  targetFps,
 }: Props) => {
   const { videoElement, isSharing, startScreenShare, stopScreenShare, isRoomConnected } = useScreenShareContext()
   const interactionText = isSharing ? '画面共有を停止' : '画面共有を開始'
   const screenSize = useMemo<[number, number]>(() => [width, width * (9 / 16)], [width])
-  const { texture, hasVideo, videoSize } = useVideoTexture(videoElement, screenSize)
+  const { texture, hasVideo, videoSize } = useVideoTexture(videoElement, screenSize, targetFps)
 
   const handleInteract = useCallback(() => {
     if (isSharing) {
