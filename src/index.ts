@@ -159,7 +159,10 @@ export {
   getBillboardYRotation,
 } from './components/BillboardY'
 
-export { type PhysicsConfig } from './components/DevEnvironment/types'
+export {
+  type PhysicsConfig,
+  type CameraConfig,
+} from './components/DevEnvironment/types'
 
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'

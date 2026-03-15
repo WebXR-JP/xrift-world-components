@@ -8,6 +8,8 @@ import {
   DEFAULT_SPAWN_POSITION,
   DEFAULT_GRAVITY,
   DEFAULT_ALLOW_INFINITE_JUMP,
+  DEFAULT_CAMERA_NEAR,
+  DEFAULT_CAMERA_FAR,
   MOVE_SPEED,
   RESPAWN_Y_THRESHOLD,
 } from './constants'
@@ -59,6 +61,8 @@ export function DevEnvironment({
 
   const cameraPosition = camera?.position ?? spawnPosition
   const cameraFov = camera?.fov ?? 50
+  const cameraNear = camera?.near ?? DEFAULT_CAMERA_NEAR
+  const cameraFar = camera?.far ?? DEFAULT_CAMERA_FAR
 
   return (
     <div style={containerStyle}>
@@ -67,8 +71,8 @@ export function DevEnvironment({
         camera={{
           position: cameraPosition,
           fov: cameraFov,
-          near: 0.01,
-          far: 1000,
+          near: cameraNear,
+          far: cameraFar,
         }}
         gl={{ preserveDrawingBuffer: true }}
       >

@@ -11,6 +11,8 @@ export const RESPAWN_Y_THRESHOLD = -10
 export const DEFAULT_SPAWN_POSITION: [number, number, number] = [0.11, 1.6, 7.59]
 export const DEFAULT_GRAVITY = 9.81
 export const DEFAULT_ALLOW_INFINITE_JUMP = true
+export const DEFAULT_CAMERA_NEAR = 0.01
+export const DEFAULT_CAMERA_FAR = 1000
 
 /**
  * クロスヘアスタイル定数

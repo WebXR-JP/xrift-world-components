@@ -7,10 +7,17 @@ export interface PhysicsConfig {
   allowInfiniteJump?: boolean
 }
 
+export interface CameraConfig {
+  /** nearクリッピング距離（デフォルト: 0.01） */
+  near?: number
+  /** farクリッピング距離（デフォルト: 1000） */
+  far?: number
+}
+
 export interface Props {
   children: ReactNode
   /** カメラ設定 */
-  camera?: { position?: [number, number, number]; fov?: number }
+  camera?: { position?: [number, number, number]; fov?: number; near?: number; far?: number }
   /** 移動速度（デフォルト: 5.0） */
   moveSpeed?: number
   /** シャドウを有効にするか（デフォルト: true） */
