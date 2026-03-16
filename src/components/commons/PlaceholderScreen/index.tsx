@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { FrontSide } from 'three'
 
 interface PlaceholderScreenProps {
   width: number
@@ -11,7 +12,7 @@ export const PlaceholderScreen = memo(
   ({ width, screenHeight, color }: PlaceholderScreenProps) => (
     <mesh>
       <planeGeometry args={[width, screenHeight]} />
-      <meshBasicMaterial color={color} />
+      <meshBasicMaterial color={color} side={FrontSide} />
     </mesh>
   )
 )

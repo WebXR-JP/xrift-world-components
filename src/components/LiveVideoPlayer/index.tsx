@@ -1,4 +1,5 @@
 import { memo, Suspense } from "react";
+import { FrontSide } from "three";
 import { Text } from "@react-three/drei";
 import { ControlPanel } from "./components/ControlPanel";
 import { LiveVideoTexture } from "./components/LiveVideoTexture";
@@ -74,6 +75,7 @@ export const LiveVideoPlayer = memo(
                 anchorX="center"
                 anchorY="middle"
                 textAlign="center"
+                material-side={FrontSide}
               >
                 {`ライブストリームURLを入力\nHLS .m3u8 形式`}
               </Text>
@@ -123,6 +125,7 @@ export const LiveVideoPlayer = memo(
             anchorX="center"
             anchorY="middle"
             textAlign="center"
+            material-side={FrontSide}
           >
             再接続中...
           </Text>

@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
+import { FrontSide } from 'three'
 import { useVideoTexture } from '@react-three/drei'
 import { useInstanceState } from '../../hooks/useInstanceState'
 import { useWebAudioVolume } from '../../hooks/useWebAudioVolume'
@@ -118,7 +119,7 @@ function VideoScreenInner({
     <group position={position} rotation={rotation}>
       <mesh>
         <planeGeometry args={[scale[0], scale[1]]} />
-        <meshBasicMaterial map={texture} toneMapped={false} />
+        <meshBasicMaterial map={texture} toneMapped={false} side={FrontSide} />
       </mesh>
     </group>
   )
@@ -138,7 +139,7 @@ export function VideoScreen(props: VideoScreenProps) {
       <group position={position} rotation={rotation}>
         <mesh>
           <planeGeometry args={scaleValue} />
-          <meshBasicMaterial color="#000000" />
+          <meshBasicMaterial color="#000000" side={FrontSide} />
         </mesh>
       </group>
     )
@@ -150,7 +151,7 @@ export function VideoScreen(props: VideoScreenProps) {
         <group position={position} rotation={rotation}>
           <mesh>
             <planeGeometry args={scaleValue} />
-            <meshBasicMaterial color="#333333" />
+            <meshBasicMaterial color="#333333" side={FrontSide} />
           </mesh>
         </group>
       }

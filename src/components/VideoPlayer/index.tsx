@@ -1,4 +1,5 @@
 import { memo, Suspense, useState, useCallback, useRef } from 'react'
+import { FrontSide } from 'three'
 import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import { ControlPanel } from './components/ControlPanel'
@@ -161,6 +162,7 @@ export const VideoPlayer = memo(
                 color="#666666"
                 anchorX="center"
                 anchorY="middle"
+                material-side={FrontSide}
               >
                 URLを入力してください
               </Text>

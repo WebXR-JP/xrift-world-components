@@ -89,6 +89,7 @@ export const VideoMesh = memo(({ texture, width, height }: VideoMeshProps) => {
       vertexShader: letterboxVertexShader,
       fragmentShader: letterboxFragmentShader,
       toneMapped: false,
+      side: THREE.FrontSide,
     });
   }, [texture, screenAspectRatio]);
 
