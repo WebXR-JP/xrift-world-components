@@ -70,6 +70,30 @@ export function useVideoElement({
     errorReportedRef.current = false; // 新しいテクスチャではエラーフラグをリセット
   }, [texture]);
 
+  // Triplex デバッグパネルへの出力
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const debugInterval = setInterval(() => {
+      const v = videoRef.current;
+      if (!v) return;
+      window.triplex?.debug("VideoElement", {
+        paused: v.paused,
+        muted: v.muted,
+        volume: v.volume,
+        readyState: v.readyState,
+        networkState: v.networkState,
+        currentTime: Math.round(v.currentTime * 100) / 100,
+        duration: Math.round((v.duration || 0) * 100) / 100,
+        error: v.error ? `${v.error.code}: ${v.error.message}` : null,
+        src: v.src.slice(0, 60),
+      });
+    }, 500);
+
+    return () => clearInterval(debugInterval);
+  }, [texture]);
+
   // 再生/停止制御
   useEffect(() => {
     const video = videoRef.current;
@@ -212,28 +236,16 @@ export function useVideoElement({
   }, [texture, onError, onBufferingChange, onDurationChange, startStallDetection, clearStallDetection]);
 
   // クリーンアップ
+  // suspend-react がビデオ要素とテクスチャのライフサイクルを管理するため、
+  // ソースのクリアやテクスチャの破棄はしない（Strict Mode での再マウントで壊れるため）
   useEffect(() => {
     const video = texture.image as HTMLVideoElement;
     return () => {
-      // 停止検出をクリア
       if (stallCheckIntervalRef.current) {
         clearInterval(stallCheckIntervalRef.current);
         stallCheckIntervalRef.current = null;
       }
-
-      // 再生を停止
       video.pause();
-
-      // ソースを完全にクリア
-      video.src = "";
-      video.removeAttribute("src");
-      video.srcObject = null;
-
-      // MediaSourceをリリースするためにloadを呼び出し
-      video.load();
-
-      // テクスチャを破棄
-      texture.dispose();
     };
   }, [texture]);
 

@@ -17,7 +17,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["@react-three/fiber"]
+    "types": ["@react-three/fiber", "@triplex/api/types"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "src/scenes"]

@@ -105,6 +105,7 @@ export const VideoPlayer = memo(
     const [duration, setDuration] = useState(0)
     const [hasError, setHasError] = useState(false)
     const [reloadKey, setReloadKey] = useState(0)
+    const [controlsVisible, setControlsVisible] = useState(false)
     const seekTimeRef = useRef<number | null>(null)
     const screenHeight = width * (9 / 16)
 
@@ -142,6 +143,10 @@ export const VideoPlayer = memo(
 
     const handleProgressChange = useCallback((newProgress: number) => {
       setProgress(newProgress)
+    }, [])
+
+    const handleToggleControls = useCallback(() => {
+      setControlsVisible((prev) => !prev)
     }, [])
 
     const handleError = useCallback((error: Error) => {
@@ -192,22 +197,26 @@ export const VideoPlayer = memo(
           </ErrorBoundary>
         )}
 
-        {/* コントロールパネル（常に表示） */}
-        <ControlPanel
-          id={id}
-          width={width}
-          screenHeight={screenHeight}
-          playing={playing}
-          progress={progress}
-          duration={duration}
-          volume={volume}
-          url={currentUrl || ''}
-          onPlayPause={handlePlayPause}
-          onStop={handleStop}
-          onSeek={handleSeek}
-          onVolumeChange={handleVolumeChange}
-          onUrlChange={handleUrlChange}
-        />
+        {/* コントロールパネル（スクリーン内オーバーレイ） */}
+        <group position={[0, 0, 0.01]}>
+          <ControlPanel
+            id={id}
+            width={width}
+            screenHeight={screenHeight}
+            playing={playing}
+            progress={progress}
+            duration={duration}
+            volume={volume}
+            url={currentUrl || ''}
+            visible={!playing || controlsVisible}
+            onPlayPause={handlePlayPause}
+            onStop={handleStop}
+            onSeek={handleSeek}
+            onVolumeChange={handleVolumeChange}
+            onUrlChange={handleUrlChange}
+            onToggleVisible={handleToggleControls}
+          />
+        </group>
       </group>
     )
   }
