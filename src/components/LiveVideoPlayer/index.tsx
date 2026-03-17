@@ -1,4 +1,4 @@
-import { memo, Suspense } from "react";
+import { memo, Suspense, useState, useCallback, useRef, useEffect } from "react";
 import { FrontSide } from "three";
 import { Text } from "@react-three/drei";
 import { ControlPanel } from "./components/ControlPanel";
@@ -25,6 +25,9 @@ interface Props {
   /** 同期モード（デフォルト: 'global'） */
   sync?: 'global' | 'local'
 }
+
+/** UI操作後に自動非表示するまでの時間（ms） */
+const AUTO_HIDE_DELAY = 3000
 
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5];
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
@@ -55,7 +58,39 @@ export const LiveVideoPlayer = memo(
       sync,
     });
 
+    const [controlsVisible, setControlsVisible] = useState(false)
+    const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
     const screenHeight = width * (9 / 16);
+
+    const resetAutoHideTimer = useCallback(() => {
+      if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current)
+      autoHideTimerRef.current = setTimeout(() => {
+        setControlsVisible(false)
+      }, AUTO_HIDE_DELAY)
+    }, [])
+
+    // 再生中にUIを表示したらタイマー開始、停止中はタイマー解除
+    useEffect(() => {
+      if (videoState.playing && controlsVisible) {
+        resetAutoHideTimer()
+      } else if (autoHideTimerRef.current) {
+        clearTimeout(autoHideTimerRef.current)
+        autoHideTimerRef.current = null
+      }
+      return () => {
+        if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current)
+      }
+    }, [videoState.playing, controlsVisible, resetAutoHideTimer])
+
+    const handleToggleControls = useCallback(() => {
+      setControlsVisible((prev) => !prev)
+    }, [])
+
+    const handleVolumeChange = useCallback((newVolume: number) => {
+      handlers.onVolumeChange(newVolume)
+      resetAutoHideTimer()
+    }, [handlers, resetAutoHideTimer])
 
     return (
       <group position={position} rotation={rotation}>
@@ -131,20 +166,24 @@ export const LiveVideoPlayer = memo(
           </Text>
         )}
 
-        {/* コントロールパネル（常に表示） */}
-        <ControlPanel
-          id={id}
-          width={width}
-          screenHeight={screenHeight}
-          playing={videoState.playing}
-          volume={volume}
-          isBuffering={isBuffering}
-          url={videoState.url || ""}
-          onPlayPause={handlers.onPlayPause}
-          onStop={handlers.onStop}
-          onVolumeChange={handlers.onVolumeChange}
-          onUrlChange={handlers.onUrlChange}
-        />
+        {/* コントロールパネル（スクリーン内オーバーレイ） */}
+        <group position={[0, 0, 0.01]}>
+          <ControlPanel
+            id={id}
+            width={width}
+            screenHeight={screenHeight}
+            playing={videoState.playing}
+            volume={volume}
+            isBuffering={isBuffering}
+            url={videoState.url || ""}
+            visible={!videoState.playing || controlsVisible}
+            onPlayPause={handlers.onPlayPause}
+            onStop={handlers.onStop}
+            onVolumeChange={handleVolumeChange}
+            onUrlChange={handlers.onUrlChange}
+            onToggleVisible={handleToggleControls}
+          />
+        </group>
       </group>
     );
   },

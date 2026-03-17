@@ -1,9 +1,6 @@
-import { memo, useCallback } from 'react'
-import { Text } from '@react-three/drei'
-import { IconButton } from '../../../commons/IconButton'
-import { VolumeControl } from '../../../commons/VolumeControl'
+import { memo, useCallback, useMemo } from 'react'
+import { Container, Text } from '@react-three/uikit'
 import { useTextInputContext } from '../../../../contexts/TextInputContext'
-import { LiveIndicator } from './LiveIndicator'
 
 interface Props {
   id: string
@@ -13,14 +10,56 @@ interface Props {
   volume: number
   isBuffering: boolean
   url: string
+  visible: boolean
   onPlayPause: () => void
   onStop: () => void
   onVolumeChange: (volume: number) => void
   onUrlChange: (url: string) => void
+  onToggleVisible: () => void
 }
 
-const PANEL_HEIGHT = 0.15
-const BUTTON_SIZE = PANEL_HEIGHT * 0.6
+const PIXEL_SIZE = 0.01
+const VOLUME_SEGMENTS = 11
+
+/** パネル高さの割合（screenHeight の 10%） */
+const PANEL_HEIGHT_RATIO = 0.1
+
+/** 一時停止アイコン: 2本の縦棒 */
+const PauseIcon = memo(({ size }: { size: number }) => (
+  <Container width={size} height={size} flexDirection="row" justifyContent="center" alignItems="center" gap={size * 0.15}>
+    <Container width={size * 0.2} height={size * 0.7} backgroundColor={0xffffff} borderRadius={1} />
+    <Container width={size * 0.2} height={size * 0.7} backgroundColor={0xffffff} borderRadius={1} />
+  </Container>
+))
+PauseIcon.displayName = 'PauseIcon'
+
+/** 再生アイコン: 右向き三角（3つの棒で近似） */
+const PlayIcon = memo(({ size }: { size: number }) => (
+  <Container width={size} height={size} flexDirection="row" justifyContent="center" alignItems="center" gap={0}>
+    <Container width={size * 0.15} height={size * 0.7} backgroundColor={0xffffff} borderRadius={1} />
+    <Container width={size * 0.15} height={size * 0.5} backgroundColor={0xffffff} borderRadius={1} />
+    <Container width={size * 0.15} height={size * 0.3} backgroundColor={0xffffff} borderRadius={1} />
+  </Container>
+))
+PlayIcon.displayName = 'PlayIcon'
+
+/** 停止アイコン: 四角 */
+const StopIcon = memo(({ size }: { size: number }) => (
+  <Container width={size} height={size} justifyContent="center" alignItems="center">
+    <Container width={size * 0.5} height={size * 0.5} backgroundColor={0xffffff} borderRadius={1} />
+  </Container>
+))
+StopIcon.displayName = 'StopIcon'
+
+/** 音量アイコン: 棒グラフ風 */
+const VolumeIcon = memo(({ size, muted }: { size: number; muted: boolean }) => (
+  <Container width={size} height={size} flexDirection="row" justifyContent="center" alignItems="flex-end" gap={size * 0.06}>
+    <Container width={size * 0.12} height={size * 0.25} backgroundColor={muted ? 0x666666 : 0xffffff} borderRadius={1} />
+    <Container width={size * 0.12} height={size * 0.45} backgroundColor={muted ? 0x666666 : 0xffffff} borderRadius={1} />
+    <Container width={size * 0.12} height={size * 0.65} backgroundColor={muted ? 0x666666 : 0xffffff} borderRadius={1} />
+  </Container>
+))
+VolumeIcon.displayName = 'VolumeIcon'
 
 export const ControlPanel = memo(
   ({
@@ -31,12 +70,15 @@ export const ControlPanel = memo(
     volume,
     isBuffering,
     url,
+    visible,
     onPlayPause,
     onStop,
     onVolumeChange,
     onUrlChange,
+    onToggleVisible,
   }: Props) => {
-    const panelY = -screenHeight / 2 - PANEL_HEIGHT / 2
+    const pxHeight = screenHeight / PIXEL_SIZE
+    const panelHeight = pxHeight * PANEL_HEIGHT_RATIO
 
     const { requestTextInput } = useTextInputContext()
 
@@ -53,69 +95,146 @@ export const ControlPanel = memo(
       })
     }, [id, url, onUrlChange, requestTextInput])
 
+    const volumeSegments = useMemo(() => {
+      return Array.from({ length: VOLUME_SEGMENTS }).map((_, i) => {
+        const value = i / (VOLUME_SEGMENTS - 1)
+        const isFilled = value <= volume
+        return { index: i, value, isFilled }
+      })
+    }, [volume])
+
+    const buttonSize = panelHeight * 0.6
+    const iconSize = buttonSize * 0.5
+    const fontSize = panelHeight * 0.35
+
     return (
-      <group position={[0, panelY, 0]}>
-        {/* パネル背景 */}
-        <mesh position={[0, 0, 0]}>
-          <planeGeometry args={[width, PANEL_HEIGHT]} />
-          <meshBasicMaterial color="#1a1a2a" transparent opacity={0.9} />
-        </mesh>
-
-        {/* URL入力ボタン（左端） */}
-        <IconButton
-          id={`${id}-url-input`}
-          position={[-width * 0.45, 0, 0.01]}
-          size={BUTTON_SIZE}
-          icon="🔗"
-          interactionText="URL変更"
-          onInteract={handleUrlInput}
-        />
-
-        {/* 再生/一時停止ボタン */}
-        <IconButton
-          id={`${id}-play-pause`}
-          position={[-width * 0.38, 0, 0.01]}
-          size={BUTTON_SIZE}
-          icon={playing ? "||" : "▶"}
-          interactionText={playing ? "一時停止" : "再生"}
-          onInteract={onPlayPause}
-        />
-
-        {/* 停止ボタン */}
-        <IconButton
-          id={`${id}-stop`}
-          position={[-width * 0.31, 0, 0.01]}
-          size={BUTTON_SIZE}
-          icon="■"
-          interactionText="停止"
-          onInteract={onStop}
-        />
-
-        {/* LIVEインジケータ（中央） */}
-        <LiveIndicator position={[0, 0, 0.01]} size={BUTTON_SIZE} playing={playing} />
-
-        {/* バッファリング中のテキスト */}
-        {isBuffering && (
-          <Text
-            position={[0, -0.04, 0.01]}
-            fontSize={0.02}
-            color="#aaaaaa"
-            anchorX="center"
-            anchorY="middle"
+      <Container
+        sizeX={width}
+        sizeY={screenHeight}
+        pixelSize={PIXEL_SIZE}
+        flexDirection="column"
+        justifyContent="flex-end"
+        onClick={onToggleVisible}
+        cursor="pointer"
+      >
+        {/* コントロールパネル */}
+        {!visible ? null : <>
+          {/* 画面全体を覆う半透明オーバーレイ */}
+          <Container flexGrow={1} width="100%" backgroundColor={0x000000} opacity={0.4} />
+          <Container
+            width="100%"
+            height={panelHeight}
+            backgroundColor={0x000000}
+            opacity={0.6}
+            flexDirection="row"
+            alignItems="center"
+            paddingX={panelHeight * 0.15}
+            gap={panelHeight * 0.1}
+            onClick={(e) => e.stopPropagation?.()}
           >
-            読み込み中...
-          </Text>
-        )}
+            {/* URL入力ボタン */}
+            <Container
+              width={buttonSize}
+              height={buttonSize}
+              backgroundColor={0x444444}
+              borderRadius={buttonSize / 2}
+              justifyContent="center"
+              alignItems="center"
+              hover={{ backgroundColor: 0x666666 }}
+              active={{ backgroundColor: 0x333333 }}
+              onClick={handleUrlInput}
+              cursor="pointer"
+            >
+              <Text fontSize={iconSize * 0.6} color={0xffffff} fontWeight="bold">URL</Text>
+            </Container>
 
-        {/* 音量コントロール（右） */}
-        <VolumeControl
-          id={`${id}-volume`}
-          position={[width * 0.4, 0, 0.01]}
-          size={BUTTON_SIZE}
-          volume={volume}
-          onVolumeChange={onVolumeChange}
-        />
-      </group>
+            {/* 再生/一時停止ボタン */}
+            <Container
+              width={buttonSize}
+              height={buttonSize}
+              backgroundColor={0x444444}
+              borderRadius={buttonSize / 2}
+              justifyContent="center"
+              alignItems="center"
+              hover={{ backgroundColor: 0x666666 }}
+              active={{ backgroundColor: 0x333333 }}
+              onClick={onPlayPause}
+              cursor="pointer"
+            >
+              {playing ? <PauseIcon size={iconSize} /> : <PlayIcon size={iconSize} />}
+            </Container>
+
+            {/* 停止ボタン */}
+            <Container
+              width={buttonSize}
+              height={buttonSize}
+              backgroundColor={0x444444}
+              borderRadius={buttonSize / 2}
+              justifyContent="center"
+              alignItems="center"
+              hover={{ backgroundColor: 0x666666 }}
+              active={{ backgroundColor: 0x333333 }}
+              onClick={onStop}
+              cursor="pointer"
+            >
+              <StopIcon size={iconSize} />
+            </Container>
+
+            {/* LIVE インジケータ（中央に配置、flexGrow で広がる） */}
+            <Container
+              flexGrow={1}
+              height="100%"
+              flexDirection="row"
+              justifyContent="center"
+              alignItems="center"
+              gap={panelHeight * 0.1}
+            >
+              {/* 赤い丸 */}
+              <Container
+                width={panelHeight * 0.15}
+                height={panelHeight * 0.15}
+                borderRadius={panelHeight * 0.075}
+                backgroundColor={playing ? 0xff0000 : 0x666666}
+              />
+              <Text
+                fontSize={fontSize * 0.8}
+                color={0xffffff}
+                fontWeight="bold"
+              >
+                LIVE
+              </Text>
+              {isBuffering && (
+                <Text fontSize={fontSize * 0.6} color={0xaaaaaa}>
+                  {'...'}
+                </Text>
+              )}
+            </Container>
+
+            {/* 音量アイコン */}
+            <VolumeIcon size={iconSize} muted={volume === 0} />
+
+            {/* 音量バー */}
+            <Container
+              width={panelHeight * 1.2}
+              height={panelHeight * 0.2}
+              flexDirection="row"
+              borderRadius={2}
+            >
+              {volumeSegments.map((seg) => (
+                <Container
+                  key={seg.index}
+                  flexGrow={1}
+                  height="100%"
+                  backgroundColor={seg.isFilled ? 0x4aff4a : 0x333333}
+                  hover={{ backgroundColor: seg.isFilled ? 0x6eff6e : 0x555555 }}
+                  onClick={() => onVolumeChange(seg.value)}
+                  cursor="pointer"
+                />
+              ))}
+            </Container>
+          </Container>
+        </>}
+      </Container>
     )
   }
 )
