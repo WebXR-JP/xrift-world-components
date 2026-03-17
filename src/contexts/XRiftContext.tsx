@@ -35,6 +35,11 @@ import {
   type InstanceEventContextValue,
 } from './InstanceEventContext'
 import { PlacementStateProvider, type PlacementMode } from './PlacementStateContext'
+import {
+  AudioVolumeProvider,
+  createDefaultAudioVolumeImplementation,
+  type AudioVolumeContextValue,
+} from './AudioVolumeContext'
 
 // デフォルトの画面共有実装（開発環境用）
 const createDefaultScreenShareImplementation = (): ScreenShareContextValue => ({
@@ -129,6 +134,11 @@ interface Props {
    */
   instanceEventImplementation?: InstanceEventContextValue
   /**
+   * 音量オーバーライドの実装（オプション）
+   * 指定しない場合はデフォルト実装（no-op）が使用される
+   */
+  audioVolumeImplementation?: AudioVolumeContextValue
+  /**
    * アイテムの配置状態（オプション）
    * 'preview': プレビュー中、'placed': 設置済み
    * 指定しない場合は Provider をスキップ（フォールバックで 'placed' が返る）
@@ -154,6 +164,7 @@ export const XRiftProvider = ({
   usersImplementation,
   worldImplementation,
   instanceEventImplementation,
+  audioVolumeImplementation,
   placementMode,
   children,
 }: Props) => {
@@ -202,6 +213,12 @@ export const XRiftProvider = ({
     [instanceEventImplementation],
   )
 
+  // 音量オーバーライドの実装（指定がない場合はデフォルト実装を使用）
+  const audioVolumeImpl = useMemo(
+    () => audioVolumeImplementation ?? createDefaultAudioVolumeImplementation(),
+    [audioVolumeImplementation],
+  )
+
   // オブジェクトの登録
   const registerInteractable = useCallback((object: Object3D) => {
     interactableObjects.add(object)
@@ -231,13 +248,15 @@ export const XRiftProvider = ({
                     <ConfirmProvider value={confirmImpl}>
                       <WorldProvider value={worldImpl}>
                         <InstanceProvider value={instanceImpl}>
-                          {placementMode ? (
-                            <PlacementStateProvider mode={placementMode}>
-                              {children}
-                            </PlacementStateProvider>
-                          ) : (
-                            children
-                          )}
+                          <AudioVolumeProvider value={audioVolumeImpl}>
+                            {placementMode ? (
+                              <PlacementStateProvider mode={placementMode}>
+                                {children}
+                              </PlacementStateProvider>
+                            ) : (
+                              children
+                            )}
+                          </AudioVolumeProvider>
                         </InstanceProvider>
                       </WorldProvider>
                     </ConfirmProvider>

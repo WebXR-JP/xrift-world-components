@@ -95,6 +95,14 @@ export {
   type PlacementStateContextValue,
 } from './contexts/PlacementStateContext'
 
+export {
+  AudioVolumeContext,
+  AudioVolumeProvider,
+  useAudioVolumeContext,
+  createDefaultAudioVolumeImplementation,
+  type AudioVolumeContextValue,
+} from './contexts/AudioVolumeContext'
+
 // Components
 export {
   Interactable,
@@ -173,6 +181,7 @@ export { useInstance } from './hooks/useInstance'
 export { useWorld } from './hooks/useWorld'
 export { useWebAudioVolume } from './hooks/useWebAudioVolume'
 export { useInstanceEvent } from './hooks/useInstanceEvent'
+export { useAudioVolume } from './hooks/useAudioVolume'
 
 // Constants
 export { LAYERS, type LayerName, type LayerNumber } from './constants/layers'
