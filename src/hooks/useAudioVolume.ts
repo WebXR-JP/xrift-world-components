@@ -1,4 +1,3 @@
-import { useCallback } from 'react'
 import { type AudioVolumeContextValue, useAudioVolumeContext } from '../contexts/AudioVolumeContext'
 
 /**
@@ -15,34 +14,5 @@ import { type AudioVolumeContextValue, useAudioVolumeContext } from '../contexts
  * clearOverride(speakerUserId)
  */
 export const useAudioVolume = (): AudioVolumeContextValue => {
-  const { setOverride, clearOverride, clearAll, getOverrides } = useAudioVolumeContext()
-
-  const stableSetOverride = useCallback(
-    (userId: string, volume: number) => {
-      setOverride(userId, volume)
-    },
-    [setOverride],
-  )
-
-  const stableClearOverride = useCallback(
-    (userId: string) => {
-      clearOverride(userId)
-    },
-    [clearOverride],
-  )
-
-  const stableClearAll = useCallback(() => {
-    clearAll()
-  }, [clearAll])
-
-  const stableGetOverrides = useCallback(() => {
-    return getOverrides()
-  }, [getOverrides])
-
-  return {
-    setOverride: stableSetOverride,
-    clearOverride: stableClearOverride,
-    clearAll: stableClearAll,
-    getOverrides: stableGetOverrides,
-  }
+  return useAudioVolumeContext()
 }
