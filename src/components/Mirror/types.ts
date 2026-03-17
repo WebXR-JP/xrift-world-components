@@ -9,4 +9,6 @@ export interface MirrorProps {
   color?: number
   /** 反射テクスチャの解像度（デフォルト: 512）。sizeの比率に応じて自動調整されます */
   textureResolution?: number
+  /** この距離（メートル）を超えると envMap ベースの擬似ミラーに切り替え（デフォルト: 10） */
+  lodDistance?: number
 }
