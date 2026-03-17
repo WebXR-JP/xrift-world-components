@@ -1,4 +1,4 @@
-import { memo, Suspense, useState, useCallback, useRef } from 'react'
+import { memo, Suspense, useState, useCallback, useRef, useEffect } from 'react'
 import { FrontSide } from 'three'
 import { Text } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
@@ -27,6 +27,9 @@ interface Props {
 
 /** @public */
 export type VideoPlayerProps = Props
+
+/** UI操作後に自動非表示するまでの時間（ms） */
+const AUTO_HIDE_DELAY = 3000
 
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
@@ -107,7 +110,28 @@ export const VideoPlayer = memo(
     const [reloadKey, setReloadKey] = useState(0)
     const [controlsVisible, setControlsVisible] = useState(false)
     const seekTimeRef = useRef<number | null>(null)
+    const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const screenHeight = width * (9 / 16)
+
+    const resetAutoHideTimer = useCallback(() => {
+      if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current)
+      autoHideTimerRef.current = setTimeout(() => {
+        setControlsVisible(false)
+      }, AUTO_HIDE_DELAY)
+    }, [])
+
+    // 再生中にUIを表示したらタイマー開始、停止中はタイマー解除
+    useEffect(() => {
+      if (playing && controlsVisible) {
+        resetAutoHideTimer()
+      } else if (autoHideTimerRef.current) {
+        clearTimeout(autoHideTimerRef.current)
+        autoHideTimerRef.current = null
+      }
+      return () => {
+        if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current)
+      }
+    }, [playing, controlsVisible, resetAutoHideTimer])
 
     const handleUrlChange = useCallback((newUrl: string) => {
       setCurrentUrl(newUrl)
@@ -131,11 +155,13 @@ export const VideoPlayer = memo(
 
     const handleVolumeChange = useCallback((newVolume: number) => {
       setVolume(newVolume)
-    }, [])
+      resetAutoHideTimer()
+    }, [resetAutoHideTimer])
 
     const handleSeek = useCallback((time: number) => {
       seekTimeRef.current = time
-    }, [])
+      resetAutoHideTimer()
+    }, [resetAutoHideTimer])
 
     const handleDurationChange = useCallback((newDuration: number) => {
       setDuration(newDuration)

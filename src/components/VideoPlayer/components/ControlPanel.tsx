@@ -146,6 +146,7 @@ export const ControlPanel = memo(
             alignItems="center"
             paddingX={panelHeight * 0.15}
             gap={panelHeight * 0.1}
+            onClick={(e) => e.stopPropagation?.()}
           >
           {/* URL入力ボタン */}
           <Container
@@ -200,7 +201,6 @@ export const ControlPanel = memo(
             flexGrow={1}
             height={panelHeight * 0.2}
             flexDirection="row"
-            gap={1}
             borderRadius={2}
           >
             {progressSegments.map((seg) => (
@@ -229,7 +229,6 @@ export const ControlPanel = memo(
             width={panelHeight * 1.2}
             height={panelHeight * 0.2}
             flexDirection="row"
-            gap={1}
             borderRadius={2}
           >
             {volumeSegments.map((seg) => (
