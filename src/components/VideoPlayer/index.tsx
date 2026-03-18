@@ -1,6 +1,5 @@
 import { memo, Suspense, useState, useCallback, useRef, useEffect } from 'react'
-import { FrontSide } from 'three'
-import { Text } from '@react-three/drei'
+import { Container, Text } from '@react-three/uikit'
 import { useFrame } from '@react-three/fiber'
 import { ControlPanel } from './components/ControlPanel'
 import { useVideoElement } from '../../hooks/useVideoElement'
@@ -34,6 +33,7 @@ const AUTO_HIDE_DELAY = 3000
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
 const DEFAULT_WIDTH = 4
+const PIXEL_SIZE = 0.01
 
 /** 動画テクスチャを表示するコンポーネント（Suspense内で使用） */
 const VideoTextureInner = memo(
@@ -187,16 +187,17 @@ export const VideoPlayer = memo(
           <>
             <PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />
             {!currentUrl && (
-              <Text
-                position={[0, 0, 0.01]}
-                fontSize={width * 0.05}
-                color="#666666"
-                anchorX="center"
-                anchorY="middle"
-                material-side={FrontSide}
+              <Container
+                sizeX={width}
+                sizeY={screenHeight}
+                pixelSize={PIXEL_SIZE}
+                justifyContent="center"
+                alignItems="center"
               >
-                URLを入力してください
-              </Text>
+                <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
+                  Enter Video URL
+                </Text>
+              </Container>
             )}
           </>
         ) : (
