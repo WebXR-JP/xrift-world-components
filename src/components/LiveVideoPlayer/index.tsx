@@ -1,6 +1,5 @@
 import { memo, Suspense, useState, useCallback, useRef, useEffect } from "react";
-import { FrontSide } from "three";
-import { Text } from "@react-three/drei";
+import { Container, Text } from "@react-three/uikit";
 import { ControlPanel } from "./components/ControlPanel";
 import { LiveVideoTexture } from "./components/LiveVideoTexture";
 import { ErrorBoundary } from "../commons/ErrorBoundary";
@@ -32,6 +31,7 @@ const AUTO_HIDE_DELAY = 3000
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5];
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
 const DEFAULT_WIDTH = 4;
+const PIXEL_SIZE = 0.01;
 
 export const LiveVideoPlayer = memo(
   ({
@@ -103,17 +103,22 @@ export const LiveVideoPlayer = memo(
               color="#000000"
             />
             {!videoState.url && !isRetrying && (
-              <Text
-                position={[0, 0, 0.01]}
-                fontSize={width * 0.05}
-                color="#666666"
-                anchorX="center"
-                anchorY="middle"
-                textAlign="center"
-                material-side={FrontSide}
+              <Container
+                sizeX={width}
+                sizeY={screenHeight}
+                pixelSize={PIXEL_SIZE}
+                justifyContent="center"
+                alignItems="center"
+                flexDirection="column"
+                gap={4}
               >
-                {`ライブストリームURLを入力\nHLS .m3u8 形式`}
-              </Text>
+                <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
+                  ライブストリームURLを入力
+                </Text>
+                <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
+                  HLS .m3u8 形式
+                </Text>
+              </Container>
             )}
           </>
         ) : (
@@ -153,17 +158,17 @@ export const LiveVideoPlayer = memo(
 
         {/* リトライ中オーバーレイ */}
         {isRetrying && (
-          <Text
-            position={[0, 0, 0.02]}
-            fontSize={width * 0.04}
-            color="#ffcc00"
-            anchorX="center"
-            anchorY="middle"
-            textAlign="center"
-            material-side={FrontSide}
+          <Container
+            sizeX={width}
+            sizeY={screenHeight}
+            pixelSize={PIXEL_SIZE}
+            justifyContent="center"
+            alignItems="center"
           >
-            再接続中...
-          </Text>
+            <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center">
+              再接続中...
+            </Text>
+          </Container>
         )}
 
         {/* コントロールパネル（スクリーン内オーバーレイ） */}
