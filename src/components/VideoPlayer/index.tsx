@@ -183,23 +183,21 @@ export const VideoPlayer = memo(
     return (
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
-        {!currentUrl || hasError ? (
-          <>
-            <PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />
-            {!currentUrl && (
-              <Container
-                sizeX={width}
-                sizeY={screenHeight}
-                pixelSize={PIXEL_SIZE}
-                justifyContent="center"
-                alignItems="center"
-              >
-                <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
-                  Enter Video URL
-                </Text>
-              </Container>
-            )}
-          </>
+        {!currentUrl && !hasError ? (
+          <Container
+            sizeX={width}
+            sizeY={screenHeight}
+            pixelSize={PIXEL_SIZE}
+            backgroundColor={0x000000}
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
+              Enter Video URL
+            </Text>
+          </Container>
+        ) : !currentUrl || hasError ? (
+          <PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />
         ) : (
           <ErrorBoundary
             fallback={<PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />}

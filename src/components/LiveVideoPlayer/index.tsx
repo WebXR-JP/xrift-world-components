@@ -95,32 +95,37 @@ export const LiveVideoPlayer = memo(
     return (
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
-        {!videoState.url || isRetrying ? (
-          <>
-            <PlaceholderScreen
-              width={width}
-              screenHeight={screenHeight}
-              color="#000000"
-            />
-            {!videoState.url && !isRetrying && (
-              <Container
-                sizeX={width}
-                sizeY={screenHeight}
-                pixelSize={PIXEL_SIZE}
-                justifyContent="center"
-                alignItems="center"
-                flexDirection="column"
-                gap={4}
-              >
-                <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
-                  Enter Live Stream URL
-                </Text>
-                <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
-                  HLS .m3u8
-                </Text>
-              </Container>
-            )}
-          </>
+        {isRetrying ? (
+          <Container
+            sizeX={width}
+            sizeY={screenHeight}
+            pixelSize={PIXEL_SIZE}
+            backgroundColor={0x000000}
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center">
+              Reconnecting...
+            </Text>
+          </Container>
+        ) : !videoState.url ? (
+          <Container
+            sizeX={width}
+            sizeY={screenHeight}
+            pixelSize={PIXEL_SIZE}
+            backgroundColor={0x000000}
+            justifyContent="center"
+            alignItems="center"
+            flexDirection="column"
+            gap={4}
+          >
+            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
+              Enter Live Stream URL
+            </Text>
+            <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
+              HLS .m3u8
+            </Text>
+          </Container>
         ) : (
           <ErrorBoundary
             key={`error-boundary-${videoState.url}-${videoState.reloadKey}`}
@@ -154,21 +159,6 @@ export const LiveVideoPlayer = memo(
               />
             </Suspense>
           </ErrorBoundary>
-        )}
-
-        {/* リトライ中オーバーレイ */}
-        {isRetrying && (
-          <Container
-            sizeX={width}
-            sizeY={screenHeight}
-            pixelSize={PIXEL_SIZE}
-            justifyContent="center"
-            alignItems="center"
-          >
-            <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center">
-              Reconnecting...
-            </Text>
-          </Container>
         )}
 
         {/* コントロールパネル（スクリーン内オーバーレイ） */}
