@@ -3,6 +3,7 @@ import { Container, Text } from '@react-three/uikit'
 import { useFrame } from '@react-three/fiber'
 import { ControlPanel } from './components/ControlPanel'
 import { useVideoElement } from '../../hooks/useVideoElement'
+import { useJapaneseFont } from '../../hooks/useJapaneseFont'
 import { VideoMesh } from '../commons/VideoMesh'
 import { ErrorBoundary } from '../commons/ErrorBoundary'
 import { PlaceholderScreen } from '../commons/PlaceholderScreen'
@@ -34,6 +35,28 @@ const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
 const DEFAULT_WIDTH = 4
 const PIXEL_SIZE = 0.01
+
+/** ガイドテキスト（Suspense内で使用: useJapaneseFontがsuspendする） */
+const GuideText = memo(({ width, screenHeight }: { width: number; screenHeight: number }) => {
+  const fontFamilies = useJapaneseFont()
+  return (
+    <Container
+      sizeX={width}
+      sizeY={screenHeight}
+      pixelSize={PIXEL_SIZE}
+      backgroundColor={0x000000}
+      justifyContent="center"
+      alignItems="center"
+      fontFamilies={fontFamilies}
+    >
+      <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
+        URLを入力してください
+      </Text>
+    </Container>
+  )
+})
+
+GuideText.displayName = 'GuideText'
 
 /** 動画テクスチャを表示するコンポーネント（Suspense内で使用） */
 const VideoTextureInner = memo(
@@ -184,18 +207,11 @@ export const VideoPlayer = memo(
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
         {!currentUrl && !hasError ? (
-          <Container
-            sizeX={width}
-            sizeY={screenHeight}
-            pixelSize={PIXEL_SIZE}
-            backgroundColor={0x000000}
-            justifyContent="center"
-            alignItems="center"
+          <Suspense
+            fallback={<PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />}
           >
-            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
-              Enter Video URL
-            </Text>
-          </Container>
+            <GuideText width={width} screenHeight={screenHeight} />
+          </Suspense>
         ) : !currentUrl || hasError ? (
           <PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />
         ) : (

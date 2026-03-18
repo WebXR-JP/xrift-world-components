@@ -5,6 +5,7 @@ import { LiveVideoTexture } from "./components/LiveVideoTexture";
 import { ErrorBoundary } from "../commons/ErrorBoundary";
 import { PlaceholderScreen } from "../commons/PlaceholderScreen";
 import { useLiveVideoPlayer } from "./hooks/useLiveVideoPlayer";
+import { useJapaneseFont } from "../../hooks/useJapaneseFont";
 
 interface Props {
   /** スクリーンの一意なID（必須） */
@@ -32,6 +33,55 @@ const DEFAULT_POSITION: [number, number, number] = [0, 2, -5];
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
 const DEFAULT_WIDTH = 4;
 const PIXEL_SIZE = 0.01;
+
+/** 再接続中テキスト（Suspense内で使用: useJapaneseFontがsuspendする） */
+const ReconnectingText = memo(({ width, screenHeight }: { width: number; screenHeight: number }) => {
+  const fontFamilies = useJapaneseFont()
+  return (
+    <Container
+      sizeX={width}
+      sizeY={screenHeight}
+      pixelSize={PIXEL_SIZE}
+      backgroundColor={0x000000}
+      justifyContent="center"
+      alignItems="center"
+      fontFamilies={fontFamilies}
+    >
+      <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center">
+        再接続中...
+      </Text>
+    </Container>
+  )
+})
+
+ReconnectingText.displayName = 'ReconnectingText'
+
+/** ガイドテキスト（Suspense内で使用: useJapaneseFontがsuspendする） */
+const GuideText = memo(({ width, screenHeight }: { width: number; screenHeight: number }) => {
+  const fontFamilies = useJapaneseFont()
+  return (
+    <Container
+      sizeX={width}
+      sizeY={screenHeight}
+      pixelSize={PIXEL_SIZE}
+      backgroundColor={0x000000}
+      justifyContent="center"
+      alignItems="center"
+      flexDirection="column"
+      gap={4}
+      fontFamilies={fontFamilies}
+    >
+      <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
+        ライブストリームURLを入力
+      </Text>
+      <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
+        HLS .m3u8 形式
+      </Text>
+    </Container>
+  )
+})
+
+GuideText.displayName = 'GuideText'
 
 export const LiveVideoPlayer = memo(
   ({
@@ -96,36 +146,17 @@ export const LiveVideoPlayer = memo(
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
         {isRetrying ? (
-          <Container
-            sizeX={width}
-            sizeY={screenHeight}
-            pixelSize={PIXEL_SIZE}
-            backgroundColor={0x000000}
-            justifyContent="center"
-            alignItems="center"
+          <Suspense
+            fallback={<PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />}
           >
-            <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center">
-              Reconnecting...
-            </Text>
-          </Container>
+            <ReconnectingText width={width} screenHeight={screenHeight} />
+          </Suspense>
         ) : !videoState.url ? (
-          <Container
-            sizeX={width}
-            sizeY={screenHeight}
-            pixelSize={PIXEL_SIZE}
-            backgroundColor={0x000000}
-            justifyContent="center"
-            alignItems="center"
-            flexDirection="column"
-            gap={4}
+          <Suspense
+            fallback={<PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />}
           >
-            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
-              Enter Live Stream URL
-            </Text>
-            <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
-              HLS .m3u8
-            </Text>
-          </Container>
+            <GuideText width={width} screenHeight={screenHeight} />
+          </Suspense>
         ) : (
           <ErrorBoundary
             key={`error-boundary-${videoState.url}-${videoState.reloadKey}`}

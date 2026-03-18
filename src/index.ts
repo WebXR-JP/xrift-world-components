@@ -178,6 +178,14 @@ export {
   type CameraConfig,
 } from './components/DevEnvironment/types'
 
+// Fonts
+export { useJapaneseFont } from './hooks/useJapaneseFont'
+export {
+  JAPANESE_FONT_URL,
+  JAPANESE_CHARSET,
+  JAPANESE_TEXTURE_SIZE,
+} from './fonts/constants'
+
 // Hooks
 export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
