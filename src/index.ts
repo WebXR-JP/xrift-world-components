@@ -96,6 +96,12 @@ export {
 } from './contexts/PlacementStateContext'
 
 export {
+  VoiceVolumeOverrideContext,
+  VoiceVolumeOverrideProvider,
+  useVoiceVolumeOverrideContext,
+  createDefaultVoiceVolumeOverrideImplementation,
+  type VoiceVolumeOverrideContextValue,
+  // Deprecated aliases
   AudioVolumeContext,
   AudioVolumeProvider,
   useAudioVolumeContext,
@@ -179,9 +185,8 @@ export { useConfirm } from './hooks/useConfirm'
 export { useTeleport } from './hooks/useTeleport'
 export { useInstance } from './hooks/useInstance'
 export { useWorld } from './hooks/useWorld'
-export { useWebAudioVolume } from './hooks/useWebAudioVolume'
 export { useInstanceEvent } from './hooks/useInstanceEvent'
-export { useAudioVolume } from './hooks/useAudioVolume'
+export { useVoiceVolumeOverride, useAudioVolume } from './hooks/useAudioVolume'
 
 // Constants
 export { LAYERS, type LayerName, type LayerNumber } from './constants/layers'

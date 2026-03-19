@@ -1,11 +1,11 @@
-import { type AudioVolumeContextValue, useAudioVolumeContext } from '../contexts/AudioVolumeContext'
+import { type VoiceVolumeOverrideContextValue, useVoiceVolumeOverrideContext } from '../contexts/AudioVolumeContext'
 
 /**
- * 特定ユーザーの音声ボリュームをオーバーライドするhook
+ * 特定ユーザーのボイスチャット音量をオーバーライドするhook
  * ワールド制作者が演壇やステージなどで特定ユーザーの音量を制御するために使用
  *
  * @example
- * const { setOverride, clearOverride } = useAudioVolume()
+ * const { setOverride, clearOverride } = useVoiceVolumeOverride()
  *
  * // 演壇に立った人の声を全体に届ける
  * setOverride(speakerUserId, 1.0)
@@ -13,6 +13,9 @@ import { type AudioVolumeContextValue, useAudioVolumeContext } from '../contexts
  * // オーバーライドを解除
  * clearOverride(speakerUserId)
  */
-export const useAudioVolume = (): AudioVolumeContextValue => {
-  return useAudioVolumeContext()
+export const useVoiceVolumeOverride = (): VoiceVolumeOverrideContextValue => {
+  return useVoiceVolumeOverrideContext()
 }
+
+/** @deprecated Use useVoiceVolumeOverride instead */
+export const useAudioVolume = useVoiceVolumeOverride
