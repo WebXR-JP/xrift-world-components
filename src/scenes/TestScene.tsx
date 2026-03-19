@@ -1,29 +1,28 @@
-import { VideoPlayer } from "../components/VideoPlayer";
-import { LiveVideoPlayer } from "../components/LiveVideoPlayer";
+import { Mirror } from "../components/Mirror";
 
 /**
- * VideoPlayer / LiveVideoPlayer のテストシーン
+ * Mirror のテストシーン
  */
 export function TestScene() {
   return (
     <>
-      {/* ビデオプレイヤー（左） */}
-      <VideoPlayer
-        id="video-player"
-        position={[-2.5, 1.125, 0]}
-        width={4}
-        volume={0}
-        playing
-        url="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-      />
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[5, 5, 5]} intensity={1} />
 
-      {/* ライブビデオプレイヤー（右） */}
-      <LiveVideoPlayer
-        id="live-player"
-        position={[2.5, 1.125, 0]}
-        width={4}
-        volume={0}
-      />
+      {/* ミラー（奥） */}
+      <Mirror position={[0, 1.5, -3]} size={[3, 2]} />
+
+      {/* 反射確認用のボックス */}
+      <mesh position={[0, 0.5, 0]}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color="tomato" />
+      </mesh>
+
+      {/* 床 */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[20, 20]} />
+        <meshStandardMaterial color="#888" />
+      </mesh>
     </>
   );
 }

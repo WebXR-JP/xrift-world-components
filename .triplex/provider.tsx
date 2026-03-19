@@ -1,3 +1,4 @@
+import { OrbitControls } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
 import { Skybox } from '../src/components/Skybox'
@@ -20,6 +21,7 @@ export function CanvasProvider({
   return (
     <XRiftProvider baseUrl="">
       <EnableLocalClipping />
+      <OrbitControls />
       <Skybox />
       {children}
     </XRiftProvider>
