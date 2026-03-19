@@ -1,6 +1,5 @@
 import { memo, Suspense, useState, useCallback, useRef, useEffect } from "react";
-import { FrontSide } from "three";
-import { Text } from "@react-three/drei";
+import { Container, Text } from "@react-three/uikit";
 import { ControlPanel } from "./components/ControlPanel";
 import { LiveVideoTexture } from "./components/LiveVideoTexture";
 import { ErrorBoundary } from "../commons/ErrorBoundary";
@@ -32,6 +31,7 @@ const AUTO_HIDE_DELAY = 3000
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5];
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
 const DEFAULT_WIDTH = 4;
+const PIXEL_SIZE = 0.01;
 
 export const LiveVideoPlayer = memo(
   ({
@@ -95,27 +95,37 @@ export const LiveVideoPlayer = memo(
     return (
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
-        {!videoState.url || isRetrying ? (
-          <>
-            <PlaceholderScreen
-              width={width}
-              screenHeight={screenHeight}
-              color="#000000"
-            />
-            {!videoState.url && !isRetrying && (
-              <Text
-                position={[0, 0, 0.01]}
-                fontSize={width * 0.05}
-                color="#666666"
-                anchorX="center"
-                anchorY="middle"
-                textAlign="center"
-                material-side={FrontSide}
-              >
-                {`ライブストリームURLを入力\nHLS .m3u8 形式`}
-              </Text>
-            )}
-          </>
+        {isRetrying ? (
+          <Container
+            sizeX={width}
+            sizeY={screenHeight}
+            pixelSize={PIXEL_SIZE}
+            backgroundColor={0x000000}
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center">
+              Reconnecting...
+            </Text>
+          </Container>
+        ) : !videoState.url ? (
+          <Container
+            sizeX={width}
+            sizeY={screenHeight}
+            pixelSize={PIXEL_SIZE}
+            backgroundColor={0x000000}
+            justifyContent="center"
+            alignItems="center"
+            flexDirection="column"
+            gap={4}
+          >
+            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
+              Enter Live Stream URL
+            </Text>
+            <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
+              HLS .m3u8
+            </Text>
+          </Container>
         ) : (
           <ErrorBoundary
             key={`error-boundary-${videoState.url}-${videoState.reloadKey}`}
@@ -149,21 +159,6 @@ export const LiveVideoPlayer = memo(
               />
             </Suspense>
           </ErrorBoundary>
-        )}
-
-        {/* リトライ中オーバーレイ */}
-        {isRetrying && (
-          <Text
-            position={[0, 0, 0.02]}
-            fontSize={width * 0.04}
-            color="#ffcc00"
-            anchorX="center"
-            anchorY="middle"
-            textAlign="center"
-            material-side={FrontSide}
-          >
-            再接続中...
-          </Text>
         )}
 
         {/* コントロールパネル（スクリーン内オーバーレイ） */}
