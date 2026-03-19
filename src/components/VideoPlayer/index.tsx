@@ -36,9 +36,11 @@ const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
 const DEFAULT_WIDTH = 4
 const PIXEL_SIZE = 0.01
 
+const GUIDE_TEXTS = ['URLを入力してください']
+
 /** ガイドテキスト（Suspense内で使用: useJapaneseFontがsuspendする） */
 const GuideText = memo(({ width, screenHeight }: { width: number; screenHeight: number }) => {
-  const fontFamilies = useJapaneseFont()
+  const fontFamilies = useJapaneseFont(GUIDE_TEXTS)
   return (
     <Container
       sizeX={width}

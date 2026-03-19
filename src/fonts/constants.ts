@@ -2,8 +2,8 @@
 export const JAPANESE_FONT_URL =
   'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-jp@latest/japanese-400-normal.ttf'
 
-/** MSDF 生成に含める文字セット（ひらがな・カタカナ・常用句読点・ASCII） */
-export const JAPANESE_CHARSET = [
+/** MSDF 生成に含めるベース文字セット（ひらがな・カタカナ・常用句読点・ASCII） */
+export const JAPANESE_BASE_CHARSET = [
   // ASCII
   ' !"#$%&\'()*+,-./0123456789:;<=>?@',
   'ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`',

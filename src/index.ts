@@ -182,7 +182,7 @@ export {
 export { useJapaneseFont } from './hooks/useJapaneseFont'
 export {
   JAPANESE_FONT_URL,
-  JAPANESE_CHARSET,
+  JAPANESE_BASE_CHARSET,
   JAPANESE_TEXTURE_SIZE,
 } from './fonts/constants'
 

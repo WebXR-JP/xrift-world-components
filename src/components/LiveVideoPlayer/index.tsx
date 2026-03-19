@@ -34,9 +34,12 @@ const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
 const DEFAULT_WIDTH = 4;
 const PIXEL_SIZE = 0.01;
 
+const RECONNECTING_TEXTS = ['再接続中...']
+const GUIDE_TEXTS = ['ライブストリームURLを入力', 'HLS .m3u8 形式']
+
 /** 再接続中テキスト（Suspense内で使用: useJapaneseFontがsuspendする） */
 const ReconnectingText = memo(({ width, screenHeight }: { width: number; screenHeight: number }) => {
-  const fontFamilies = useJapaneseFont()
+  const fontFamilies = useJapaneseFont(RECONNECTING_TEXTS)
   return (
     <Container
       sizeX={width}
@@ -58,7 +61,7 @@ ReconnectingText.displayName = 'ReconnectingText'
 
 /** ガイドテキスト（Suspense内で使用: useJapaneseFontがsuspendする） */
 const GuideText = memo(({ width, screenHeight }: { width: number; screenHeight: number }) => {
-  const fontFamilies = useJapaneseFont()
+  const fontFamilies = useJapaneseFont(GUIDE_TEXTS)
   return (
     <Container
       sizeX={width}
