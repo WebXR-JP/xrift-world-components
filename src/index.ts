@@ -181,10 +181,11 @@ export {
 // Fonts
 export { MsdfText } from './components/MsdfText'
 export { FontReadyContainer } from './fonts/FontReadyContainer'
+export { FontProvider } from './fonts/FontProvider'
+export { FontContext, useFontContext } from './fonts/FontContext'
 export { useMsdfFont } from './hooks/useMsdfFont'
 export {
   JAPANESE_FONT_URL,
-  JAPANESE_BASE_CHARSET,
   JAPANESE_TEXTURE_SIZE,
 } from './fonts/constants'
 

@@ -2,14 +2,11 @@ import { useMemo } from 'react'
 import { useTTF } from '../fonts/useTTF'
 import {
   JAPANESE_FONT_URL,
-  JAPANESE_BASE_CHARSET,
   JAPANESE_TEXTURE_SIZE,
 } from '../fonts/constants'
 
-const deriveCharset = (texts: string[]): string => {
-  const all = JAPANESE_BASE_CHARSET + texts.join('')
-  return [...new Set(all)].join('')
-}
+const deriveCharset = (texts: string[]): string =>
+  [...new Set(texts.join(''))].join('')
 
 /**
  * MSDF フォントを読み込む hook。
