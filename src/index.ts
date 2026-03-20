@@ -187,6 +187,7 @@ export { useInstance } from './hooks/useInstance'
 export { useWorld } from './hooks/useWorld'
 export { useInstanceEvent } from './hooks/useInstanceEvent'
 export { useVoiceVolumeOverride, useAudioVolume } from './hooks/useAudioVolume'
+export { useDefaultFont, type FontLocale } from './hooks/useDefaultFont'
 
 // Constants
 export { LAYERS, type LayerName, type LayerNumber } from './constants/layers'
