@@ -2,7 +2,7 @@ import { createRoot } from 'react-dom/client'
 import { RigidBody } from '@react-three/rapier'
 import { DevEnvironment } from '../src/components/DevEnvironment'
 import { TextInputProvider, createDefaultTextInputImplementation } from '../src/contexts/TextInputContext'
-import { TestScene } from '../src/scenes/TestScene'
+import { TroikaTextScene } from '../src/scenes/TroikaTextScene'
 
 const textInput = createDefaultTextInputImplementation()
 
@@ -24,7 +24,7 @@ function App() {
       <directionalLight position={[5, 10, 5]} intensity={1} castShadow />
       <TextInputProvider value={textInput}>
         <Floor />
-        <TestScene />
+        <TroikaTextScene />
       </TextInputProvider>
     </DevEnvironment>
   )

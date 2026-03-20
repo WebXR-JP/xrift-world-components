@@ -167,6 +167,8 @@ export {
 
 export { Portal, type PortalProps } from './components/Portal'
 
+export { TroikaText, type TroikaTextProps } from './components/TroikaText'
+
 export {
   BillboardY,
   useBillboardY,
