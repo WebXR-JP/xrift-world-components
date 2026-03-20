@@ -179,8 +179,6 @@ export {
 } from './components/DevEnvironment/types'
 
 // Fonts
-export { MsdfText } from './components/MsdfText'
-export { FontReadyContainer } from './fonts/FontReadyContainer'
 export { FontProvider } from './fonts/FontProvider'
 export { FontContext, useFontContext } from './fonts/FontContext'
 export { useMsdfFont } from './hooks/useMsdfFont'
