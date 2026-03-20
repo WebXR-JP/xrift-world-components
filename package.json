@@ -9,7 +9,8 @@
   ],
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch",
+    "dev": "vite",
+    "dev:build": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"
@@ -58,6 +59,7 @@
     "@triplex/api": "^0.1.4",
     "@types/react": "^18.3.12",
     "@types/three": "^0.181.0",
+    "@vitejs/plugin-react": "^6.0.1",
     "jsdom": "^28.0.0",
     "react-dom": "^19.2.0",
     "three": "^0.181.0",
