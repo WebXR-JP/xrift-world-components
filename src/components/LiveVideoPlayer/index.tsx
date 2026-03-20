@@ -1,11 +1,10 @@
 import { memo, Suspense, useState, useCallback, useRef, useEffect } from "react";
-import { Text } from "@react-three/uikit";
+import { Container, Text } from "@react-three/uikit";
 import { ControlPanel } from "./components/ControlPanel";
 import { LiveVideoTexture } from "./components/LiveVideoTexture";
 import { ErrorBoundary } from "../commons/ErrorBoundary";
 import { PlaceholderScreen } from "../commons/PlaceholderScreen";
 import { useLiveVideoPlayer } from "./hooks/useLiveVideoPlayer";
-import { FontReadyContainer } from "../../fonts/FontReadyContainer";
 
 interface Props {
   /** スクリーンの一意なID（必須） */
@@ -33,52 +32,6 @@ const DEFAULT_POSITION: [number, number, number] = [0, 2, -5];
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
 const DEFAULT_WIDTH = 4;
 const PIXEL_SIZE = 0.01;
-
-const RECONNECTING_TEXTS = ['再接続中...']
-const GUIDE_TEXTS = ['ライブストリームURLを入力', 'HLS .m3u8 形式']
-
-/** 再接続中テキスト（Suspense内で使用: FontReadyContainerがsuspendする） */
-const ReconnectingText = memo(({ width, screenHeight }: { width: number; screenHeight: number }) => (
-  <FontReadyContainer
-    texts={RECONNECTING_TEXTS}
-    sizeX={width}
-    sizeY={screenHeight}
-    pixelSize={PIXEL_SIZE}
-    backgroundColor={0x000000}
-    justifyContent="center"
-    alignItems="center"
-  >
-    <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center">
-      再接続中...
-    </Text>
-  </FontReadyContainer>
-))
-
-ReconnectingText.displayName = 'ReconnectingText'
-
-/** ガイドテキスト（Suspense内で使用: FontReadyContainerがsuspendする） */
-const GuideText = memo(({ width, screenHeight }: { width: number; screenHeight: number }) => (
-  <FontReadyContainer
-    texts={GUIDE_TEXTS}
-    sizeX={width}
-    sizeY={screenHeight}
-    pixelSize={PIXEL_SIZE}
-    backgroundColor={0x000000}
-    justifyContent="center"
-    alignItems="center"
-    flexDirection="column"
-    gap={4}
-  >
-    <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
-      ライブストリームURLを入力
-    </Text>
-    <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
-      HLS .m3u8 形式
-    </Text>
-  </FontReadyContainer>
-))
-
-GuideText.displayName = 'GuideText'
 
 export const LiveVideoPlayer = memo(
   ({
@@ -143,17 +96,36 @@ export const LiveVideoPlayer = memo(
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
         {isRetrying ? (
-          <Suspense
-            fallback={<PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />}
+          <Container
+            sizeX={width}
+            sizeY={screenHeight}
+            pixelSize={PIXEL_SIZE}
+            backgroundColor={0x000000}
+            justifyContent="center"
+            alignItems="center"
           >
-            <ReconnectingText width={width} screenHeight={screenHeight} />
-          </Suspense>
+            <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center">
+              Reconnecting...
+            </Text>
+          </Container>
         ) : !videoState.url ? (
-          <Suspense
-            fallback={<PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />}
+          <Container
+            sizeX={width}
+            sizeY={screenHeight}
+            pixelSize={PIXEL_SIZE}
+            backgroundColor={0x000000}
+            justifyContent="center"
+            alignItems="center"
+            flexDirection="column"
+            gap={4}
           >
-            <GuideText width={width} screenHeight={screenHeight} />
-          </Suspense>
+            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
+              Enter Live Stream URL
+            </Text>
+            <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
+              HLS .m3u8
+            </Text>
+          </Container>
         ) : (
           <ErrorBoundary
             key={`error-boundary-${videoState.url}-${videoState.reloadKey}`}
