@@ -179,7 +179,9 @@ export {
 } from './components/DevEnvironment/types'
 
 // Fonts
-export { useJapaneseFont } from './hooks/useJapaneseFont'
+export { MsdfText } from './components/MsdfText'
+export { FontReadyContainer } from './fonts/FontReadyContainer'
+export { useMsdfFont } from './hooks/useMsdfFont'
 export {
   JAPANESE_FONT_URL,
   JAPANESE_BASE_CHARSET,

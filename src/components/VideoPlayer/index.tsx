@@ -1,9 +1,9 @@
 import { memo, Suspense, useState, useCallback, useRef, useEffect } from 'react'
-import { Container, Text } from '@react-three/uikit'
+import { Text } from '@react-three/uikit'
 import { useFrame } from '@react-three/fiber'
 import { ControlPanel } from './components/ControlPanel'
 import { useVideoElement } from '../../hooks/useVideoElement'
-import { useJapaneseFont } from '../../hooks/useJapaneseFont'
+import { FontReadyContainer } from '../../fonts/FontReadyContainer'
 import { VideoMesh } from '../commons/VideoMesh'
 import { ErrorBoundary } from '../commons/ErrorBoundary'
 import { PlaceholderScreen } from '../commons/PlaceholderScreen'
@@ -38,25 +38,22 @@ const PIXEL_SIZE = 0.01
 
 const GUIDE_TEXTS = ['URLを入力してください']
 
-/** ガイドテキスト（Suspense内で使用: useJapaneseFontがsuspendする） */
-const GuideText = memo(({ width, screenHeight }: { width: number; screenHeight: number }) => {
-  const fontFamilies = useJapaneseFont(GUIDE_TEXTS)
-  return (
-    <Container
-      sizeX={width}
-      sizeY={screenHeight}
-      pixelSize={PIXEL_SIZE}
-      backgroundColor={0x000000}
-      justifyContent="center"
-      alignItems="center"
-      fontFamilies={fontFamilies}
-    >
-      <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
-        URLを入力してください
-      </Text>
-    </Container>
-  )
-})
+/** ガイドテキスト（Suspense内で使用: FontReadyContainerがsuspendする） */
+const GuideText = memo(({ width, screenHeight }: { width: number; screenHeight: number }) => (
+  <FontReadyContainer
+    texts={GUIDE_TEXTS}
+    sizeX={width}
+    sizeY={screenHeight}
+    pixelSize={PIXEL_SIZE}
+    backgroundColor={0x000000}
+    justifyContent="center"
+    alignItems="center"
+  >
+    <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
+      URLを入力してください
+    </Text>
+  </FontReadyContainer>
+))
 
 GuideText.displayName = 'GuideText'
 
