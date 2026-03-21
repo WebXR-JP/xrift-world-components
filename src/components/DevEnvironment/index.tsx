@@ -2,6 +2,7 @@ import { useCallback, useState, useSyncExternalStore } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
+import { SpawnPointProvider } from '../../contexts/SpawnPointContext'
 import { PCFShadowMap } from 'three'
 import type { Props } from './types'
 import {
@@ -79,13 +80,15 @@ export function DevEnvironment({
         <PointerLockControls />
         <CenterRaycaster onHitChange={handleHitChange} />
         <Physics gravity={[0, -gravity, 0]} timeStep="vary">
-          <PhysicsPlayer
-            moveSpeed={moveSpeed}
-            spawnPosition={spawnPosition}
-            respawnThreshold={respawnThreshold}
-            allowInfiniteJump={allowInfiniteJump}
-          />
-          {children}
+          <SpawnPointProvider>
+            <PhysicsPlayer
+              moveSpeed={moveSpeed}
+              spawnPosition={spawnPosition}
+              respawnThreshold={respawnThreshold}
+              allowInfiniteJump={allowInfiniteJump}
+            />
+            {children}
+          </SpawnPointProvider>
         </Physics>
       </Canvas>
       <Crosshair active={isHit} />

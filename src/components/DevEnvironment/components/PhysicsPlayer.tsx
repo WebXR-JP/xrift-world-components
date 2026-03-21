@@ -8,6 +8,7 @@ import {
 import type { RapierRigidBody } from '@react-three/rapier'
 import { Vector3 } from 'three'
 import type { Group, Mesh } from 'three'
+import { useSpawnPoint } from '../../../hooks/useSpawnPoint'
 import { LAYERS } from '../../../constants/layers'
 import {
   PLAYER_HALF_HEIGHT,
@@ -42,6 +43,23 @@ export function PhysicsPlayer({
   const rightRef = useRef(new Vector3())
 
   const { camera } = useThree()
+  const spawnPoint = useSpawnPoint()
+
+  // SpawnPoint が登録されたらテレポート
+  useEffect(() => {
+    if (!spawnPoint) return
+    const rb = rigidBodyRef.current
+    if (!rb) return
+
+    rb.setTranslation(
+      { x: spawnPoint.position[0], y: spawnPoint.position[1], z: spawnPoint.position[2] },
+      true,
+    )
+    rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
+
+    const yawRad = (spawnPoint.yaw * Math.PI) / 180
+    camera.rotation.set(0, yawRad, 0)
+  }, [spawnPoint, camera])
 
   // アバターを三人称レイヤーに設定（一人称カメラには映らない）
   useEffect(() => {
@@ -166,11 +184,17 @@ export function PhysicsPlayer({
 
     // --- リスポーン ---
     if (pos.y < respawnThreshold) {
+      const respawnPos = spawnPoint?.position ?? spawnPosition
       rb.setTranslation(
-        { x: spawnPosition[0], y: spawnPosition[1], z: spawnPosition[2] },
+        { x: respawnPos[0], y: respawnPos[1], z: respawnPos[2] },
         true,
       )
       rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
+
+      if (spawnPoint) {
+        const yawRad = (spawnPoint.yaw * Math.PI) / 180
+        camera.rotation.set(0, yawRad, 0)
+      }
     }
   })
 
