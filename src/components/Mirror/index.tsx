@@ -10,6 +10,7 @@ import { shouldUseReflector } from './utils'
 export type { MirrorProps } from './types'
 
 const _worldPos = new Vector3()
+const _cameraWorldPos = new Vector3()
 
 const fallbackVertexShader = `
   varying vec3 vWorldNormal;
@@ -109,14 +110,19 @@ export function Mirror({
   // VRMFirstPersonのレイヤー設定により、メインカメラではThirdPersonOnlyレイヤー（頭部）が
   // 非表示になっているが、鏡には全身を映す必要があるため
   // onBeforeRenderでメインカメラの設定がコピーされるため、毎フレーム設定が必要
-  useFrame(({ camera }) => {
+  useFrame(({ camera, gl }) => {
     const reflector = reflectorRef.current
     if (!reflector) return
 
     // LOD: カメラと鏡の距離に応じて Reflector ↔ envMap を切り替え
     const fallback = fallbackRef.current
     if (fallback && groupRef.current) {
-      const distance = camera.position.distanceTo(groupRef.current.getWorldPosition(_worldPos))
+      // VR モードでは XR カメラのワールド座標を使用
+      const activeCamera = gl.xr.isPresenting ? gl.xr.getCamera() : camera
+      _cameraWorldPos.setFromMatrixPosition(activeCamera.matrixWorld)
+      const distance = _cameraWorldPos.distanceTo(
+        groupRef.current.getWorldPosition(_worldPos),
+      )
       const useReflector = shouldUseReflector(
         distance,
         lodDistance,
