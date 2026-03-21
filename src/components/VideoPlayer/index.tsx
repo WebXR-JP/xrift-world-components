@@ -193,7 +193,7 @@ export const VideoPlayer = memo(
             alignItems="center"
           >
             <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
-              Enter Video URL
+              動画のURLを入力
             </Text>
           </Container>
         ) : !currentUrl || hasError ? (

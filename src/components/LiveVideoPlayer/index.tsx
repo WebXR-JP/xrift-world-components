@@ -105,7 +105,7 @@ export const LiveVideoPlayer = memo(
             alignItems="center"
           >
             <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center">
-              Reconnecting...
+              再接続中...
             </Text>
           </Container>
         ) : !videoState.url ? (
@@ -120,7 +120,7 @@ export const LiveVideoPlayer = memo(
             gap={4}
           >
             <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
-              Enter Live Stream URL
+              ライブ配信のURLを入力
             </Text>
             <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
               HLS .m3u8
