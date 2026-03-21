@@ -3,6 +3,8 @@ import { Container, Text } from '@react-three/uikit'
 import { useFrame } from '@react-three/fiber'
 import { ControlPanel } from './components/ControlPanel'
 import { useVideoElement } from '../../hooks/useVideoElement'
+import { useDefaultFont } from '../../hooks/useDefaultFont'
+import type { FontLocale } from '../../hooks/useDefaultFont'
 import { VideoMesh } from '../commons/VideoMesh'
 import { ErrorBoundary } from '../commons/ErrorBoundary'
 import { PlaceholderScreen } from '../commons/PlaceholderScreen'
@@ -34,6 +36,7 @@ const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
 const DEFAULT_WIDTH = 4
 const PIXEL_SIZE = 0.01
+const FONT_LOCALES: FontLocale[] = ['ja']
 
 /** 動画テクスチャを表示するコンポーネント（Suspense内で使用） */
 const VideoTextureInner = memo(
@@ -111,6 +114,7 @@ export const VideoPlayer = memo(
     const [controlsVisible, setControlsVisible] = useState(false)
     const seekTimeRef = useRef<number | null>(null)
     const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const fontFamilies = useDefaultFont(FONT_LOCALES)
     const screenHeight = width * (9 / 16)
 
     const resetAutoHideTimer = useCallback(() => {
@@ -191,8 +195,9 @@ export const VideoPlayer = memo(
             backgroundColor={0x000000}
             justifyContent="center"
             alignItems="center"
+            fontFamilies={fontFamilies}
           >
-            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center">
+            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center" fontFamily="ja">
               動画のURLを入力
             </Text>
           </Container>

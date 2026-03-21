@@ -15,15 +15,26 @@ const FONT_REGISTRY: Record<FontLocale, FontConfig> = {
   },
 }
 
-async function loadFont(
+/** ロケールごとのキャッシュ（同じフォントの重複フェッチを防止） */
+const fontCache = new Map<FontLocale, Promise<[string, FontFamilies[string]]>>()
+
+function loadFont(
   locale: FontLocale,
 ): Promise<[string, FontFamilies[string]]> {
+  const cached = fontCache.get(locale)
+  if (cached) return cached
+
   const config = FONT_REGISTRY[locale]
   const url = `${config.baseUrl}/metrics.json?v=${config.version}`
-  const res = await fetch(url)
-  const metrics = await res.json()
-  metrics.pages = [`${config.baseUrl}/atlas.png?v=${config.version}`]
-  return [locale, { normal: metrics }]
+  const promise = fetch(url)
+    .then((res) => res.json())
+    .then((metrics) => {
+      metrics.pages = [`${config.baseUrl}/atlas.png?v=${config.version}`]
+      return [locale, { normal: metrics }] as [string, FontFamilies[string]]
+    })
+
+  fontCache.set(locale, promise)
+  return promise
 }
 
 /**
