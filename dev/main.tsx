@@ -12,7 +12,7 @@ function Floor() {
     <RigidBody type="fixed">
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[50, 50]} />
-        <meshStandardMaterial color="#444444" />
+        <meshStandardMaterial color="#444444" transparent opacity={0} />
       </mesh>
     </RigidBody>
   )
