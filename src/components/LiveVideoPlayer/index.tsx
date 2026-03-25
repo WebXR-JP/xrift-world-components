@@ -100,38 +100,46 @@ export const LiveVideoPlayer = memo(
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
         {isRetrying ? (
-          <Container
-            sizeX={width}
-            sizeY={screenHeight}
-            pixelSize={PIXEL_SIZE}
-            backgroundColor={0x000000}
-            justifyContent="center"
-            alignItems="center"
-            fontFamilies={fontFamilies}
-          >
-            <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center" fontFamily="ja">
-              再接続中...
-            </Text>
-          </Container>
+          fontFamilies ? (
+            <Container
+              sizeX={width}
+              sizeY={screenHeight}
+              pixelSize={PIXEL_SIZE}
+              backgroundColor={0x000000}
+              justifyContent="center"
+              alignItems="center"
+              fontFamilies={fontFamilies}
+            >
+              <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center" fontFamily="ja">
+                再接続中...
+              </Text>
+            </Container>
+          ) : (
+            <PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />
+          )
         ) : !videoState.url ? (
-          <Container
-            sizeX={width}
-            sizeY={screenHeight}
-            pixelSize={PIXEL_SIZE}
-            backgroundColor={0x000000}
-            justifyContent="center"
-            alignItems="center"
-            flexDirection="column"
-            gap={4}
-            fontFamilies={fontFamilies}
-          >
-            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center" fontFamily="ja">
-              ライブ配信のURLを入力
-            </Text>
-            <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
-              HLS .m3u8
-            </Text>
-          </Container>
+          fontFamilies ? (
+            <Container
+              sizeX={width}
+              sizeY={screenHeight}
+              pixelSize={PIXEL_SIZE}
+              backgroundColor={0x000000}
+              justifyContent="center"
+              alignItems="center"
+              flexDirection="column"
+              gap={4}
+              fontFamilies={fontFamilies}
+            >
+              <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center" fontFamily="ja">
+                ライブ配信のURLを入力
+              </Text>
+              <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
+                HLS .m3u8
+              </Text>
+            </Container>
+          ) : (
+            <PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />
+          )
         ) : (
           <ErrorBoundary
             key={`error-boundary-${videoState.url}-${videoState.reloadKey}`}

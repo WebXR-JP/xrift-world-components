@@ -18,6 +18,9 @@ const FONT_REGISTRY: Record<FontLocale, FontConfig> = {
 /** ロケールごとのキャッシュ（同じフォントの重複フェッチを防止） */
 const fontCache = new Map<FontLocale, Promise<[string, FontFamilies[string]]>>()
 
+/** 解決済みフォントデータのキャッシュ（同期アクセス用） */
+const resolvedCache = new Map<string, FontFamilies>()
+
 function loadFont(
   locale: FontLocale,
 ): Promise<[string, FontFamilies[string]]> {
@@ -35,6 +38,11 @@ function loadFont(
 
   fontCache.set(locale, promise)
   return promise
+}
+
+// モジュール読み込み時にフォントのフェッチを開始
+for (const locale of Object.keys(FONT_REGISTRY) as FontLocale[]) {
+  loadFont(locale)
 }
 
 /**
@@ -57,19 +65,30 @@ function loadFont(
 export function useDefaultFont(
   locales: FontLocale[],
 ): FontFamilies | undefined {
-  const [fontFamilies, setFontFamilies] = useState<FontFamilies | undefined>()
   const key = locales.slice().sort().join(',')
+
+  // 解決済みなら初期値として同期的に返す
+  const [fontFamilies, setFontFamilies] = useState<FontFamilies | undefined>(
+    () => resolvedCache.get(key),
+  )
 
   useEffect(() => {
     if (key === '') return
+
+    // すでに解決済みなら何もしない
+    if (resolvedCache.has(key)) {
+      setFontFamilies(resolvedCache.get(key))
+      return
+    }
 
     let cancelled = false
     const targetLocales = key.split(',') as FontLocale[]
 
     Promise.all(targetLocales.map(loadFont)).then((entries) => {
-      if (!cancelled) {
-        setFontFamilies(Object.fromEntries(entries))
-      }
+      if (cancelled) return
+      const result = Object.fromEntries(entries)
+      resolvedCache.set(key, result)
+      setFontFamilies(result)
     })
 
     return () => {
