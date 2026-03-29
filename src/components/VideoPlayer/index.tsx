@@ -1,10 +1,10 @@
 import { memo, Suspense, useState, useCallback, useRef, useEffect } from 'react'
-import { Text } from '@react-three/uikit'
+import { Container, Text } from '@react-three/uikit'
 import { useFrame } from '@react-three/fiber'
-import { Container } from '@react-three/uikit'
 import { ControlPanel } from './components/ControlPanel'
 import { useVideoElement } from '../../hooks/useVideoElement'
-import { useDefaultFont, type FontLocale } from '../../hooks/useDefaultFont'
+import { useDefaultFont } from '../../hooks/useDefaultFont'
+import type { FontLocale } from '../../hooks/useDefaultFont'
 import { VideoMesh } from '../commons/VideoMesh'
 import { ErrorBoundary } from '../commons/ErrorBoundary'
 import { PlaceholderScreen } from '../commons/PlaceholderScreen'
@@ -32,11 +32,11 @@ export type VideoPlayerProps = Props
 /** UI操作後に自動非表示するまでの時間（ms） */
 const AUTO_HIDE_DELAY = 3000
 
-const FONT_LOCALES: FontLocale[] = ['ja']
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
 const DEFAULT_WIDTH = 4
 const PIXEL_SIZE = 0.01
+const FONT_LOCALES: FontLocale[] = ['ja']
 
 /** 動画テクスチャを表示するコンポーネント（Suspense内で使用） */
 const VideoTextureInner = memo(
@@ -189,13 +189,13 @@ export const VideoPlayer = memo(
         {/* 画面本体 */}
         {!currentUrl && !hasError ? (
           <Container
-            fontFamilies={fontFamilies}
             sizeX={width}
             sizeY={screenHeight}
             pixelSize={PIXEL_SIZE}
             backgroundColor={0x000000}
             justifyContent="center"
             alignItems="center"
+            fontFamilies={fontFamilies}
           >
             <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center" fontFamily="ja">
               動画のURLを入力
