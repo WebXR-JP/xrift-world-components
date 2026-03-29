@@ -40,7 +40,9 @@ function loadFont(
   return promise
 }
 
-// モジュール読み込み時にフォントのフェッチを開始
+// モジュール読み込み時に全ロケールのフォントを事前フェッチする。
+// 現在は ja のみだが、ロケール追加時もここで一括プリロードされる想定。
+// 特定ロケールだけ遅延ロードしたい場合はこのループから除外すること。
 for (const locale of Object.keys(FONT_REGISTRY) as FontLocale[]) {
   loadFont(locale)
 }

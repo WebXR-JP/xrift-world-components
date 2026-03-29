@@ -1,5 +1,5 @@
 import { memo, Suspense, useState, useCallback, useRef, useEffect } from 'react'
-import { Container, Text } from '@react-three/uikit'
+import { Text } from '@react-three/uikit'
 import { useFrame } from '@react-three/fiber'
 import { ControlPanel } from './components/ControlPanel'
 import { useVideoElement } from '../../hooks/useVideoElement'
@@ -8,6 +8,7 @@ import type { FontLocale } from '../../hooks/useDefaultFont'
 import { VideoMesh } from '../commons/VideoMesh'
 import { ErrorBoundary } from '../commons/ErrorBoundary'
 import { PlaceholderScreen } from '../commons/PlaceholderScreen'
+import { FontGuardedContainer } from '../commons/FontGuardedContainer'
 
 interface Props {
   /** スクリーンの一意なID（必須） */
@@ -188,23 +189,21 @@ export const VideoPlayer = memo(
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
         {!currentUrl && !hasError ? (
-          fontFamilies ? (
-            <Container
-              sizeX={width}
-              sizeY={screenHeight}
-              pixelSize={PIXEL_SIZE}
-              backgroundColor={0x000000}
-              justifyContent="center"
-              alignItems="center"
-              fontFamilies={fontFamilies}
-            >
-              <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center" fontFamily="ja">
-                動画のURLを入力
-              </Text>
-            </Container>
-          ) : (
-            <PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />
-          )
+          <FontGuardedContainer
+            fontFamilies={fontFamilies}
+            width={width}
+            screenHeight={screenHeight}
+            sizeX={width}
+            sizeY={screenHeight}
+            pixelSize={PIXEL_SIZE}
+            backgroundColor={0x000000}
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center" fontFamily="ja">
+              動画のURLを入力
+            </Text>
+          </FontGuardedContainer>
         ) : !currentUrl || hasError ? (
           <PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />
         ) : (

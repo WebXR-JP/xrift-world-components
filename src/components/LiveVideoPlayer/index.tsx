@@ -1,9 +1,10 @@
 import { memo, Suspense, useState, useCallback, useRef, useEffect } from "react";
-import { Container, Text } from "@react-three/uikit";
+import { Text } from "@react-three/uikit";
 import { ControlPanel } from "./components/ControlPanel";
 import { LiveVideoTexture } from "./components/LiveVideoTexture";
 import { ErrorBoundary } from "../commons/ErrorBoundary";
 import { PlaceholderScreen } from "../commons/PlaceholderScreen";
+import { FontGuardedContainer } from "../commons/FontGuardedContainer";
 import { useLiveVideoPlayer } from "./hooks/useLiveVideoPlayer";
 import { useDefaultFont } from "../../hooks/useDefaultFont";
 import type { FontLocale } from "../../hooks/useDefaultFont";
@@ -100,46 +101,42 @@ export const LiveVideoPlayer = memo(
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
         {isRetrying ? (
-          fontFamilies ? (
-            <Container
-              sizeX={width}
-              sizeY={screenHeight}
-              pixelSize={PIXEL_SIZE}
-              backgroundColor={0x000000}
-              justifyContent="center"
-              alignItems="center"
-              fontFamilies={fontFamilies}
-            >
-              <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center" fontFamily="ja">
-                再接続中...
-              </Text>
-            </Container>
-          ) : (
-            <PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />
-          )
+          <FontGuardedContainer
+            fontFamilies={fontFamilies}
+            width={width}
+            screenHeight={screenHeight}
+            sizeX={width}
+            sizeY={screenHeight}
+            pixelSize={PIXEL_SIZE}
+            backgroundColor={0x000000}
+            justifyContent="center"
+            alignItems="center"
+          >
+            <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center" fontFamily="ja">
+              再接続中...
+            </Text>
+          </FontGuardedContainer>
         ) : !videoState.url ? (
-          fontFamilies ? (
-            <Container
-              sizeX={width}
-              sizeY={screenHeight}
-              pixelSize={PIXEL_SIZE}
-              backgroundColor={0x000000}
-              justifyContent="center"
-              alignItems="center"
-              flexDirection="column"
-              gap={4}
-              fontFamilies={fontFamilies}
-            >
-              <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center" fontFamily="ja">
-                ライブ配信のURLを入力
-              </Text>
-              <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
-                HLS .m3u8
-              </Text>
-            </Container>
-          ) : (
-            <PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />
-          )
+          <FontGuardedContainer
+            fontFamilies={fontFamilies}
+            width={width}
+            screenHeight={screenHeight}
+            sizeX={width}
+            sizeY={screenHeight}
+            pixelSize={PIXEL_SIZE}
+            backgroundColor={0x000000}
+            justifyContent="center"
+            alignItems="center"
+            flexDirection="column"
+            gap={4}
+          >
+            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center" fontFamily="ja">
+              ライブ配信のURLを入力
+            </Text>
+            <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
+              HLS .m3u8
+            </Text>
+          </FontGuardedContainer>
         ) : (
           <ErrorBoundary
             key={`error-boundary-${videoState.url}-${videoState.reloadKey}`}
