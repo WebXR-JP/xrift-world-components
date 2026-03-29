@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber'
 import { Container } from '@react-three/uikit'
 import { ControlPanel } from './components/ControlPanel'
 import { useVideoElement } from '../../hooks/useVideoElement'
-import { useFont } from '../../contexts/FontContext'
+import { useDefaultFont, type FontLocale } from '../../hooks/useDefaultFont'
 import { VideoMesh } from '../commons/VideoMesh'
 import { ErrorBoundary } from '../commons/ErrorBoundary'
 import { PlaceholderScreen } from '../commons/PlaceholderScreen'
@@ -32,6 +32,7 @@ export type VideoPlayerProps = Props
 /** UI操作後に自動非表示するまでの時間（ms） */
 const AUTO_HIDE_DELAY = 3000
 
+const FONT_LOCALES: FontLocale[] = ['ja']
 const DEFAULT_POSITION: [number, number, number] = [0, 2, -5]
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0]
 const DEFAULT_WIDTH = 4
@@ -113,7 +114,7 @@ export const VideoPlayer = memo(
     const [controlsVisible, setControlsVisible] = useState(false)
     const seekTimeRef = useRef<number | null>(null)
     const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-    const fontFamilies = useFont()
+    const fontFamilies = useDefaultFont(FONT_LOCALES)
     const screenHeight = width * (9 / 16)
 
     const resetAutoHideTimer = useCallback(() => {

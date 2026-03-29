@@ -40,7 +40,6 @@ import {
   createDefaultAudioVolumeImplementation,
   type AudioVolumeContextValue,
 } from './AudioVolumeContext'
-import { FontProvider } from './FontContext'
 
 // デフォルトの画面共有実装（開発環境用）
 const createDefaultScreenShareImplementation = (): ScreenShareContextValue => ({
@@ -238,39 +237,37 @@ export const XRiftProvider = ({
   }), [baseUrl, interactableObjects, registerInteractable, unregisterInteractable])
 
   return (
-    <FontProvider>
-      <XRiftContext.Provider value={xriftContextValue}>
-        <ScreenShareProvider value={screenShareImpl}>
-          <TextInputProvider value={textInputImpl}>
-            <InstanceStateProvider implementation={instanceStateImplementation}>
-              <SpawnPointProvider implementation={spawnPointImplementation}>
-                <UsersProvider implementation={usersImplementation}>
-                  <InstanceEventProvider value={instanceEventImpl}>
-                    <TeleportProvider value={teleportImpl}>
-                      <ConfirmProvider value={confirmImpl}>
-                        <WorldProvider value={worldImpl}>
-                          <InstanceProvider value={instanceImpl}>
-                            <AudioVolumeProvider value={audioVolumeImpl}>
-                              {placementMode ? (
-                                <PlacementStateProvider mode={placementMode}>
-                                  {children}
-                                </PlacementStateProvider>
-                              ) : (
-                                children
-                              )}
-                            </AudioVolumeProvider>
-                          </InstanceProvider>
-                        </WorldProvider>
-                      </ConfirmProvider>
-                    </TeleportProvider>
-                  </InstanceEventProvider>
-                </UsersProvider>
-              </SpawnPointProvider>
-            </InstanceStateProvider>
-          </TextInputProvider>
-        </ScreenShareProvider>
-      </XRiftContext.Provider>
-    </FontProvider>
+    <XRiftContext.Provider value={xriftContextValue}>
+      <ScreenShareProvider value={screenShareImpl}>
+        <TextInputProvider value={textInputImpl}>
+          <InstanceStateProvider implementation={instanceStateImplementation}>
+            <SpawnPointProvider implementation={spawnPointImplementation}>
+              <UsersProvider implementation={usersImplementation}>
+                <InstanceEventProvider value={instanceEventImpl}>
+                  <TeleportProvider value={teleportImpl}>
+                    <ConfirmProvider value={confirmImpl}>
+                      <WorldProvider value={worldImpl}>
+                        <InstanceProvider value={instanceImpl}>
+                          <AudioVolumeProvider value={audioVolumeImpl}>
+                            {placementMode ? (
+                              <PlacementStateProvider mode={placementMode}>
+                                {children}
+                              </PlacementStateProvider>
+                            ) : (
+                              children
+                            )}
+                          </AudioVolumeProvider>
+                        </InstanceProvider>
+                      </WorldProvider>
+                    </ConfirmProvider>
+                  </TeleportProvider>
+                </InstanceEventProvider>
+              </UsersProvider>
+            </SpawnPointProvider>
+          </InstanceStateProvider>
+        </TextInputProvider>
+      </ScreenShareProvider>
+    </XRiftContext.Provider>
   )
 }
 
