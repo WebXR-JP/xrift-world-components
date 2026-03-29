@@ -11,7 +11,7 @@ type FontConfig = {
 const FONT_REGISTRY: Record<FontLocale, FontConfig> = {
   ja: {
     baseUrl: 'https://public.xrift.net/fonts/msdf/NotoSansJP',
-    version: 2,
+    version: 3,
   },
 }
 
@@ -40,29 +40,30 @@ function loadFont(
   return promise
 }
 
-// モジュール読み込み時に全ロケールのフォントを事前フェッチする。
-// 現在は ja のみだが、ロケール追加時もここで一括プリロードされる想定。
-// 特定ロケールだけ遅延ロードしたい場合はこのループから除外すること。
-for (const locale of Object.keys(FONT_REGISTRY) as FontLocale[]) {
-  loadFont(locale)
-}
+// モジュール読み込み時に全ロケールのフォントを事前フェッチし、
+// ロード完了後に uikit のグローバルプロパティとして登録する。
+// これにより、uikit コンポーネントのコンストラクタ実行時に star-inheritance 経由で
+// fontFamilies が即座に利用可能になり、"unknown font family" 警告を防ぐ。
+const fontReadyPromise = Promise.all(
+  (Object.keys(FONT_REGISTRY) as FontLocale[]).map(loadFont),
+).then(async (entries) => {
+  const fontFamilies = Object.fromEntries(entries) as FontFamilies
+  try {
+    const { setGlobalProperties } = await import('@pmndrs/uikit')
+    setGlobalProperties({ fontFamilies })
+  } catch {
+    // @pmndrs/uikit が利用できない環境ではスキップ
+  }
+  return fontFamilies
+})
 
 /**
- * UIKit 用の多言語 MSDF フォントをロードする hook
+ * UIKit 用の多言語 MSDF フォントをロードする hook。
+ * ロード完了時に uikit のグローバルプロパティとしても登録されるため、
+ * Container に fontFamilies を明示的に渡さなくても fontFamily="ja" が使える。
  *
  * @param locales - ロードするフォントのロケール配列
  * @returns ロード完了後に FontFamilies を返す。ロード中は undefined
- *
- * @example
- * ```tsx
- * const fontFamilies = useDefaultFont(['ja'])
- *
- * return (
- *   <Container fontFamilies={fontFamilies}>
- *     <Text fontFamily="ja">こんにちは</Text>
- *   </Container>
- * )
- * ```
  */
 export function useDefaultFont(
   locales: FontLocale[],
@@ -86,9 +87,15 @@ export function useDefaultFont(
     let cancelled = false
     const targetLocales = key.split(',') as FontLocale[]
 
-    Promise.all(targetLocales.map(loadFont)).then((entries) => {
+    // fontReadyPromise を使用し、setGlobalProperties 完了後に解決する
+    fontReadyPromise.then((allFonts) => {
       if (cancelled) return
-      const result = Object.fromEntries(entries)
+      const result: FontFamilies = {}
+      for (const locale of targetLocales) {
+        if (locale in allFonts) {
+          result[locale] = allFonts[locale]
+        }
+      }
       resolvedCache.set(key, result)
       setFontFamilies(result)
     })

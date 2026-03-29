@@ -95,6 +95,8 @@ export {
   type PlacementStateContextValue,
 } from './contexts/PlacementStateContext'
 
+export { FontProvider, useFont } from './contexts/FontContext'
+
 export {
   VoiceVolumeOverrideContext,
   VoiceVolumeOverrideProvider,

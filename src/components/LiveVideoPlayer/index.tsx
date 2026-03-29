@@ -1,13 +1,11 @@
 import { memo, Suspense, useState, useCallback, useRef, useEffect } from "react";
-import { Text } from "@react-three/uikit";
+import { Container, Text } from "@react-three/uikit";
 import { ControlPanel } from "./components/ControlPanel";
 import { LiveVideoTexture } from "./components/LiveVideoTexture";
 import { ErrorBoundary } from "../commons/ErrorBoundary";
 import { PlaceholderScreen } from "../commons/PlaceholderScreen";
-import { FontGuardedContainer } from "../commons/FontGuardedContainer";
 import { useLiveVideoPlayer } from "./hooks/useLiveVideoPlayer";
-import { useDefaultFont } from "../../hooks/useDefaultFont";
-import type { FontLocale } from "../../hooks/useDefaultFont";
+import { useFont } from "../../contexts/FontContext";
 
 interface Props {
   /** スクリーンの一意なID（必須） */
@@ -35,7 +33,6 @@ const DEFAULT_POSITION: [number, number, number] = [0, 2, -5];
 const DEFAULT_ROTATION: [number, number, number] = [0, 0, 0];
 const DEFAULT_WIDTH = 4;
 const PIXEL_SIZE = 0.01;
-const FONT_LOCALES: FontLocale[] = ['ja'];
 
 export const LiveVideoPlayer = memo(
   ({
@@ -65,7 +62,7 @@ export const LiveVideoPlayer = memo(
     const [controlsVisible, setControlsVisible] = useState(false)
     const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-    const fontFamilies = useDefaultFont(FONT_LOCALES);
+    const fontFamilies = useFont();
     const screenHeight = width * (9 / 16);
 
     const resetAutoHideTimer = useCallback(() => {
@@ -101,10 +98,8 @@ export const LiveVideoPlayer = memo(
       <group position={position} rotation={rotation}>
         {/* 画面本体 */}
         {isRetrying ? (
-          <FontGuardedContainer
+          <Container
             fontFamilies={fontFamilies}
-            width={width}
-            screenHeight={screenHeight}
             sizeX={width}
             sizeY={screenHeight}
             pixelSize={PIXEL_SIZE}
@@ -115,12 +110,10 @@ export const LiveVideoPlayer = memo(
             <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center" fontFamily="ja">
               再接続中...
             </Text>
-          </FontGuardedContainer>
+          </Container>
         ) : !videoState.url ? (
-          <FontGuardedContainer
+          <Container
             fontFamilies={fontFamilies}
-            width={width}
-            screenHeight={screenHeight}
             sizeX={width}
             sizeY={screenHeight}
             pixelSize={PIXEL_SIZE}
@@ -136,7 +129,7 @@ export const LiveVideoPlayer = memo(
             <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
               HLS .m3u8
             </Text>
-          </FontGuardedContainer>
+          </Container>
         ) : (
           <ErrorBoundary
             key={`error-boundary-${videoState.url}-${videoState.reloadKey}`}
