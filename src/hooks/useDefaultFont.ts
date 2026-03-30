@@ -40,6 +40,28 @@ function loadFont(
   return promise
 }
 
+/**
+ * R3F の removeChild は three.js の parent.remove(child) を呼び、
+ * "removed" イベントで uikit の parentContainer signal が更新される。
+ * この結果 computedFont エフェクトが再実行され fontFamilies が undefined に
+ * フォールバックし "unknown font family" / "Missing glyph info" 警告が出る。
+ * これは React アンマウント時の一時的な状態であり機能に影響しないため抑制する。
+ */
+function suppressUikitTeardownWarnings() {
+  const origError = console.error
+  const origWarn = console.warn
+  console.error = function (...args: unknown[]) {
+    if (typeof args[0] === 'string' && (args[0] as string).startsWith('unknown font family')) return
+    return origError.apply(console, args)
+  }
+  console.warn = function (...args: unknown[]) {
+    if (typeof args[0] === 'string' && (args[0] as string).startsWith('Missing glyph info')) return
+    return origWarn.apply(console, args)
+  }
+}
+
+suppressUikitTeardownWarnings()
+
 // モジュール読み込み時に全ロケールのフォントを事前フェッチし、
 // ロード完了後に uikit のグローバルプロパティとして登録する。
 // これにより、uikit コンポーネントのコンストラクタ実行時に star-inheritance 経由で
@@ -49,10 +71,10 @@ const fontReadyPromise = Promise.all(
 ).then(async (entries) => {
   const fontFamilies = Object.fromEntries(entries) as FontFamilies
   try {
-    const { setGlobalProperties } = await import('@pmndrs/uikit')
-    setGlobalProperties({ fontFamilies })
-  } catch {
-    // @pmndrs/uikit が利用できない環境ではスキップ
+    const mod = await import('@pmndrs/uikit')
+    mod.setGlobalProperties({ fontFamilies })
+  } catch (e) {
+    console.error('[useDefaultFont] import @pmndrs/uikit failed', e)
   }
   return fontFamilies
 })

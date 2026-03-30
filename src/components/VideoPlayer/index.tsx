@@ -186,8 +186,8 @@ export const VideoPlayer = memo(
 
     return (
       <group position={position} rotation={rotation}>
-        {/* 画面本体 */}
-        {!currentUrl && !hasError ? (
+        {/* テキストプレースホルダー（常時マウントし、分岐切替時の再生成を防止） */}
+        <group visible={!currentUrl && !hasError}>
           <Container
             sizeX={width}
             sizeY={screenHeight}
@@ -201,9 +201,15 @@ export const VideoPlayer = memo(
               動画のURLを入力
             </Text>
           </Container>
-        ) : !currentUrl || hasError ? (
+        </group>
+
+        {/* エラー時の黒画面 */}
+        {hasError && (
           <PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />
-        ) : (
+        )}
+
+        {/* 動画コンテンツ */}
+        {currentUrl && !hasError && (
           <ErrorBoundary
             fallback={<PlaceholderScreen width={width} screenHeight={screenHeight} color="#000000" />}
             onError={handleError}

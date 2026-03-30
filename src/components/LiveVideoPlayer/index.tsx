@@ -98,22 +98,8 @@ export const LiveVideoPlayer = memo(
 
     return (
       <group position={position} rotation={rotation}>
-        {/* 画面本体 */}
-        {isRetrying ? (
-          <Container
-            sizeX={width}
-            sizeY={screenHeight}
-            pixelSize={PIXEL_SIZE}
-            backgroundColor={0x000000}
-            justifyContent="center"
-            alignItems="center"
-            fontFamilies={fontFamilies}
-          >
-            <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center" fontFamily="ja">
-              再接続中...
-            </Text>
-          </Container>
-        ) : !videoState.url ? (
+        {/* テキストプレースホルダー（常時マウントし、分岐切替時の再生成を防止） */}
+        <group visible={isRetrying || !videoState.url}>
           <Container
             sizeX={width}
             sizeY={screenHeight}
@@ -125,14 +111,25 @@ export const LiveVideoPlayer = memo(
             gap={4}
             fontFamilies={fontFamilies}
           >
-            <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center" fontFamily="ja">
-              ライブ配信のURLを入力
-            </Text>
-            <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
-              HLS .m3u8
-            </Text>
+            {isRetrying ? (
+              <Text fontSize={width / PIXEL_SIZE * 0.04} color={0xffcc00} textAlign="center" fontFamily="ja">
+                再接続中...
+              </Text>
+            ) : (
+              <>
+                <Text fontSize={width / PIXEL_SIZE * 0.05} color={0x666666} textAlign="center" fontFamily="ja">
+                  ライブ配信のURLを入力
+                </Text>
+                <Text fontSize={width / PIXEL_SIZE * 0.035} color={0x666666} textAlign="center">
+                  HLS .m3u8
+                </Text>
+              </>
+            )}
           </Container>
-        ) : (
+        </group>
+
+        {/* 動画コンテンツ */}
+        {videoState.url && !isRetrying && (
           <ErrorBoundary
             key={`error-boundary-${videoState.url}-${videoState.reloadKey}`}
             fallback={
