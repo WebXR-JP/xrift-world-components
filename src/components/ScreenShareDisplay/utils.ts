@@ -7,6 +7,8 @@ export const calculateContainSize = (
   screenWidth: number,
   screenHeight: number,
 ): [number, number] => {
+  if (videoWidth <= 0 || videoHeight <= 0) return [screenWidth, screenHeight]
+
   const videoAspect = videoWidth / videoHeight
   const screenAspect = screenWidth / screenHeight
 

@@ -36,18 +36,24 @@ export const useVideoTexture = (
     setTexture(videoTexture)
 
     // 映像のメタデータがロードされたら解像度を記録
+    // WebRTC リモートトラックでは loadedmetadata 時に videoWidth/Height が 0 のケースがあるため、
+    // ゼロチェックを行い、resize イベントでも解像度確定を監視する
     const handleLoadedMetadata = () => {
-      setVideoResolution([videoElement.videoWidth, videoElement.videoHeight])
+      if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
+        setVideoResolution([videoElement.videoWidth, videoElement.videoHeight])
+      }
     }
 
-    if (videoElement.videoWidth > 0) {
+    if (videoElement.videoWidth > 0 && videoElement.videoHeight > 0) {
       handleLoadedMetadata()
     } else {
       videoElement.addEventListener('loadedmetadata', handleLoadedMetadata)
+      videoElement.addEventListener('resize', handleLoadedMetadata)
     }
 
     return () => {
       videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata)
+      videoElement.removeEventListener('resize', handleLoadedMetadata)
       videoTexture.dispose()
     }
   }, [videoElement])

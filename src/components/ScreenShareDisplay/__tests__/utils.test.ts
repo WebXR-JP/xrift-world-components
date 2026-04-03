@@ -32,4 +32,22 @@ describe('calculateContainSize', () => {
     expect(h).toBe(2.25)
     expect(w).toBeCloseTo(2.25)
   })
+
+  it('videoWidth と videoHeight が共に 0 の場合はスクリーンサイズを返す', () => {
+    const [w, h] = calculateContainSize(0, 0, 4, 2.25)
+    expect(w).toBe(4)
+    expect(h).toBe(2.25)
+  })
+
+  it('videoWidth のみ 0 の場合はスクリーンサイズを返す', () => {
+    const [w, h] = calculateContainSize(0, 1080, 4, 2.25)
+    expect(w).toBe(4)
+    expect(h).toBe(2.25)
+  })
+
+  it('videoHeight のみ 0 の場合はスクリーンサイズを返す', () => {
+    const [w, h] = calculateContainSize(1920, 0, 4, 2.25)
+    expect(w).toBe(4)
+    expect(h).toBe(2.25)
+  })
 })
