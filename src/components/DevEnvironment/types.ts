@@ -28,4 +28,6 @@ export interface Props {
   respawnThreshold?: number
   /** 物理設定 */
   physicsConfig?: PhysicsConfig
+  /** 出力バッファタイプ（"UnsignedByteType" | "HalfFloatType" | "FloatType"） */
+  outputBufferType?: string
 }

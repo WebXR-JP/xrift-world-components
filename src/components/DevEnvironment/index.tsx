@@ -1,10 +1,11 @@
-import { useCallback, useState, useSyncExternalStore } from 'react'
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { SpawnPointProvider } from '../../contexts/SpawnPointContext'
 import { PCFShadowMap } from 'three'
 import type { Props } from './types'
+import { toThreeOutputBufferType } from './utils'
 import {
   DEFAULT_SPAWN_POSITION,
   DEFAULT_GRAVITY,
@@ -47,6 +48,7 @@ export function DevEnvironment({
   spawnPosition = DEFAULT_SPAWN_POSITION,
   respawnThreshold = RESPAWN_Y_THRESHOLD,
   physicsConfig,
+  outputBufferType: outputBufferTypeStr,
 }: Props) {
   const [isHit, setIsHit] = useState(false)
   const isPointerLocked = useSyncExternalStore(
@@ -59,6 +61,15 @@ export function DevEnvironment({
   const gravity = physicsConfig?.gravity ?? DEFAULT_GRAVITY
   const allowInfiniteJump =
     physicsConfig?.allowInfiniteJump ?? DEFAULT_ALLOW_INFINITE_JUMP
+
+  const outputBufferType = toThreeOutputBufferType(outputBufferTypeStr)
+  const glProps = useMemo(
+    () =>
+      outputBufferType
+        ? { preserveDrawingBuffer: true, stencil: true, outputBufferType }
+        : { preserveDrawingBuffer: true, stencil: true },
+    [outputBufferType],
+  )
 
   const cameraPosition = camera?.position ?? spawnPosition
   const cameraFov = camera?.fov ?? 50
@@ -75,7 +86,7 @@ export function DevEnvironment({
           near: cameraNear,
           far: cameraFar,
         }}
-        gl={{ preserveDrawingBuffer: true }}
+        gl={glProps}
       >
         <PointerLockControls />
         <CenterRaycaster onHitChange={handleHitChange} />
