@@ -1,4 +1,5 @@
 import { createContext, type ReactNode, useContext } from 'react'
+import type { AvatarHeight } from '../types/avatar'
 import type { PlayerMovement } from '../types/movement'
 
 /**
@@ -29,6 +30,14 @@ const DEFAULT_PLAYER_MOVEMENT: PlayerMovement = {
 }
 
 /**
+ * デフォルトの AvatarHeight（高さ情報が取得できない場合に使用）
+ */
+const DEFAULT_AVATAR_HEIGHT: AvatarHeight = {
+  height: 1.5,
+  eyeHeight: 1.35,
+}
+
+/**
  * ユーザー情報を管理するためのインターフェース
  * プラットフォーム側（xrift-frontend）が実装を注入する
  */
@@ -50,6 +59,17 @@ export interface UsersContextValue {
    * @returns PlayerMovement
    */
   getLocalMovement: () => PlayerMovement
+  /**
+   * 指定したユーザーのアバター高さ情報を取得
+   * @param userId - ユーザーの一意識別子
+   * @returns AvatarHeight または undefined（ユーザーが存在しない場合）
+   */
+  getAvatarHeight?: (userId: string) => AvatarHeight | undefined
+  /**
+   * ローカルユーザー（自分）のアバター高さ情報を取得
+   * @returns AvatarHeight
+   */
+  getLocalAvatarHeight?: () => AvatarHeight
 }
 
 /**
@@ -61,6 +81,8 @@ const createDefaultImplementation = (): UsersContextValue => ({
   remoteUsers: [],
   getMovement: () => undefined,
   getLocalMovement: () => DEFAULT_PLAYER_MOVEMENT,
+  getAvatarHeight: () => undefined,
+  getLocalAvatarHeight: () => DEFAULT_AVATAR_HEIGHT,
 })
 
 /**

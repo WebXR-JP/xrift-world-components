@@ -193,6 +193,8 @@ export { useDefaultFont, type FontLocale } from './hooks/useDefaultFont'
 export { LAYERS, type LayerName, type LayerNumber } from './constants/layers'
 
 // Types
+export { type AvatarHeight } from './types/avatar'
+
 export {
   type PlayerMovement,
   type Position3D,
