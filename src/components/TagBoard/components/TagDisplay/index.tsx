@@ -12,10 +12,10 @@
  * - instanceStateKey: インスタンス状態キーの識別子
  */
 import { useMemo, useRef } from "react";
-import { Billboard } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import { type Group, DoubleSide, Vector3 } from "three";
 
+import { BillboardY } from "../../../BillboardY";
 import { useInstanceState } from "../../../../hooks/useInstanceState";
 import { TagChip } from "../TagChip";
 import { type TagDisplayProps } from "../../types";
@@ -96,7 +96,7 @@ export const TagDisplay = ({
 
   return (
     <group ref={groupRef} visible={false} scale={[0.5, 0.5, 0.5]}>
-      <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+      <BillboardY>
         <group>
           {/* 背景: 半透明の黒背景 */}
           <mesh position={[0, ((layout.maxRows - 1) * layout.tagHeight) / 2, -0.02]}>
@@ -133,7 +133,7 @@ export const TagDisplay = ({
             });
           })}
         </group>
-      </Billboard>
+      </BillboardY>
     </group>
   );
 };
