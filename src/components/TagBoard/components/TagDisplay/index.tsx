@@ -25,11 +25,15 @@ import {
   groupTagsByColumn,
 } from "./utils";
 
-const HEAD_OFFSET_Y = 2.6;
+/** アバター頭上のタグ表示マージン（メートル） */
+const TAG_MARGIN_Y = 0.3;
+/** getAvatarHeight が未提供時のフォールバック高さ */
+const DEFAULT_HEIGHT = 1.5;
 
 export const TagDisplay = ({
   userId,
   getMovement,
+  getAvatarHeight,
   tags,
   visible,
   instanceStateKey,
@@ -64,10 +68,14 @@ export const TagDisplay = ({
       return;
     }
 
+    // アバター高さからオフセットを算出
+    const avatarHeight = getAvatarHeight?.(userId);
+    const headOffsetY = (avatarHeight?.height ?? DEFAULT_HEIGHT) + TAG_MARGIN_Y;
+
     // ワールド座標
     const worldPos = new Vector3(
       movement.position.x,
-      movement.position.y + HEAD_OFFSET_Y,
+      movement.position.y + headOffsetY,
       movement.position.z,
     );
 

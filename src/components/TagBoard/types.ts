@@ -1,3 +1,4 @@
+import { type AvatarHeight } from "../../types/avatar";
 import { type PlayerMovement } from "../../types/movement";
 
 /** 表示用のタグ定義 */
@@ -29,6 +30,7 @@ export interface TagBoardProps {
 export interface TagDisplayProps {
   userId: string;
   getMovement: (userId: string) => PlayerMovement | undefined;
+  getAvatarHeight?: (userId: string) => AvatarHeight | undefined;
   tags: Tag[][];
   visible: boolean;
   instanceStateKey: string;

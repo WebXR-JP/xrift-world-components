@@ -28,7 +28,7 @@ export const TagBoard = ({
   rotation = [0, 0, 0],
   scale = 1,
 }: TagBoardProps) => {
-  const { remoteUsers, getMovement, getLocalMovement, localUser } = useUsers();
+  const { remoteUsers, getMovement, getLocalMovement, localUser, getAvatarHeight, getLocalAvatarHeight } = useUsers();
   const [tagsVisible, setTagsVisible] = useState(true);
 
   const tagColumns = useMemo(
@@ -55,6 +55,7 @@ export const TagBoard = ({
         <TagDisplay
           userId={localUser.id}
           getMovement={getLocalMovement}
+          getAvatarHeight={getLocalAvatarHeight ? () => getLocalAvatarHeight() : undefined}
           tags={tagColumns}
           visible={tagsVisible}
           instanceStateKey={instanceStateKey}
@@ -67,6 +68,7 @@ export const TagBoard = ({
           key={user.id}
           userId={user.id}
           getMovement={getMovement}
+          getAvatarHeight={getAvatarHeight}
           tags={tagColumns}
           visible={tagsVisible}
           instanceStateKey={instanceStateKey}
