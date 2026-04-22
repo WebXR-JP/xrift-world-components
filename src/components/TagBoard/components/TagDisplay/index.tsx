@@ -95,7 +95,7 @@ export const TagDisplay = ({
   if (selectedTags.length === 0 || !visible) return null;
 
   return (
-    <group ref={groupRef} visible={false} scale={[0.5, 0.5, 0.5]}>
+    <group ref={groupRef} visible={false} scale={[0.75, 0.75, 0.75]}>
       <BillboardY>
         <group>
           {/* 背景: 半透明の黒背景 */}
