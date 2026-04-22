@@ -25,8 +25,9 @@ import {
   groupTagsByColumn,
 } from "./utils";
 
-/** アバター頭上のタグ表示マージン（メートル） */
-const TAG_MARGIN_Y = 0.3;
+/** アバター頭上のタグ表示マージン（メートル）
+ * NameTag（avatarHeight * 1.05 + 0.15）やアイコンと被らないよう十分な余裕を持たせる */
+const TAG_MARGIN_Y = 0.65;
 /** getAvatarHeight が未提供時のフォールバック高さ */
 const DEFAULT_HEIGHT = 1.5;
 
@@ -98,7 +99,7 @@ export const TagDisplay = ({
       <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
         <group>
           {/* 背景: 半透明の黒背景 */}
-          <mesh position={[0, (-(layout.maxRows - 1) * layout.tagHeight) / 2, -0.02]}>
+          <mesh position={[0, ((layout.maxRows - 1) * layout.tagHeight) / 2, -0.02]}>
             <planeGeometry
               args={[layout.totalWidth + 0.1, layout.maxRows * layout.tagHeight + 0.1]}
             />
@@ -110,13 +111,13 @@ export const TagDisplay = ({
             />
           </mesh>
 
-          {/* タグを配置 */}
+          {/* タグを配置（下から上に積む） */}
           {activeColumns.map(([columnIndex, columnTags], activeColIndex) => {
             const xPos =
               (activeColIndex - (activeColumns.length - 1) / 2) * layout.columnSpacing;
 
             return columnTags.map((tag, rowIndex) => {
-              const yOffset = -rowIndex * (layout.tagHeight + layout.tagSpacing);
+              const yOffset = rowIndex * (layout.tagHeight + layout.tagSpacing);
 
               return (
                 <TagChip
