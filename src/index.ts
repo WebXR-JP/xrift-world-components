@@ -45,6 +45,17 @@ export {
 } from './contexts/TextInputContext'
 
 export {
+  FileInputContext,
+  FileInputProvider,
+  useFileInputContext,
+  createDefaultFileInputImplementation,
+  type FileInputContextValue,
+  type FileInputRequest,
+  type FileInputError,
+  type FileInputErrorType,
+} from './contexts/FileInputContext'
+
+export {
   ConfirmContext,
   ConfirmProvider,
   useConfirmContext,
@@ -182,6 +193,7 @@ export {
 export { useInstanceState } from './hooks/useInstanceState'
 export { useSpawnPoint } from './hooks/useSpawnPoint'
 export { useConfirm } from './hooks/useConfirm'
+export { useFileInput } from './hooks/useFileInput'
 export { useTeleport } from './hooks/useTeleport'
 export { useInstance } from './hooks/useInstance'
 export { useWorld } from './hooks/useWorld'
