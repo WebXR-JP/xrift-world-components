@@ -45,6 +45,11 @@ import {
   createDefaultAudioVolumeImplementation,
   type AudioVolumeContextValue,
 } from './AudioVolumeContext'
+import {
+  SharedFileProvider,
+  createDefaultSharedFileImplementation,
+  type SharedFileContextValue,
+} from './SharedFileContext'
 
 // デフォルトの画面共有実装（開発環境用）
 const createDefaultScreenShareImplementation = (): ScreenShareContextValue => ({
@@ -149,6 +154,11 @@ interface Props {
    */
   fileInputImplementation?: FileInputContextValue
   /**
+   * 共有ファイルの実装（オプション）
+   * 指定しない場合はデフォルト実装（console.log）が使用される
+   */
+  sharedFileImplementation?: SharedFileContextValue
+  /**
    * アイテムの配置状態（オプション）
    * 'preview': プレビュー中、'placed': 設置済み
    * 指定しない場合は Provider をスキップ（フォールバックで 'placed' が返る）
@@ -176,6 +186,7 @@ export const XRiftProvider = ({
   instanceEventImplementation,
   audioVolumeImplementation,
   fileInputImplementation,
+  sharedFileImplementation,
   placementMode,
   children,
 }: Props) => {
@@ -236,6 +247,12 @@ export const XRiftProvider = ({
     [fileInputImplementation],
   )
 
+  // 共有ファイルの実装（指定がない場合はデフォルト実装を使用）
+  const sharedFileImpl = useMemo(
+    () => sharedFileImplementation ?? createDefaultSharedFileImplementation(),
+    [sharedFileImplementation],
+  )
+
   // オブジェクトの登録
   const registerInteractable = useCallback((object: Object3D) => {
     interactableObjects.add(object)
@@ -258,31 +275,33 @@ export const XRiftProvider = ({
       <ScreenShareProvider value={screenShareImpl}>
         <TextInputProvider value={textInputImpl}>
           <FileInputProvider value={fileInputImpl}>
-            <InstanceStateProvider implementation={instanceStateImplementation}>
-              <SpawnPointProvider implementation={spawnPointImplementation}>
-                <UsersProvider implementation={usersImplementation}>
-                  <InstanceEventProvider value={instanceEventImpl}>
-                    <TeleportProvider value={teleportImpl}>
-                      <ConfirmProvider value={confirmImpl}>
-                        <WorldProvider value={worldImpl}>
-                          <InstanceProvider value={instanceImpl}>
-                            <AudioVolumeProvider value={audioVolumeImpl}>
-                              {placementMode ? (
-                                <PlacementStateProvider mode={placementMode}>
-                                  {children}
-                                </PlacementStateProvider>
-                              ) : (
-                                children
-                              )}
-                            </AudioVolumeProvider>
-                          </InstanceProvider>
-                        </WorldProvider>
-                      </ConfirmProvider>
-                    </TeleportProvider>
-                  </InstanceEventProvider>
-                </UsersProvider>
-              </SpawnPointProvider>
-            </InstanceStateProvider>
+            <SharedFileProvider value={sharedFileImpl}>
+              <InstanceStateProvider implementation={instanceStateImplementation}>
+                <SpawnPointProvider implementation={spawnPointImplementation}>
+                  <UsersProvider implementation={usersImplementation}>
+                    <InstanceEventProvider value={instanceEventImpl}>
+                      <TeleportProvider value={teleportImpl}>
+                        <ConfirmProvider value={confirmImpl}>
+                          <WorldProvider value={worldImpl}>
+                            <InstanceProvider value={instanceImpl}>
+                              <AudioVolumeProvider value={audioVolumeImpl}>
+                                {placementMode ? (
+                                  <PlacementStateProvider mode={placementMode}>
+                                    {children}
+                                  </PlacementStateProvider>
+                                ) : (
+                                  children
+                                )}
+                              </AudioVolumeProvider>
+                            </InstanceProvider>
+                          </WorldProvider>
+                        </ConfirmProvider>
+                      </TeleportProvider>
+                    </InstanceEventProvider>
+                  </UsersProvider>
+                </SpawnPointProvider>
+              </InstanceStateProvider>
+            </SharedFileProvider>
           </FileInputProvider>
         </TextInputProvider>
       </ScreenShareProvider>

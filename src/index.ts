@@ -107,6 +107,15 @@ export {
 } from './contexts/PlacementStateContext'
 
 export {
+  SharedFileContext,
+  SharedFileProvider,
+  useSharedFileContext,
+  createDefaultSharedFileImplementation,
+  type SharedFileContextValue,
+  type SharedFileInfo,
+} from './contexts/SharedFileContext'
+
+export {
   VoiceVolumeOverrideContext,
   VoiceVolumeOverrideProvider,
   useVoiceVolumeOverrideContext,
@@ -198,6 +207,7 @@ export { useTeleport } from './hooks/useTeleport'
 export { useInstance } from './hooks/useInstance'
 export { useWorld } from './hooks/useWorld'
 export { useInstanceEvent } from './hooks/useInstanceEvent'
+export { useSharedFile } from './hooks/useSharedFile'
 export { useVoiceVolumeOverride, useAudioVolume } from './hooks/useAudioVolume'
 export { useDefaultFont, type FontLocale } from './hooks/useDefaultFont'
 
