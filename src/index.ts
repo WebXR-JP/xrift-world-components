@@ -107,6 +107,12 @@ export {
 } from './contexts/PlacementStateContext'
 
 export {
+  ItemProvider,
+  useItem,
+  type ItemContextValue,
+} from './contexts/ItemContext'
+
+export {
   SharedFileContext,
   SharedFileProvider,
   useSharedFileContext,
