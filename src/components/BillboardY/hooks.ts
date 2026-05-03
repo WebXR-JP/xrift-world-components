@@ -18,6 +18,11 @@ const _parentPos = new Vector3()
 const _parentScale = new Vector3()
 const _euler = new Euler()
 
+// DEBUG: 原因特定用ログ。PR マージ前に削除する
+let __billboardYInstanceCounter = 0
+let __billboardYFrameCounter = 0
+let __lastFrameLogged = -1
+
 const SENTINEL_GEOMETRY = new BoxGeometry(0.001, 0.001, 0.001)
 
 // Three.js はレンダーリストを opaque → transparent の順で処理する。
@@ -59,10 +64,14 @@ export const useBillboardY = <T extends Object3D>() => {
     if (!ref.current) return
     const target = ref.current
 
+    // DEBUG: インスタンス識別用カウンタ
+    const instanceId = ++__billboardYInstanceCounter
+
     // 回転の save/restore 用スタック
     const savedRotations: number[] = []
 
-    const applyRotation = (camera: Camera) => {
+    const applyRotation = (camera: Camera, label: string) => {
+      const before = target.rotation.y
       savedRotations.push(target.rotation.y)
 
       // WebXR安全: matrixWorldを直接読み取り、updateWorldMatrixを呼ばない
@@ -87,14 +96,43 @@ export const useBillboardY = <T extends Object3D>() => {
       }
 
       target.updateWorldMatrix(false, true)
+
+      // DEBUG: フレーム境界判定 + 発火ログ
+      const now = performance.now() | 0
+      if (now !== __lastFrameLogged) {
+        __billboardYFrameCounter++
+        __lastFrameLogged = now
+      }
+      // eslint-disable-next-line no-console
+      console.log(
+        `[BBY#${instanceId} f${__billboardYFrameCounter}] ${label} apply`,
+        {
+          cam: camera.type,
+          camMask: camera.layers.mask.toString(2),
+          before: +before.toFixed(3),
+          after: +target.rotation.y.toFixed(3),
+          stack: savedRotations.length,
+        },
+      )
     }
 
-    const restoreRotation = () => {
+    const restoreRotation = (label: string) => {
+      const beforePop = target.rotation.y
       const saved = savedRotations.pop()
       if (saved !== undefined) {
         target.rotation.y = saved
         target.updateWorldMatrix(false, true)
       }
+      // eslint-disable-next-line no-console
+      console.log(
+        `[BBY#${instanceId} f${__billboardYFrameCounter}] ${label} restore`,
+        {
+          beforePop: +beforePop.toFixed(3),
+          after: +target.rotation.y.toFixed(3),
+          stack: savedRotations.length,
+          popped: saved !== undefined,
+        },
+      )
     }
 
     // opaque リスト用 sentinel
@@ -105,12 +143,12 @@ export const useBillboardY = <T extends Object3D>() => {
       _r: unknown,
       _s: unknown,
       camera: Camera,
-    ) => applyRotation(camera)
+    ) => applyRotation(camera, 'opaquePre')
 
     const opaquePostSentinel = new Mesh(SENTINEL_GEOMETRY, OPAQUE_MATERIAL)
     opaquePostSentinel.frustumCulled = false
     opaquePostSentinel.renderOrder = Infinity
-    opaquePostSentinel.onBeforeRender = restoreRotation
+    opaquePostSentinel.onBeforeRender = () => restoreRotation('opaquePost')
 
     // transparent リスト用 sentinel
     const transparentPreSentinel = new Mesh(
@@ -123,7 +161,7 @@ export const useBillboardY = <T extends Object3D>() => {
       _r: unknown,
       _s: unknown,
       camera: Camera,
-    ) => applyRotation(camera)
+    ) => applyRotation(camera, 'transparentPre')
 
     const transparentPostSentinel = new Mesh(
       SENTINEL_GEOMETRY,
@@ -131,7 +169,8 @@ export const useBillboardY = <T extends Object3D>() => {
     )
     transparentPostSentinel.frustumCulled = false
     transparentPostSentinel.renderOrder = Infinity
-    transparentPostSentinel.onBeforeRender = restoreRotation
+    transparentPostSentinel.onBeforeRender = () =>
+      restoreRotation('transparentPost')
 
     const sentinels = [
       opaquePreSentinel,
@@ -146,11 +185,19 @@ export const useBillboardY = <T extends Object3D>() => {
       target.add(s)
     }
 
+    // eslint-disable-next-line no-console
+    console.log(`[BBY#${instanceId}] mounted`, {
+      targetUuid: target.uuid,
+      parentName: target.parent?.name || target.parent?.type,
+    })
+
     return () => {
       for (const s of sentinels) {
         s.onBeforeRender = () => {}
         target.remove(s)
       }
+      // eslint-disable-next-line no-console
+      console.log(`[BBY#${instanceId}] unmounted`)
     }
   }, [])
 
