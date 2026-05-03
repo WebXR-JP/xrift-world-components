@@ -139,7 +139,12 @@ export const useBillboardY = <T extends Object3D>() => {
       transparentPreSentinel,
       transparentPostSentinel,
     ]
-    for (const s of sentinels) target.add(s)
+    // どのカメラのレイヤー設定でも projection を通すため全レイヤーを有効化
+    // （sentinel は colorWrite/depthWrite 全 off なので描画自体は無害）
+    for (const s of sentinels) {
+      s.layers.enableAll()
+      target.add(s)
+    }
 
     return () => {
       for (const s of sentinels) {
