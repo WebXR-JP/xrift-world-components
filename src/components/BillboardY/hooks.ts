@@ -70,7 +70,19 @@ export const useBillboardY = <T extends Object3D>() => {
     // 回転の save/restore 用スタック
     const savedRotations: number[] = []
 
-    const applyRotation = (camera: Camera, label: string) => {
+    // DEBUG: 同じカメラインスタンスが繰り返し使われているか識別する
+    const seenCameras = new WeakMap<Camera, number>()
+    let __camCounter = 0
+    const camId = (camera: Camera): number => {
+      let id = seenCameras.get(camera)
+      if (id === undefined) {
+        id = ++__camCounter
+        seenCameras.set(camera, id)
+      }
+      return id
+    }
+
+    const applyRotation = (camera: Camera, scene: unknown, label: string) => {
       const before = target.rotation.y
       savedRotations.push(target.rotation.y)
 
@@ -103,14 +115,19 @@ export const useBillboardY = <T extends Object3D>() => {
         __billboardYFrameCounter++
         __lastFrameLogged = now
       }
+      // matrixWorld の rotation Y 成分を確認（YXZ の場合 m11=cos, m13=sin）
+      const m = target.matrixWorld.elements
+      const mwRotY = Math.atan2(m[8], m[10])
       // eslint-disable-next-line no-console
       console.log(
         `[BBY#${instanceId} f${__billboardYFrameCounter}] ${label} apply`,
         {
-          cam: camera.type,
+          cam: `${camera.type}#${camId(camera)}`,
           camMask: camera.layers.mask.toString(2),
+          sceneId: (scene as { uuid?: string })?.uuid?.slice(0, 8),
           before: +before.toFixed(3),
           after: +target.rotation.y.toFixed(3),
+          mwRotY: +mwRotY.toFixed(3),
           stack: savedRotations.length,
         },
       )
@@ -123,12 +140,15 @@ export const useBillboardY = <T extends Object3D>() => {
         target.rotation.y = saved
         target.updateWorldMatrix(false, true)
       }
+      const m = target.matrixWorld.elements
+      const mwRotY = Math.atan2(m[8], m[10])
       // eslint-disable-next-line no-console
       console.log(
         `[BBY#${instanceId} f${__billboardYFrameCounter}] ${label} restore`,
         {
           beforePop: +beforePop.toFixed(3),
           after: +target.rotation.y.toFixed(3),
+          mwRotY: +mwRotY.toFixed(3),
           stack: savedRotations.length,
           popped: saved !== undefined,
         },
@@ -141,9 +161,9 @@ export const useBillboardY = <T extends Object3D>() => {
     opaquePreSentinel.renderOrder = -Infinity
     opaquePreSentinel.onBeforeRender = (
       _r: unknown,
-      _s: unknown,
+      scene: unknown,
       camera: Camera,
-    ) => applyRotation(camera, 'opaquePre')
+    ) => applyRotation(camera, scene, 'opaquePre')
 
     const opaquePostSentinel = new Mesh(SENTINEL_GEOMETRY, OPAQUE_MATERIAL)
     opaquePostSentinel.frustumCulled = false
@@ -159,9 +179,9 @@ export const useBillboardY = <T extends Object3D>() => {
     transparentPreSentinel.renderOrder = -Infinity
     transparentPreSentinel.onBeforeRender = (
       _r: unknown,
-      _s: unknown,
+      scene: unknown,
       camera: Camera,
-    ) => applyRotation(camera, 'transparentPre')
+    ) => applyRotation(camera, scene, 'transparentPre')
 
     const transparentPostSentinel = new Mesh(
       SENTINEL_GEOMETRY,
