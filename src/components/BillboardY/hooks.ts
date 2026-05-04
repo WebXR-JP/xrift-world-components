@@ -15,6 +15,11 @@ const _parentPos = new Vector3()
 const _parentScale = new Vector3()
 const _euler = new Euler()
 
+/** カメラとターゲットの水平距離がこれ以下なら rotation 更新をスキップ。
+ * カメラの真上/真下にターゲットがあるケースで atan2 が数値的に不安定になり
+ * rotation が暴れるのを防ぐ（例: 自分の頭上に出す TagDisplay）。 */
+const MIN_HORIZONTAL_DIST_SQ = 0.0001 // 0.01m
+
 /**
  * Y軸ビルボードフック
  * 対象の Object3D を毎フレームカメラに向けてY軸のみ回転させる。
@@ -25,8 +30,7 @@ const _euler = new Euler()
  *
  * 既知の制約:
  * - Mirror（Reflector）の鏡像内では「鏡カメラに向く」挙動にはならず、
- *   メインカメラ向きで固定される。鏡像内 billboard を正しい向きにするには
- *   別途 hook が必要。
+ *   メインカメラ向きで固定される。
  */
 export const useBillboardY = <T extends Object3D>() => {
   const ref = useRef<T>(null)
@@ -37,6 +41,12 @@ export const useBillboardY = <T extends Object3D>() => {
 
     _cameraWorldPos.setFromMatrixPosition(camera.matrixWorld)
     _targetWorldPos.setFromMatrixPosition(target.matrixWorld)
+
+    const dx = _cameraWorldPos.x - _targetWorldPos.x
+    const dz = _cameraWorldPos.z - _targetWorldPos.z
+
+    // カメラがターゲットの真上/真下にあると atan2 が不安定になるのでスキップ
+    if (dx * dx + dz * dz < MIN_HORIZONTAL_DIST_SQ) return
 
     const worldRotationY = getBillboardYRotation(
       _cameraWorldPos,
