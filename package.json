@@ -1,6 +1,6 @@
 {
   "name": "@xrift/world-components",
-  "version": "0.40.6",
+  "version": "0.40.7",
   "description": "Shared components and utilities for Xrift worlds",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
