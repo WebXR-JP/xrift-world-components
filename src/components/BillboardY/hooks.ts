@@ -1,10 +1,7 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
 import {
-  BoxGeometry,
-  type Camera,
   Euler,
-  Mesh,
-  MeshBasicMaterial,
   type Object3D,
   Quaternion,
   Vector3,
@@ -18,136 +15,59 @@ const _parentPos = new Vector3()
 const _parentScale = new Vector3()
 const _euler = new Euler()
 
-const SENTINEL_GEOMETRY = new BoxGeometry(0.001, 0.001, 0.001)
-
-// Three.js はレンダーリストを opaque → transparent の順で処理する。
-// renderOrder はリスト内のソートにのみ影響するため、
-// opaque/transparent 両方の子要素に対応するには両方のリストに sentinel が必要。
-const OPAQUE_MATERIAL = new MeshBasicMaterial({
-  colorWrite: false,
-  depthWrite: false,
-  depthTest: false,
-})
-const TRANSPARENT_MATERIAL = new MeshBasicMaterial({
-  colorWrite: false,
-  depthWrite: false,
-  depthTest: false,
-  transparent: true,
-  opacity: 0,
-})
+/** カメラとターゲットの水平距離がこれ以下なら rotation 更新をスキップ。
+ * カメラの真上/真下にターゲットがあるケースで atan2 が数値的に不安定になり
+ * rotation が暴れるのを防ぐ（例: 自分の頭上に出す TagDisplay や NameTag）。 */
+const MIN_HORIZONTAL_DIST_SQ = 0.0001 // (0.01m)²
 
 /**
  * Y軸ビルボードフック
- * 対象の Object3D を毎フレームカメラに向けてY軸のみ回転させる
- * 親のワールド回転を考慮し、ローカル回転として正しい値を設定する
+ * 対象の Object3D を毎フレームカメラに向けて Y 軸のみ回転させる。
+ * 親のワールド回転を考慮し、ローカル回転として正しい値を設定する。
  *
- * 2つの sentinel メッシュ（pre/post）により、Mirror（Reflector）の
- * ネステッドレンダーと WebXR の両方に対応する。
- * - pre-sentinel (renderOrder=-Infinity): 回転を保存 → カメラ用に設定
- * - post-sentinel (renderOrder=+Infinity): 保存した回転を復元
- * スタック構造で多重ネスト（Mirror + WebXR左右眼）にも対応。
+ * 実装方針:
+ * - useFrame で renderer.render() の前に rotation を確定する
+ * - 1 フレーム中に複数の renderer.render 呼び出しがあっても全て同じ matrixWorld
+ *   を使うので、複数 BillboardY 同居や opaque/transparent 混在でも安定して動作する
  *
- * WebXR安全性:
- * - setFromMatrixPosition(): matrixWorldを直接読み取り、updateWorldMatrixを呼ばない
- * - decompose(): 同上
- * - target.updateWorldMatrix(false, true): targetとその子のみ更新、カメラには触れない
+ * 既知の制約:
+ * - Mirror（Reflector）の鏡像内では billboard が「鏡カメラに向く」挙動はしない
+ *   （メインカメラ向きで固定される）。鏡像内でも正しい向きにしたいケースは
+ *   別途検討が必要（issue #173 参照）。
  */
 export const useBillboardY = <T extends Object3D>() => {
   const ref = useRef<T>(null)
 
-  useEffect(() => {
-    if (!ref.current) return
+  useFrame(({ camera }) => {
     const target = ref.current
+    if (!target) return
 
-    // 回転の save/restore 用スタック
-    const savedRotations: number[] = []
+    _cameraWorldPos.setFromMatrixPosition(camera.matrixWorld)
+    _targetWorldPos.setFromMatrixPosition(target.matrixWorld)
 
-    const applyRotation = (camera: Camera) => {
-      savedRotations.push(target.rotation.y)
+    const dx = _cameraWorldPos.x - _targetWorldPos.x
+    const dz = _cameraWorldPos.z - _targetWorldPos.z
 
-      // WebXR安全: matrixWorldを直接読み取り、updateWorldMatrixを呼ばない
-      _cameraWorldPos.setFromMatrixPosition(camera.matrixWorld)
-      _targetWorldPos.setFromMatrixPosition(target.matrixWorld)
+    // カメラの真上/真下に target があるとき atan2 が暴れるのでスキップ
+    if (dx * dx + dz * dz < MIN_HORIZONTAL_DIST_SQ) return
 
-      const worldRotationY = getBillboardYRotation(
-        _cameraWorldPos,
-        _targetWorldPos,
+    const worldRotationY = getBillboardYRotation(
+      _cameraWorldPos,
+      _targetWorldPos,
+    )
+
+    if (target.parent) {
+      target.parent.matrixWorld.decompose(
+        _parentPos,
+        _parentQuat,
+        _parentScale,
       )
-
-      if (target.parent) {
-        target.parent.matrixWorld.decompose(
-          _parentPos,
-          _parentQuat,
-          _parentScale,
-        )
-        _euler.setFromQuaternion(_parentQuat, 'YXZ')
-        target.rotation.y = worldRotationY - _euler.y
-      } else {
-        target.rotation.y = worldRotationY
-      }
-
-      target.updateWorldMatrix(false, true)
+      _euler.setFromQuaternion(_parentQuat, 'YXZ')
+      target.rotation.y = worldRotationY - _euler.y
+    } else {
+      target.rotation.y = worldRotationY
     }
-
-    const restoreRotation = () => {
-      const saved = savedRotations.pop()
-      if (saved !== undefined) {
-        target.rotation.y = saved
-        target.updateWorldMatrix(false, true)
-      }
-    }
-
-    // opaque リスト用 sentinel
-    const opaquePreSentinel = new Mesh(SENTINEL_GEOMETRY, OPAQUE_MATERIAL)
-    opaquePreSentinel.frustumCulled = false
-    opaquePreSentinel.renderOrder = -Infinity
-    opaquePreSentinel.onBeforeRender = (
-      _r: unknown,
-      _s: unknown,
-      camera: Camera,
-    ) => applyRotation(camera)
-
-    const opaquePostSentinel = new Mesh(SENTINEL_GEOMETRY, OPAQUE_MATERIAL)
-    opaquePostSentinel.frustumCulled = false
-    opaquePostSentinel.renderOrder = Infinity
-    opaquePostSentinel.onBeforeRender = restoreRotation
-
-    // transparent リスト用 sentinel
-    const transparentPreSentinel = new Mesh(
-      SENTINEL_GEOMETRY,
-      TRANSPARENT_MATERIAL,
-    )
-    transparentPreSentinel.frustumCulled = false
-    transparentPreSentinel.renderOrder = -Infinity
-    transparentPreSentinel.onBeforeRender = (
-      _r: unknown,
-      _s: unknown,
-      camera: Camera,
-    ) => applyRotation(camera)
-
-    const transparentPostSentinel = new Mesh(
-      SENTINEL_GEOMETRY,
-      TRANSPARENT_MATERIAL,
-    )
-    transparentPostSentinel.frustumCulled = false
-    transparentPostSentinel.renderOrder = Infinity
-    transparentPostSentinel.onBeforeRender = restoreRotation
-
-    const sentinels = [
-      opaquePreSentinel,
-      opaquePostSentinel,
-      transparentPreSentinel,
-      transparentPostSentinel,
-    ]
-    for (const s of sentinels) target.add(s)
-
-    return () => {
-      for (const s of sentinels) {
-        s.onBeforeRender = () => {}
-        target.remove(s)
-      }
-    }
-  }, [])
+  })
 
   return ref
 }
