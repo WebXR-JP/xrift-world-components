@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import type { MutableRefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import {
   CapsuleCollider,
@@ -10,12 +11,14 @@ import { Vector3 } from 'three'
 import type { Group, Mesh } from 'three'
 import { useSpawnPoint } from '../../../hooks/useSpawnPoint'
 import { LAYERS } from '../../../constants/layers'
+import type { PlayerMovement } from '../../../types/movement'
 import {
   PLAYER_HALF_HEIGHT,
   PLAYER_RADIUS,
   JUMP_VELOCITY,
   LINEAR_DAMPING,
   CAMERA_Y_OFFSET,
+  DEV_AVATAR_HEIGHT,
 } from '../constants'
 
 interface Props {
@@ -23,15 +26,15 @@ interface Props {
   spawnPosition: [number, number, number]
   respawnThreshold: number
   allowInfiniteJump: boolean
+  movementRef?: MutableRefObject<PlayerMovement>
 }
-
-const DUMMY_AVATAR_HEIGHT = 1.5
 
 export function PhysicsPlayer({
   moveSpeed,
   spawnPosition,
   respawnThreshold,
   allowInfiniteJump,
+  movementRef,
 }: Props) {
   const rigidBodyRef = useRef<RapierRigidBody>(null)
   const avatarGroupRef = useRef<Group>(null)
@@ -170,19 +173,41 @@ export function PhysicsPlayer({
     camera.position.set(pos.x, pos.y + CAMERA_Y_OFFSET, pos.z)
 
     // --- DummyAvatar 位置同期 ---
+    camera.getWorldDirection(forwardRef.current)
+    const yaw = -Math.atan2(forwardRef.current.x, -forwardRef.current.z)
+    const pitch = Math.asin(forwardRef.current.y)
     if (avatarGroupRef.current) {
       avatarGroupRef.current.position.set(
         pos.x,
         pos.y + CAMERA_Y_OFFSET,
         pos.z,
       )
-      camera.getWorldDirection(forwardRef.current)
-      const yaw = -Math.atan2(forwardRef.current.x, -forwardRef.current.z)
-      const pitch = Math.asin(forwardRef.current.y)
       avatarGroupRef.current.rotation.set(0, yaw, 0)
       if (headRef.current) {
         headRef.current.rotation.set(pitch, 0, 0)
       }
+    }
+
+    // --- useUsers 用の PlayerMovement を更新（足元基準） ---
+    if (movementRef) {
+      const m = movementRef.current
+      m.position.x = pos.x
+      m.position.y = pos.y - (PLAYER_HALF_HEIGHT + PLAYER_RADIUS)
+      m.position.z = pos.z
+      if (len > 0) {
+        m.direction.x = moveX / moveSpeed
+        m.direction.z = moveZ / moveSpeed
+        m.horizontalSpeed = moveSpeed
+      } else {
+        m.direction.x = 0
+        m.direction.z = 0
+        m.horizontalSpeed = 0
+      }
+      m.verticalSpeed = vy
+      m.rotation.yaw = yaw
+      m.rotation.pitch = pitch
+      m.isGrounded = isGroundedRef.current
+      m.isJumping = !isGroundedRef.current && vy > 0
     }
 
     // --- リスポーン ---
@@ -237,8 +262,8 @@ export function PhysicsPlayer({
           <boxGeometry args={[0.2, 0.1, 0.2]} />
           <meshLambertMaterial color="#ffcccc" />
         </mesh>
-        <mesh castShadow position={[0, -DUMMY_AVATAR_HEIGHT * 0.55, 0]}>
-          <boxGeometry args={[0.3, DUMMY_AVATAR_HEIGHT, 0.1]} />
+        <mesh castShadow position={[0, -DEV_AVATAR_HEIGHT * 0.55, 0]}>
+          <boxGeometry args={[0.3, DEV_AVATAR_HEIGHT, 0.1]} />
           <meshLambertMaterial color="#ccffcc" />
         </mesh>
       </group>
