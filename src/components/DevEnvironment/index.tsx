@@ -1,8 +1,11 @@
-import { useCallback, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { SpawnPointProvider } from '../../contexts/SpawnPointContext'
+import { UsersProvider, type UsersContextValue, type User } from '../../contexts/UsersContext'
+import type { PlayerMovement } from '../../types/movement'
+import type { AvatarHeight } from '../../types/avatar'
 import { PCFShadowMap } from 'three'
 import type { Props } from './types'
 import { toThreeOutputBufferType } from './utils'
@@ -14,12 +17,30 @@ import {
   DEFAULT_CAMERA_FAR,
   MOVE_SPEED,
   RESPAWN_Y_THRESHOLD,
+  DEV_LOCAL_USER_ID,
+  DEV_LOCAL_USER_DISPLAY_NAME,
+  DEV_AVATAR_HEIGHT,
+  DEV_EYE_HEIGHT,
 } from './constants'
 import { PhysicsPlayer } from './components/PhysicsPlayer'
 import { CenterRaycaster } from './components/CenterRaycaster'
 import { Crosshair } from './components/Crosshair'
 import { PointerLockStatus } from './components/PointerLockStatus'
 import { ControlsHelp } from './components/ControlsHelp'
+
+const DEV_LOCAL_USER: User = {
+  id: DEV_LOCAL_USER_ID,
+  displayName: DEV_LOCAL_USER_DISPLAY_NAME,
+  avatarUrl: null,
+  isGuest: true,
+}
+
+const DEV_LOCAL_AVATAR_HEIGHT: AvatarHeight = {
+  height: DEV_AVATAR_HEIGHT,
+  eyeHeight: DEV_EYE_HEIGHT,
+}
+
+const EMPTY_REMOTE_USERS: User[] = []
 
 export type DevEnvironmentProps = Props
 
@@ -58,6 +79,30 @@ export function DevEnvironment({
   )
   const handleHitChange = useCallback((hit: boolean) => setIsHit(hit), [])
 
+  // ローカルユーザーの位置情報を保持する ref。PhysicsPlayer が毎フレーム書き込み、
+  // useUsers().getLocalMovement() がここから読み取る（再レンダリングは発生しない）
+  const localMovementRef = useRef<PlayerMovement>({
+    position: { x: spawnPosition[0], y: spawnPosition[1], z: spawnPosition[2] },
+    direction: { x: 0, z: 0 },
+    horizontalSpeed: 0,
+    verticalSpeed: 0,
+    rotation: { yaw: 0, pitch: 0 },
+    isGrounded: true,
+    isJumping: false,
+  })
+
+  const usersImplementation = useMemo<UsersContextValue>(
+    () => ({
+      localUser: DEV_LOCAL_USER,
+      remoteUsers: EMPTY_REMOTE_USERS,
+      getMovement: () => undefined,
+      getLocalMovement: () => localMovementRef.current,
+      getAvatarHeight: () => undefined,
+      getLocalAvatarHeight: () => DEV_LOCAL_AVATAR_HEIGHT,
+    }),
+    [],
+  )
+
   const gravity = physicsConfig?.gravity ?? DEFAULT_GRAVITY
   const allowInfiniteJump =
     physicsConfig?.allowInfiniteJump ?? DEFAULT_ALLOW_INFINITE_JUMP
@@ -92,13 +137,16 @@ export function DevEnvironment({
         <CenterRaycaster onHitChange={handleHitChange} />
         <Physics gravity={[0, -gravity, 0]} timeStep="vary">
           <SpawnPointProvider>
-            <PhysicsPlayer
-              moveSpeed={moveSpeed}
-              spawnPosition={spawnPosition}
-              respawnThreshold={respawnThreshold}
-              allowInfiniteJump={allowInfiniteJump}
-            />
-            {children}
+            <UsersProvider implementation={usersImplementation}>
+              <PhysicsPlayer
+                moveSpeed={moveSpeed}
+                spawnPosition={spawnPosition}
+                respawnThreshold={respawnThreshold}
+                allowInfiniteJump={allowInfiniteJump}
+                movementRef={localMovementRef}
+              />
+              {children}
+            </UsersProvider>
           </SpawnPointProvider>
         </Physics>
       </Canvas>

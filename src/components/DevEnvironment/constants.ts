@@ -21,3 +21,18 @@ export const CROSSHAIR_SIZE = 20
 export const CROSSHAIR_THICKNESS = 2
 export const CROSSHAIR_ACTIVE_THICKNESS = 3
 export const HIGHLIGHT_COLOR = '#4dabf7'
+
+/**
+ * DevEnvironment 上のローカルユーザー定数
+ * 本番環境では xrift-frontend が UsersProvider に実装を注入するが、
+ * DevEnvironment ではダミーのユーザー情報を提供して useUsers を機能させる
+ */
+export const DEV_LOCAL_USER_ID = 'dev-local-user'
+export const DEV_LOCAL_USER_DISPLAY_NAME = 'Dev User'
+
+/**
+ * DummyAvatar の見た目に基づく高さ情報
+ * eyeHeight はカプセル底面（地面）からカメラまでの距離
+ */
+export const DEV_AVATAR_HEIGHT = 1.5
+export const DEV_EYE_HEIGHT = PLAYER_HALF_HEIGHT + PLAYER_RADIUS + CAMERA_Y_OFFSET
