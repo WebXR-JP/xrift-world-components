@@ -75,7 +75,7 @@ export const ScreenShareDisplay = memo(({
           textAlign="center"
           material-side={THREE.FrontSide}
         >
-          {isRoomConnected ? 'クリックして画面共有' : '他のユーザーがいると\n画面共有できます'}
+          {isRoomConnected ? 'クリックして画面共有' : '音声通話に接続できていません'}
         </Text>
       )}
     </group>
