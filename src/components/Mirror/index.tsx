@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
-import type { PerspectiveCamera } from 'three'
+import type { Camera, PerspectiveCamera } from 'three'
 import { Color, Group, Mesh, PlaneGeometry, ShaderMaterial, Vector3 } from 'three'
 import { Reflector } from 'three/addons/objects/Reflector.js'
 import { DEFAULT_LOD_DISTANCE, LOD_HYSTERESIS_RATIO } from './constants'
@@ -106,19 +106,19 @@ export function Mirror({
     }
   }, [size[0], size[1], color, textureResolution, gl])
 
-  // Reflectorの内部カメラ（virtualCamera）の全レイヤーを有効化
+  // Reflectorのリフレクションカメラの全レイヤーを有効化
   // VRMFirstPersonのレイヤー設定により、メインカメラではThirdPersonOnlyレイヤー（頭部）が
   // 非表示になっているが、鏡には全身を映す必要があるため
-  // onBeforeRenderでメインカメラの設定がコピーされるため、毎フレーム設定が必要
   useFrame(({ camera, gl }) => {
     const reflector = reflectorRef.current
     if (!reflector) return
 
+    // VR モードでは XR カメラを使用
+    const activeCamera = gl.xr.isPresenting ? gl.xr.getCamera() : camera
+
     // LOD: カメラと鏡の距離に応じて Reflector ↔ envMap を切り替え
     const fallback = fallbackRef.current
     if (fallback && groupRef.current) {
-      // VR モードでは XR カメラのワールド座標を使用
-      const activeCamera = gl.xr.isPresenting ? gl.xr.getCamera() : camera
       _cameraWorldPos.setFromMatrixPosition(activeCamera.matrixWorld)
       const distance = _cameraWorldPos.distanceTo(
         groupRef.current.getWorldPosition(_worldPos),
@@ -139,10 +139,20 @@ export function Mirror({
 
     if (!reflector.visible) return
 
-    // Reflectorの内部カメラにアクセス（型定義にないためanyでキャスト）
-    const virtualCamera = (reflector as unknown as { camera: PerspectiveCamera }).camera
-    if (virtualCamera) {
-      virtualCamera.layers.enableAll()
+    // three r184+ ではリフレクション用カメラがメインカメラごとの clone に変わり、
+    // getReflectionCamera(camera) で取得する。clone はメインカメラのレイヤー設定
+    // （ThirdPersonOnly 無効）を継承するため、そのままだと鏡に頭部が映らない。
+    // リフレクションカメラの全レイヤーを有効化して全身を映す。
+    // 型定義にないため any 相当でキャストしてアクセスする。
+    const reflectorApi = reflector as unknown as {
+      camera?: PerspectiveCamera
+      getReflectionCamera?: (camera: Camera) => Camera
+    }
+    if (typeof reflectorApi.getReflectionCamera === 'function') {
+      reflectorApi.getReflectionCamera(activeCamera).layers.enableAll()
+    } else if (reflectorApi.camera) {
+      // three r183 以前: 単一の内部カメラ
+      reflectorApi.camera.layers.enableAll()
     }
   })
 
