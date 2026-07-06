@@ -122,6 +122,17 @@ export {
 } from './contexts/SharedFileContext'
 
 export {
+  GrabbableContext,
+  GrabbableProvider,
+  useGrabbableContext,
+  createDefaultGrabbableImplementation,
+  type GrabbableContextValue,
+  type GrabbableEntry,
+  type GrabbableTransform,
+  type GrabResultTransform,
+} from './contexts/GrabbableContext'
+
+export {
   VoiceVolumeOverrideContext,
   VoiceVolumeOverrideProvider,
   useVoiceVolumeOverrideContext,
@@ -140,6 +151,13 @@ export {
   Interactable,
   type InteractableProps,
 } from './components/Interactable'
+
+export {
+  Grabbable,
+  type GrabbableProps,
+} from './components/Grabbable'
+
+export { GRABBABLE_USER_DATA_KEY } from './components/Grabbable/constants'
 
 export { Mirror, type MirrorProps } from './components/Mirror'
 

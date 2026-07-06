@@ -1,9 +1,34 @@
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import { useFrame } from "@react-three/fiber"
 import { CuboidCollider, RigidBody } from "@react-three/rapier"
 import type { IntersectionEnterPayload } from "@react-three/rapier"
 import type { Mesh } from "three"
+import { Grabbable } from "../components/Grabbable"
+import type { GrabbableTransform } from "../contexts/GrabbableContext"
 import { Mirror } from "../components/Mirror"
+
+const GRABBABLE_BALL_INITIAL: GrabbableTransform = {
+  position: { x: 2, y: 0.5, z: -2 },
+  rotation: { x: 0, y: 0, z: 0 },
+}
+
+/** Grabbable の動作確認用ボール（G で掴む → ホイールで距離 → クリックで置く） */
+function GrabbableBall() {
+  const [transform, setTransform] = useState(GRABBABLE_BALL_INITIAL)
+
+  return (
+    <Grabbable
+      id="test-ball"
+      transform={transform}
+      onMove={(next) => setTransform((prev) => ({ ...prev, ...next }))}
+    >
+      <mesh>
+        <sphereGeometry args={[0.3, 32, 16]} />
+        <meshStandardMaterial color="gold" metalness={0.5} roughness={0.3} />
+      </mesh>
+    </Grabbable>
+  )
+}
 
 const WARP_POINTS = [
   { position: [-5, 0, -5] as [number, number, number], destination: [5, 1, 5] as [number, number, number], color: "#4488ff" },
@@ -62,6 +87,9 @@ export function TestScene() {
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial color="tomato" />
       </mesh>
+
+      {/* 掴めるボール */}
+      <GrabbableBall />
 
       {/* ワープポイント */}
       {WARP_POINTS.map((wp, i) => (

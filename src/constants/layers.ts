@@ -34,6 +34,15 @@ export const LAYERS = {
    * - ボタン、ドア、アイテムなどのインタラクト可能な要素に設定
    */
   INTERACTABLE: 11,
+
+  // 12（WORLD_SURFACE）・13（UI_OVERLAY）はプラットフォーム側（xrift-frontend）で予約済み
+
+  /**
+   * 掴める（Grabbable）オブジェクト
+   * - GrabSystem のレイキャスト対象
+   * - <Grabbable> で囲まれた対象のメッシュに付与し、掴める対象を明示する
+   */
+  GRABBABLE: 14,
 } as const
 
 export type LayerName = keyof typeof LAYERS
