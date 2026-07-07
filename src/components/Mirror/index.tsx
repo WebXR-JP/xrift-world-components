@@ -149,7 +149,17 @@ export function Mirror({
       getReflectionCamera?: (camera: Camera) => Camera
     }
     if (typeof reflectorApi.getReflectionCamera === 'function') {
-      reflectorApi.getReflectionCamera(activeCamera).layers.enableAll()
+      if (gl.xr.isPresenting) {
+        // VR ではシーンが左右の目のサブカメラ（cameraL/cameraR）で個別に描画され、
+        // Reflector の onBeforeRender にもサブカメラが渡るため、WeakMap もサブカメラを
+        // キーに clone を保持する。ArrayCamera 本体（getCamera()）をキーにすると描画に
+        // 使われない clone を触るだけになるので、サブカメラごとに enableAll() する。
+        for (const eyeCamera of gl.xr.getCamera().cameras) {
+          reflectorApi.getReflectionCamera(eyeCamera).layers.enableAll()
+        }
+      } else {
+        reflectorApi.getReflectionCamera(camera).layers.enableAll()
+      }
     } else if (reflectorApi.camera) {
       // three r183 以前: 単一の内部カメラ
       reflectorApi.camera.layers.enableAll()
