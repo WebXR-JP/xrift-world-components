@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 're
 import { Canvas } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
+import { GrabbableProvider } from '../../contexts/GrabbableContext'
 import { SpawnPointProvider } from '../../contexts/SpawnPointContext'
 import { UsersProvider, type UsersContextValue, type User } from '../../contexts/UsersContext'
 import type { PlayerMovement } from '../../types/movement'
@@ -23,6 +24,8 @@ import {
   DEV_EYE_HEIGHT,
 } from './constants'
 import { PhysicsPlayer } from './components/PhysicsPlayer'
+import { GrabSystem } from './components/GrabSystem'
+import { createDevGrabStore } from './components/GrabSystem/store'
 import { CenterRaycaster } from './components/CenterRaycaster'
 import { Crosshair } from './components/Crosshair'
 import { PointerLockStatus } from './components/PointerLockStatus'
@@ -72,6 +75,8 @@ export function DevEnvironment({
   outputBufferType: outputBufferTypeStr,
 }: Props) {
   const [isHit, setIsHit] = useState(false)
+  // ローカル掴みストア（<Grabbable> の登録先 & 開発プレビュー用 GrabSystem の状態）
+  const [grabStore] = useState(createDevGrabStore)
   const isPointerLocked = useSyncExternalStore(
     subscribePointerLock,
     getPointerLockSnapshot,
@@ -138,14 +143,17 @@ export function DevEnvironment({
         <Physics gravity={[0, -gravity, 0]} timeStep="vary">
           <SpawnPointProvider>
             <UsersProvider implementation={usersImplementation}>
-              <PhysicsPlayer
-                moveSpeed={moveSpeed}
-                spawnPosition={spawnPosition}
-                respawnThreshold={respawnThreshold}
-                allowInfiniteJump={allowInfiniteJump}
-                movementRef={localMovementRef}
-              />
-              {children}
+              <GrabbableProvider implementation={grabStore.contextValue}>
+                <PhysicsPlayer
+                  moveSpeed={moveSpeed}
+                  spawnPosition={spawnPosition}
+                  respawnThreshold={respawnThreshold}
+                  allowInfiniteJump={allowInfiniteJump}
+                  movementRef={localMovementRef}
+                />
+                <GrabSystem store={grabStore} />
+                {children}
+              </GrabbableProvider>
             </UsersProvider>
           </SpawnPointProvider>
         </Physics>

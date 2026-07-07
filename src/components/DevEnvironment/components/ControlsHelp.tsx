@@ -46,6 +46,9 @@ export function ControlsHelp() {
         <Kbd>Space</Kbd>
         <Kbd>E</Kbd> ジャンプ
       </div>
+      <div>
+        <Kbd>G</Kbd> 掴む / 置く（Grabbable）
+      </div>
     </div>
   )
 }

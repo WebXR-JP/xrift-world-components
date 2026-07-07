@@ -34,6 +34,7 @@ import {
   type FileInputContextValue,
 } from './FileInputContext'
 import { UsersProvider, type UsersContextValue } from './UsersContext'
+import { GrabbableProvider, type GrabbableContextValue } from './GrabbableContext'
 import {
   InstanceEventProvider,
   createDefaultInstanceEventImplementation,
@@ -159,6 +160,11 @@ interface Props {
    */
   sharedFileImplementation?: SharedFileContextValue
   /**
+   * 掴める対象管理の実装（オプション）
+   * 指定しない場合はデフォルト実装（登録のみ・掴めない）が使用される
+   */
+  grabbableImplementation?: GrabbableContextValue
+  /**
    * アイテムの配置状態（オプション）
    * 'preview': プレビュー中、'placed': 設置済み
    * 指定しない場合は Provider をスキップ（フォールバックで 'placed' が返る）
@@ -200,6 +206,7 @@ export const XRiftProvider = ({
   audioVolumeImplementation,
   fileInputImplementation,
   sharedFileImplementation,
+  grabbableImplementation,
   placementMode,
   children,
 }: Props) => {
@@ -291,6 +298,7 @@ export const XRiftProvider = ({
     [InstanceStateProvider, { implementation: instanceStateImplementation }],
     [SpawnPointProvider, { implementation: spawnPointImplementation }],
     [UsersProvider, { implementation: usersImplementation }],
+    [GrabbableProvider, { implementation: grabbableImplementation }],
     [InstanceEventProvider, { value: instanceEventImpl }],
     [TeleportProvider, { value: teleportImpl }],
     [ConfirmProvider, { value: confirmImpl }],
