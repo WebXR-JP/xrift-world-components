@@ -4,6 +4,7 @@ import { LAYERS } from '../../constants/layers'
 import { useGrabbableContext } from '../../contexts/GrabbableContext'
 import { GRABBABLE_USER_DATA_KEY } from './constants'
 import type { Props } from './types'
+import { decomposeWorldTransform, worldToLocalTransform } from './utils'
 
 /**
  * 子オブジェクトを「掴める」と宣言するラッパー（<Interactable> と同じ明示オプトイン）
@@ -59,10 +60,27 @@ export const Grabbable: FC<Props> = ({
     registerGrabbable(id, {
       // ゴースト未指定時は children をそのまま流用する
       renderGhost: () => renderGhostRef.current?.() ?? childrenRef.current,
-      onMove: (t) => onMoveRef.current(t),
+      // GrabSystem はワールド座標で確定位置を返すため、ローカル（transform prop と同じ空間）へ
+      // 変換してからユーザーの onMove に渡す。変形された親の下に置いてもズレない
+      onMove: (world) => {
+        const parent = groupRef.current?.parent
+        if (!parent) {
+          onMoveRef.current(world)
+          return
+        }
+        parent.updateWorldMatrix(true, false)
+        onMoveRef.current(worldToLocalTransform(world.position, world.rotation, parent.matrixWorld))
+      },
+      // GrabSystem 向けにはワールド姿勢を返す（掴み距離・ゴーストの初期姿勢に使われる）。
+      // group 未マウント時のみ transform prop（ローカル）にフォールバック
       getTransform: () => {
-        const t = transformRef.current
-        return { position: t.position, rotation: t.rotation, scale: t.scale ?? 1 }
+        const group = groupRef.current
+        if (!group) {
+          const t = transformRef.current
+          return { position: t.position, rotation: t.rotation, scale: t.scale ?? 1 }
+        }
+        group.updateWorldMatrix(true, false)
+        return decomposeWorldTransform(group.matrixWorld)
       },
     })
 
