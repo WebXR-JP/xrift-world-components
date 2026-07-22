@@ -122,6 +122,24 @@ export {
 } from './contexts/SharedFileContext'
 
 export {
+  WorldStorageContext,
+  WorldStorageProvider,
+  useWorldStorageContext,
+  createDefaultWorldStorageImplementation,
+  WorldStorageError,
+  WORLD_STORAGE_KEY_PATTERN,
+  WORLD_STORAGE_LIMITS,
+  isValidWorldStorageKey,
+  getWorldStorageEntrySize,
+  incrementWorldStorageValue,
+  type WorldStorageContextValue,
+  type WorldStorageErrorCode,
+  type WorldStorageEntry,
+  type SharedWorldStorage,
+  type PlayerWorldStorage,
+} from './contexts/WorldStorageContext'
+
+export {
   GrabbableContext,
   GrabbableProvider,
   useGrabbableContext,
@@ -232,6 +250,7 @@ export { useInstance } from './hooks/useInstance'
 export { useWorld } from './hooks/useWorld'
 export { useInstanceEvent } from './hooks/useInstanceEvent'
 export { useSharedFile } from './hooks/useSharedFile'
+export { useWorldStorage } from './hooks/useWorldStorage'
 export { useVoiceVolumeOverride, useAudioVolume } from './hooks/useAudioVolume'
 export { useDefaultFont, type FontLocale } from './hooks/useDefaultFont'
 
