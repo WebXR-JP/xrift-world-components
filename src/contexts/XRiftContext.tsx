@@ -51,6 +51,11 @@ import {
   createDefaultSharedFileImplementation,
   type SharedFileContextValue,
 } from './SharedFileContext'
+import {
+  WorldStorageProvider,
+  createDefaultWorldStorageImplementation,
+  type WorldStorageContextValue,
+} from './WorldStorageContext'
 
 // デフォルトの画面共有実装（開発環境用）
 const createDefaultScreenShareImplementation = (): ScreenShareContextValue => ({
@@ -165,6 +170,11 @@ interface Props {
    */
   grabbableImplementation?: GrabbableContextValue
   /**
+   * World Storage（ワールド単位のKV永続化）の実装（オプション）
+   * 指定しない場合はデフォルト実装（インメモリ・リロードで消える）が使用される
+   */
+  worldStorageImplementation?: WorldStorageContextValue
+  /**
    * アイテムの配置状態（オプション）
    * 'preview': プレビュー中、'placed': 設置済み
    * 指定しない場合は Provider をスキップ（フォールバックで 'placed' が返る）
@@ -207,6 +217,7 @@ export const XRiftProvider = ({
   fileInputImplementation,
   sharedFileImplementation,
   grabbableImplementation,
+  worldStorageImplementation,
   placementMode,
   children,
 }: Props) => {
@@ -273,6 +284,12 @@ export const XRiftProvider = ({
     [sharedFileImplementation],
   )
 
+  // World Storage の実装（指定がない場合はデフォルト実装を使用）
+  const worldStorageImpl = useMemo(
+    () => worldStorageImplementation ?? createDefaultWorldStorageImplementation(),
+    [worldStorageImplementation],
+  )
+
   // オブジェクトの登録
   const registerInteractable = useCallback((object: Object3D) => {
     interactableObjects.add(object)
@@ -305,6 +322,7 @@ export const XRiftProvider = ({
     [WorldProvider, { value: worldImpl }],
     [InstanceProvider, { value: instanceImpl }],
     [AudioVolumeProvider, { value: audioVolumeImpl }],
+    [WorldStorageProvider, { value: worldStorageImpl }],
   ]
 
   if (placementMode) {
