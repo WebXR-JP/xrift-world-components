@@ -9,6 +9,7 @@ export interface SharedFileInfo {
   contentType: string
   fileSize: number
   publicUrl: string
+  locked: boolean
   createdAt: string
 }
 
@@ -27,6 +28,10 @@ export interface SharedFileContextValue {
    * 共有ファイル一覧を取得する
    */
   getSharedFiles: () => Promise<SharedFileInfo[]>
+  /**
+   * 共有ファイルのロック状態（削除保護）を設定する
+   */
+  setSharedFileLock: (fileId: string, locked: boolean) => Promise<SharedFileInfo>
 }
 
 /**
@@ -42,12 +47,25 @@ export const createDefaultSharedFileImplementation = (): SharedFileContextValue 
       contentType: file.type,
       fileSize: file.size,
       publicUrl: `https://example.com/shared/${file.name}`,
+      locked: false,
       createdAt: new Date().toISOString(),
     }
   },
   getSharedFiles: async () => {
     console.log('[SharedFile] getSharedFiles called')
     return []
+  },
+  setSharedFileLock: async (fileId, locked) => {
+    console.log('[SharedFile] setSharedFileLock called:', fileId, locked)
+    return {
+      id: fileId,
+      fileName: 'dummy-file',
+      contentType: 'application/octet-stream',
+      fileSize: 0,
+      publicUrl: 'https://example.com/shared/dummy-file',
+      locked,
+      createdAt: new Date().toISOString(),
+    }
   },
 })
 
