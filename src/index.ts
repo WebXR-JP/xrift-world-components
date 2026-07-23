@@ -119,6 +119,8 @@ export {
   createDefaultSharedFileImplementation,
   type SharedFileContextValue,
   type SharedFileInfo,
+  type UploadSharedFileOptions,
+  type UpdateSharedFileParams,
 } from './contexts/SharedFileContext'
 
 export {

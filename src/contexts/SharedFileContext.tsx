@@ -10,7 +10,29 @@ export interface SharedFileInfo {
   fileSize: number
   publicUrl: string
   locked: boolean
+  description: string | null
+  metadata: Record<string, string> | null
   createdAt: string
+}
+
+/**
+ * アップロード時に付与できる任意情報
+ */
+export interface UploadSharedFileOptions {
+  /** 説明文（500文字以内） */
+  description?: string
+  /** 構造化メタデータ（フラットな文字列の key-value、20件以内） */
+  metadata?: Record<string, string>
+}
+
+/**
+ * 共有ファイルの更新内容
+ * `null` を指定すると該当フィールドをクリアする
+ */
+export interface UpdateSharedFileParams {
+  fileName?: string
+  description?: string | null
+  metadata?: Record<string, string> | null
 }
 
 /**
@@ -23,6 +45,7 @@ export interface SharedFileContextValue {
   uploadSharedFile: (
     file: File,
     onProgress?: (progress: number) => void,
+    options?: UploadSharedFileOptions,
   ) => Promise<SharedFileInfo>
   /**
    * 共有ファイル一覧を取得する
@@ -32,6 +55,11 @@ export interface SharedFileContextValue {
    * 共有ファイルのロック状態（削除保護）を設定する
    */
   setSharedFileLock: (fileId: string, locked: boolean) => Promise<SharedFileInfo>
+  /**
+   * 共有ファイルの情報（fileName / description / metadata）を更新する
+   * ロック中のファイルは更新できない（先にロック解除が必要）
+   */
+  updateSharedFile: (fileId: string, updates: UpdateSharedFileParams) => Promise<SharedFileInfo>
 }
 
 /**
@@ -39,8 +67,8 @@ export interface SharedFileContextValue {
  * console.log + ダミーデータを返す
  */
 export const createDefaultSharedFileImplementation = (): SharedFileContextValue => ({
-  uploadSharedFile: async (file) => {
-    console.log('[SharedFile] uploadSharedFile called:', file.name)
+  uploadSharedFile: async (file, _onProgress, options) => {
+    console.log('[SharedFile] uploadSharedFile called:', file.name, options)
     return {
       id: 'dummy-id',
       fileName: file.name,
@@ -48,6 +76,8 @@ export const createDefaultSharedFileImplementation = (): SharedFileContextValue 
       fileSize: file.size,
       publicUrl: `https://example.com/shared/${file.name}`,
       locked: false,
+      description: options?.description ?? null,
+      metadata: options?.metadata ?? null,
       createdAt: new Date().toISOString(),
     }
   },
@@ -64,6 +94,22 @@ export const createDefaultSharedFileImplementation = (): SharedFileContextValue 
       fileSize: 0,
       publicUrl: 'https://example.com/shared/dummy-file',
       locked,
+      description: null,
+      metadata: null,
+      createdAt: new Date().toISOString(),
+    }
+  },
+  updateSharedFile: async (fileId, updates) => {
+    console.log('[SharedFile] updateSharedFile called:', fileId, updates)
+    return {
+      id: fileId,
+      fileName: updates.fileName ?? 'dummy-file',
+      contentType: 'application/octet-stream',
+      fileSize: 0,
+      publicUrl: 'https://example.com/shared/dummy-file',
+      locked: false,
+      description: updates.description ?? null,
+      metadata: updates.metadata ?? null,
       createdAt: new Date().toISOString(),
     }
   },
