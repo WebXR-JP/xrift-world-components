@@ -60,6 +60,11 @@ export interface SharedFileContextValue {
    * ロック中のファイルは更新できない（先にロック解除が必要）
    */
   updateSharedFile: (fileId: string, updates: UpdateSharedFileParams) => Promise<SharedFileInfo>
+  /**
+   * 共有ファイルを削除する
+   * ロック中のファイルは削除できない（先にロック解除が必要）
+   */
+  deleteSharedFile: (fileId: string) => Promise<void>
 }
 
 /**
@@ -112,6 +117,9 @@ export const createDefaultSharedFileImplementation = (): SharedFileContextValue 
       metadata: updates.metadata ?? null,
       createdAt: new Date().toISOString(),
     }
+  },
+  deleteSharedFile: async (fileId) => {
+    console.log('[SharedFile] deleteSharedFile called:', fileId)
   },
 })
 
