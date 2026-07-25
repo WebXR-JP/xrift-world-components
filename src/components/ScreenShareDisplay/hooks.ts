@@ -106,3 +106,64 @@ export const useVideoTexture = (
 
   return { texture, hasVideo, videoSize }
 }
+
+/**
+ * 画像URLからプレースホルダー用のテクスチャを作成し管理するフック
+ * 読み込み失敗時は null を返す（呼び出し側でフォールバック表示する）
+ * @param imageUrl 画像のURL（省略時はテクスチャを作成しない）
+ * @param screenSize スクリーンのサイズ [幅, 高さ]
+ */
+export const usePlaceholderTexture = (
+  imageUrl: string | undefined,
+  screenSize: [number, number],
+) => {
+  const [texture, setTexture] = useState<THREE.Texture | null>(null)
+
+  useEffect(() => {
+    if (!imageUrl) {
+      setTexture(null)
+      return
+    }
+
+    const loader = new THREE.TextureLoader()
+    loader.setCrossOrigin('anonymous')
+
+    let cancelled = false
+    loader.load(
+      imageUrl,
+      (loaded) => {
+        if (cancelled) return
+        loaded.colorSpace = THREE.SRGBColorSpace
+        setTexture(loaded)
+      },
+      undefined,
+      (err) => {
+        console.error('ScreenShareDisplay: placeholder image load failed', err)
+      },
+    )
+
+    return () => {
+      cancelled = true
+      setTexture((prev) => {
+        prev?.dispose()
+        return null
+      })
+    }
+  }, [imageUrl])
+
+  // 画像サイズをスクリーン内に contain フィットさせる
+  const placeholderSize = useMemo<[number, number]>(() => {
+    const image = texture?.image as
+      | { width?: number; height?: number }
+      | undefined
+    if (!image?.width || !image?.height) return screenSize
+    return calculateContainSize(
+      image.width,
+      image.height,
+      screenSize[0],
+      screenSize[1],
+    )
+  }, [texture, screenSize])
+
+  return { placeholderTexture: texture, placeholderSize }
+}

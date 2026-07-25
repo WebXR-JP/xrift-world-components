@@ -9,4 +9,6 @@ export interface Props {
   width?: number
   /** テクスチャ更新のフレームレート上限（低スペック端末向け。省略時は制限なし） */
   targetFps?: number
+  /** 未共有時に表示するプレースホルダー画像のURL（省略時は背景色とガイドテキストを表示） */
+  placeholderImageUrl?: string
 }
