@@ -83,13 +83,12 @@ export function TestScene() {
       {/* ミラー（奥） */}
       <Mirror position={[0, 1.5, -3]} size={[3, 2]} />
 
-      {/* 画面共有スクリーン（プレースホルダー画像の動作確認用） */}
-      {/* dev 環境では CORS 回避のため vite のプロキシ（/xrift-assets → assets.xrift.net）経由で取得 */}
+      {/* 画面共有スクリーン（プレースホルダー画像の動作確認用。画像は dev/public に配置） */}
       <ScreenShareDisplay
         id="test-screen"
         position={[4, 1.5, -3]}
         width={3}
-        placeholderImageUrl="/xrift-assets/users/fb47fabb-5db8-41bb-9e1e-ed65c3fdbabc/shared-files/1e30682a-66f7-43c4-b37e-d9809496dda8.png"
+        placeholderImageUrl="/screen-share-placeholder.png"
       />
 
       {/* 反射確認用のボックス */}
