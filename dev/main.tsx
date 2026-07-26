@@ -1,9 +1,10 @@
-import { useRef } from 'react'
+import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useFrame } from '@react-three/fiber'
 import { RigidBody } from '@react-three/rapier'
 import { DevEnvironment } from '../src/components/DevEnvironment'
 import { SpawnPoint } from '../src/components/SpawnPoint'
+import { ScreenShareProvider, type ScreenShareContextValue } from '../src/contexts/ScreenShareContext'
 import { TextInputProvider, createDefaultTextInputImplementation } from '../src/contexts/TextInputContext'
 import { TestScene } from '../src/scenes/TestScene'
 import { useUsers } from '../src/contexts/UsersContext'
@@ -58,6 +59,46 @@ function MovementDebugReader({
   return null
 }
 
+/** dev 用の画面共有モック（getDisplayMedia で実際に画面共有できる） */
+function DevScreenShareProvider({ children }: { children: ReactNode }) {
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+
+  const stopScreenShare = useCallback(() => {
+    streamRef.current?.getTracks().forEach((track) => track.stop())
+    streamRef.current = null
+    setVideoElement(null)
+  }, [])
+
+  const startScreenShare = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true })
+      streamRef.current = stream
+      const video = document.createElement('video')
+      video.srcObject = stream
+      video.muted = true
+      await video.play()
+      setVideoElement(video)
+      stream.getVideoTracks()[0]?.addEventListener('ended', stopScreenShare)
+    } catch {
+      // 共有ダイアログのキャンセルは無視
+    }
+  }, [stopScreenShare])
+
+  const value = useMemo<ScreenShareContextValue>(
+    () => ({
+      videoElement,
+      isSharing: videoElement !== null,
+      startScreenShare,
+      stopScreenShare,
+      isRoomConnected: true,
+    }),
+    [videoElement, startScreenShare, stopScreenShare],
+  )
+
+  return <ScreenShareProvider value={value}>{children}</ScreenShareProvider>
+}
+
 function App() {
   const debugRef = useRef<HTMLPreElement>(null)
   return (
@@ -66,10 +107,12 @@ function App() {
         <ambientLight intensity={1} />
         <directionalLight position={[5, 10, 5]} intensity={1} castShadow />
         <TextInputProvider value={textInput}>
-          <Floor />
-          <SpawnPoint position={[5, 0, 5]} yaw={180} />
-          <TestScene />
-          <MovementDebugReader targetRef={debugRef} />
+          <DevScreenShareProvider>
+            <Floor />
+            <SpawnPoint position={[5, 0, 5]} yaw={180} />
+            <TestScene />
+            <MovementDebugReader targetRef={debugRef} />
+          </DevScreenShareProvider>
         </TextInputProvider>
       </DevEnvironment>
       <pre ref={debugRef} style={debugOverlayStyle} />

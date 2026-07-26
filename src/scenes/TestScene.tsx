@@ -6,6 +6,7 @@ import type { Mesh } from "three"
 import { Grabbable } from "../components/Grabbable"
 import type { GrabbableTransform } from "../contexts/GrabbableContext"
 import { Mirror } from "../components/Mirror"
+import { ScreenShareDisplay } from "../components/ScreenShareDisplay"
 
 const GRABBABLE_BALL_INITIAL: GrabbableTransform = {
   position: { x: 2, y: 0.5, z: -2 },
@@ -81,6 +82,16 @@ export function TestScene() {
 
       {/* ミラー（奥） */}
       <Mirror position={[0, 1.5, -3]} size={[3, 2]} />
+
+      {/* 画面共有スクリーン（プレースホルダー画像の動作確認用） */}
+      {/* assets.xrift.net は app.xrift.net 以外に CORS を許可していないため、
+          dev では vite のプロキシ（/xrift-assets → assets.xrift.net）経由で取得 */}
+      <ScreenShareDisplay
+        id="test-screen"
+        position={[4, 1.5, -3]}
+        width={3}
+        placeholderImageUrl="/xrift-assets/users/fb47fabb-5db8-41bb-9e1e-ed65c3fdbabc/worlds/41100e01-be41-4ee4-81eb-11a30c4f927c/610e10ef479d/thumbnail.jpg"
+      />
 
       {/* 反射確認用のボックス */}
       <mesh position={[0, 0.5, 0]}>

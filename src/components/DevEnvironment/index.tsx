@@ -5,9 +5,10 @@ import { Physics } from '@react-three/rapier'
 import { GrabbableProvider } from '../../contexts/GrabbableContext'
 import { SpawnPointProvider } from '../../contexts/SpawnPointContext'
 import { UsersProvider, type UsersContextValue, type User } from '../../contexts/UsersContext'
+import { XRiftContext, type XRiftContextValue } from '../../contexts/XRiftContext'
 import type { PlayerMovement } from '../../types/movement'
 import type { AvatarHeight } from '../../types/avatar'
-import { PCFShadowMap } from 'three'
+import { PCFShadowMap, type Object3D } from 'three'
 import type { Props } from './types'
 import { toThreeOutputBufferType } from './utils'
 import {
@@ -108,6 +109,30 @@ export function DevEnvironment({
     [],
   )
 
+  // Interactable の登録先（useXRift を使うコンポーネントを dev 環境で動かすため）
+  const [interactableObjects] = useState(() => new Set<Object3D>())
+  const registerInteractable = useCallback(
+    (object: Object3D) => {
+      interactableObjects.add(object)
+    },
+    [interactableObjects],
+  )
+  const unregisterInteractable = useCallback(
+    (object: Object3D) => {
+      interactableObjects.delete(object)
+    },
+    [interactableObjects],
+  )
+  const xriftContextValue = useMemo<XRiftContextValue>(
+    () => ({
+      baseUrl: '/',
+      interactableObjects,
+      registerInteractable,
+      unregisterInteractable,
+    }),
+    [interactableObjects, registerInteractable, unregisterInteractable],
+  )
+
   const gravity = physicsConfig?.gravity ?? DEFAULT_GRAVITY
   const allowInfiniteJump =
     physicsConfig?.allowInfiniteJump ?? DEFAULT_ALLOW_INFINITE_JUMP
@@ -141,21 +166,23 @@ export function DevEnvironment({
         <PointerLockControls />
         <CenterRaycaster onHitChange={handleHitChange} />
         <Physics gravity={[0, -gravity, 0]} timeStep="vary">
-          <SpawnPointProvider>
-            <UsersProvider implementation={usersImplementation}>
-              <GrabbableProvider implementation={grabStore.contextValue}>
-                <PhysicsPlayer
-                  moveSpeed={moveSpeed}
-                  spawnPosition={spawnPosition}
-                  respawnThreshold={respawnThreshold}
-                  allowInfiniteJump={allowInfiniteJump}
-                  movementRef={localMovementRef}
-                />
-                <GrabSystem store={grabStore} />
-                {children}
-              </GrabbableProvider>
-            </UsersProvider>
-          </SpawnPointProvider>
+          <XRiftContext.Provider value={xriftContextValue}>
+            <SpawnPointProvider>
+              <UsersProvider implementation={usersImplementation}>
+                <GrabbableProvider implementation={grabStore.contextValue}>
+                  <PhysicsPlayer
+                    moveSpeed={moveSpeed}
+                    spawnPosition={spawnPosition}
+                    respawnThreshold={respawnThreshold}
+                    allowInfiniteJump={allowInfiniteJump}
+                    movementRef={localMovementRef}
+                  />
+                  <GrabSystem store={grabStore} />
+                  {children}
+                </GrabbableProvider>
+              </UsersProvider>
+            </SpawnPointProvider>
+          </XRiftContext.Provider>
         </Physics>
       </Canvas>
       <Crosshair active={isHit} />

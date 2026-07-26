@@ -3,7 +3,7 @@ import { memo, useCallback, useMemo } from 'react'
 import * as THREE from 'three'
 import { useScreenShareContext } from '../../contexts/ScreenShareContext'
 import { Interactable } from '../Interactable'
-import { useVideoTexture } from './hooks'
+import { usePlaceholderTexture, useVideoTexture } from './hooks'
 import type { Props } from './types'
 
 export type { Props as ScreenShareDisplayProps } from './types'
@@ -23,11 +23,14 @@ export const ScreenShareDisplay = memo(({
   rotation = DEFAULT_ROTATION,
   width = DEFAULT_WIDTH,
   targetFps,
+  placeholderImageUrl,
 }: Props) => {
   const { videoElement, isSharing, startScreenShare, stopScreenShare, isRoomConnected } = useScreenShareContext()
   const interactionText = isSharing ? '画面共有を停止' : '画面共有を開始'
   const screenSize = useMemo<[number, number]>(() => [width, width * (9 / 16)], [width])
   const { texture, hasVideo, videoSize } = useVideoTexture(videoElement, screenSize, targetFps)
+  const { placeholderTexture, placeholderSize } = usePlaceholderTexture(placeholderImageUrl, screenSize)
+  const showPlaceholderImage = !hasVideo && placeholderTexture !== null
 
   const handleInteract = useCallback(() => {
     if (isSharing) {
@@ -45,12 +48,25 @@ export const ScreenShareDisplay = memo(({
         interactionText={interactionText}
       >
         {/* 背景（映像がない時のみ表示） */}
+        {/* polygonOffset で深度を奥に押し下げ、同一平面のプレースホルダー画像との z-fighting を防ぐ */}
         <mesh visible={!hasVideo}>
           <planeGeometry args={[screenSize[0], screenSize[1]]} />
           <meshBasicMaterial
             side={THREE.FrontSide}
             toneMapped={false}
             color="#1a1a2a"
+            polygonOffset
+            polygonOffsetFactor={1}
+            polygonOffsetUnits={1}
+          />
+        </mesh>
+        {/* プレースホルダー画像（未共有時かつ画像読み込み済みのみ表示） */}
+        <mesh visible={showPlaceholderImage}>
+          <planeGeometry args={[placeholderSize[0], placeholderSize[1]]} />
+          <meshBasicMaterial
+            map={placeholderTexture}
+            side={THREE.FrontSide}
+            toneMapped={false}
           />
         </mesh>
         {/* 映像 */}
@@ -64,8 +80,8 @@ export const ScreenShareDisplay = memo(({
         </mesh>
       </Interactable>
 
-      {/* ガイドテキスト */}
-      {!hasVideo && (
+      {/* ガイドテキスト（プレースホルダー画像表示中は非表示） */}
+      {!hasVideo && !showPlaceholderImage && (
         <Text
           position={[0, 0, 0.01]}
           fontSize={width * 0.05}
