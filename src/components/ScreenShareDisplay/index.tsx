@@ -48,16 +48,20 @@ export const ScreenShareDisplay = memo(({
         interactionText={interactionText}
       >
         {/* 背景（映像がない時のみ表示） */}
+        {/* polygonOffset で深度を奥に押し下げ、同一平面のプレースホルダー画像との z-fighting を防ぐ */}
         <mesh visible={!hasVideo}>
           <planeGeometry args={[screenSize[0], screenSize[1]]} />
           <meshBasicMaterial
             side={THREE.FrontSide}
             toneMapped={false}
             color="#1a1a2a"
+            polygonOffset
+            polygonOffsetFactor={1}
+            polygonOffsetUnits={1}
           />
         </mesh>
         {/* プレースホルダー画像（未共有時かつ画像読み込み済みのみ表示） */}
-        <mesh visible={showPlaceholderImage} position={[0, 0, 0.001]}>
+        <mesh visible={showPlaceholderImage}>
           <planeGeometry args={[placeholderSize[0], placeholderSize[1]]} />
           <meshBasicMaterial
             map={placeholderTexture}
