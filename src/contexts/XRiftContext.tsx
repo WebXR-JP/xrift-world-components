@@ -56,6 +56,11 @@ import {
   createDefaultWorldStorageImplementation,
   type WorldStorageContextValue,
 } from './WorldStorageContext'
+import {
+  ServerClockProvider,
+  createDefaultServerClockImplementation,
+  type ServerClockContextValue,
+} from './ServerClockContext'
 
 // デフォルトの画面共有実装（開発環境用）
 const createDefaultScreenShareImplementation = (): ScreenShareContextValue => ({
@@ -175,6 +180,11 @@ interface Props {
    */
   worldStorageImplementation?: WorldStorageContextValue
   /**
+   * インスタンス共有時計（サーバ時刻）の実装（オプション）
+   * 指定しない場合はデフォルト実装（端末のローカル時計・synced=false）が使用される
+   */
+  serverClockImplementation?: ServerClockContextValue
+  /**
    * アイテムの配置状態（オプション）
    * 'preview': プレビュー中、'placed': 設置済み
    * 指定しない場合は Provider をスキップ（フォールバックで 'placed' が返る）
@@ -218,6 +228,7 @@ export const XRiftProvider = ({
   sharedFileImplementation,
   grabbableImplementation,
   worldStorageImplementation,
+  serverClockImplementation,
   placementMode,
   children,
 }: Props) => {
@@ -290,6 +301,12 @@ export const XRiftProvider = ({
     [worldStorageImplementation],
   )
 
+  // 共有時計の実装（指定がない場合はデフォルト実装 = 端末のローカル時計を使用）
+  const serverClockImpl = useMemo(
+    () => serverClockImplementation ?? createDefaultServerClockImplementation(),
+    [serverClockImplementation],
+  )
+
   // オブジェクトの登録
   const registerInteractable = useCallback((object: Object3D) => {
     interactableObjects.add(object)
@@ -323,6 +340,7 @@ export const XRiftProvider = ({
     [InstanceProvider, { value: instanceImpl }],
     [AudioVolumeProvider, { value: audioVolumeImpl }],
     [WorldStorageProvider, { value: worldStorageImpl }],
+    [ServerClockProvider, { value: serverClockImpl }],
   ]
 
   if (placementMode) {

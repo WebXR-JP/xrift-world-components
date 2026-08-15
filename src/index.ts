@@ -140,6 +140,16 @@ export {
   type SharedWorldStorage,
   type PlayerWorldStorage,
 } from './contexts/WorldStorageContext'
+export {
+  ServerClockContext,
+  ServerClockProvider,
+  useServerClockContext,
+  createDefaultServerClockImplementation,
+  isServerClockAccurateEnough,
+  SERVER_CLOCK_ACCURACY_THRESHOLD,
+  type ServerClockContextValue,
+  type ServerClockAccuracy,
+} from './contexts/ServerClockContext'
 
 export {
   GrabbableContext,
@@ -253,6 +263,7 @@ export { useWorld } from './hooks/useWorld'
 export { useInstanceEvent } from './hooks/useInstanceEvent'
 export { useSharedFile } from './hooks/useSharedFile'
 export { useWorldStorage } from './hooks/useWorldStorage'
+export { useServerClock, type UseServerClockResult } from './hooks/useServerClock'
 export { useVoiceVolumeOverride, useAudioVolume } from './hooks/useAudioVolume'
 export { useDefaultFont, type FontLocale } from './hooks/useDefaultFont'
 
