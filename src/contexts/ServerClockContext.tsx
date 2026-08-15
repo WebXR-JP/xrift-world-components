@@ -19,6 +19,25 @@ export const SERVER_CLOCK_ACCURACY_THRESHOLD: Record<ServerClockAccuracy, number
   motion: 100,
 }
 
+/**
+ * 共有時計の Context 値
+ *
+ * **注入側（プラットフォーム）への契約:**
+ *
+ * `uncertainty` / `synced` / `timeJumpCount` はただの値なので、この Context の
+ * reactivity は「注入側が**新しいオブジェクトに差し替えること**」に全面的に依存する。
+ * 同じオブジェクトを持ち続けると（getter 付きの可変オブジェクトを1個渡す等）、
+ * 一度レンダーした値のまま永久に更新されず、**下のフックの使用例が黙って壊れる**
+ * （飛びを観測できないので基準を取り直せない）。
+ *
+ * 差し替えるタイミング:
+ * 1. オフセットを採用したとき（≒45秒ごとの再同期）
+ * 2. `synced` が変化したとき
+ * 3. 時刻が飛んだとき
+ *
+ * この頻度なら `uncertainty` の鮮度は最大45秒遅れ = ドリフト換算で +2ms 程度。
+ * しきい値（100 / 300ms）に対して無視できる。
+ */
 export interface ServerClockContextValue {
   /**
    * サーバ時刻の推定値（ms）
@@ -43,7 +62,7 @@ export interface ServerClockContextValue {
    */
   synced: boolean
   /**
-   * 時刻が飛んだ回数
+   * `now()` のタイムラインが飛んだ回数
    *
    * 通常の補正は徐々に寄せる（時刻は巻き戻らない）が、次の場合だけは飛ぶ。
    * 1. 端末のスリープ等で推定を捨てたとき
@@ -52,10 +71,14 @@ export interface ServerClockContextValue {
    *
    * **時刻から位置を計算しているワールドは、この値の変化を見て基準を取り直すこと。**
    * 取り直さないと、飛んだぶんだけオブジェクトがワープしたまま戻らない。
+   *
+   * 名前はプラットフォーム側の実装（`ServerClock.timeJumpCount`）と一致させてある。
+   * あちらの `discontinuityCount` は「端末時計の不連続の**検出**回数」という別物なので、
+   * 注入するときに取り違えないこと。
    */
-  discontinuityCount: number
+  timeJumpCount: number
   /** 直近に飛んだ量（ms）。負なら時刻が戻った */
-  lastJumpMs: number
+  lastTimeJumpMs: number
 }
 
 /**
@@ -68,8 +91,8 @@ export const createDefaultServerClockImplementation = (): ServerClockContextValu
   now: () => Date.now(),
   uncertainty: Number.POSITIVE_INFINITY,
   synced: false,
-  discontinuityCount: 0,
-  lastJumpMs: 0,
+  timeJumpCount: 0,
+  lastTimeJumpMs: 0,
 })
 
 /**

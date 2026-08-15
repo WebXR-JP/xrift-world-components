@@ -18,7 +18,7 @@ describe('createDefaultServerClockImplementation', () => {
     // 他の端末とは 0.1〜数秒ずれている前提なので、合わせにいってはいけない
     expect(clock.synced).toBe(false)
     expect(clock.uncertainty).toBe(Number.POSITIVE_INFINITY)
-    expect(clock.discontinuityCount).toBe(0)
+    expect(clock.timeJumpCount).toBe(0)
   })
 })
 
