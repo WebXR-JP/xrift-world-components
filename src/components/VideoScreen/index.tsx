@@ -2,7 +2,9 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { FrontSide } from 'three'
 import { useVideoTexture } from '@react-three/drei'
 import { useInstanceState } from '../../hooks/useInstanceState'
+import { useServerClock } from '../../hooks/useServerClock'
 import { useWebAudioVolume } from '../../hooks/useWebAudioVolume'
+import { useVideoTimeSync } from './hooks'
 import { VideoScreenProps, VideoState } from './types'
 
 export type { VideoScreenProps, VideoState } from './types'
@@ -23,6 +25,9 @@ function VideoScreenInner({
   muted = false,
   volume = 1,
 }: VideoScreenProps) {
+  // 共有時計。アンカーの打刻に使う（端末の Date.now() は互いに 0.1〜数秒ずれている）
+  const clock = useServerClock({ require: 'media' })
+
   // グローバル同期用の状態
   const [globalState, setGlobalState] = useInstanceState<VideoState>(
     `video-${id}`,
@@ -30,7 +35,7 @@ function VideoScreenInner({
       url: url,
       isPlaying: playing,
       currentTime: currentTime,
-      serverTime: Date.now(),
+      serverTime: clock.now(),
     }
   )
 
@@ -39,7 +44,7 @@ function VideoScreenInner({
     url: url,
     isPlaying: playing,
     currentTime: currentTime,
-    serverTime: Date.now(),
+    serverTime: clock.now(),
   })
 
   // sync modeに応じて使用する状態を切り替え
@@ -54,14 +59,16 @@ function VideoScreenInner({
       videoState.isPlaying !== playing ||
       videoState.currentTime !== currentTime
     ) {
+      // props が変わったらアンカーを打ち直す。
+      // 「いまサーバ時刻 X で、再生位置は currentTime である」と宣言する
       setVideoState({
         url: url,
         isPlaying: playing,
         currentTime: currentTime,
-        serverTime: Date.now(),
+        serverTime: clock.now(),
       })
     }
-  }, [url, playing, currentTime, videoState, setVideoState])
+  }, [url, playing, currentTime, videoState, setVideoState, clock])
 
   // useVideoTextureで動画テクスチャを取得
   const texture = useVideoTexture(url || '', {
@@ -89,20 +96,18 @@ function VideoScreenInner({
   // Web Audio API を使用した音量制御（iOS対応）
   useWebAudioVolume(texture.image as HTMLVideoElement, volume)
 
-  // 再生位置の同期ロジック（VRChat方式）
-  // currentTimeが外部から変更された場合のみ同期
-  const lastSyncTimeRef = useRef(currentTime)
-
-  useEffect(() => {
-    const video = texture.image as HTMLVideoElement
-    if (!video) return
-
-    // currentTimeが外部から変更された場合のみシークする
-    if (lastSyncTimeRef.current !== currentTime) {
-      video.currentTime = currentTime
-      lastSyncTimeRef.current = currentTime
-    }
-  }, [currentTime, texture])
+  // 再生位置の追従（アンカー方式）
+  // 状態のアンカーと共有時計から目標位置を計算し、穏やかに寄せる。
+  // 後から入った人はここで一度シークして追いつく
+  useVideoTimeSync({
+    video: texture.image as HTMLVideoElement,
+    anchorMediaTime: videoState.currentTime,
+    anchorServerTime: videoState.serverTime,
+    isPlaying: videoState.isPlaying,
+    loop: true,
+    // ローカル再生は合わせる相手がいないので追従しない
+    enabled: sync === 'global',
+  })
 
   // アンマウント時に動画を停止
   useEffect(() => {

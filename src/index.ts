@@ -264,6 +264,17 @@ export { useInstanceEvent } from './hooks/useInstanceEvent'
 export { useSharedFile } from './hooks/useSharedFile'
 export { useWorldStorage } from './hooks/useWorldStorage'
 export { useServerClock, type UseServerClockResult } from './hooks/useServerClock'
+export {
+  computeTargetTime,
+  decideVideoSyncAction,
+  isTimeBuffered,
+  type VideoSyncAction,
+} from './components/VideoScreen/utils'
+export {
+  SYNC_DEAD_BAND,
+  SYNC_RATE_ADJUSTMENT,
+  SYNC_RATE_LIMIT,
+} from './components/VideoScreen/constants'
 export { useVoiceVolumeOverride, useAudioVolume } from './hooks/useAudioVolume'
 export { useDefaultFont, type FontLocale } from './hooks/useDefaultFont'
 
