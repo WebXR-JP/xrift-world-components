@@ -22,16 +22,26 @@ export interface VideoScreenProps {
 }
 
 /**
- * VideoScreenの状態
- * useInstanceStateで同期される
+ * VideoScreenの状態（useInstanceStateで同期される）
+ *
+ * `currentTime` と `serverTime` は**アンカー**として使う。
+ * 「サーバ時刻 `serverTime` のとき再生位置は `currentTime` だった」という意味で、
+ * 各クライアントはここから自分で現在の目標位置を計算する。
+ * 「いまの再生位置」を配ると受け取った瞬間には既に古いが、アンカーなら
+ * **後から入った人も通信ゼロで正しい位置に追いつける**。
  */
 export interface VideoState {
   /** 動画のURL */
   url: string
   /** 再生中かどうか */
   isPlaying: boolean
-  /** 現在の再生位置（秒） */
+  /** アンカーの再生位置（秒） */
   currentTime: number
-  /** サーバータイム（VRChat方式の同期用） */
+  /**
+   * アンカーのサーバ時刻（ms）
+   *
+   * 共有時計（`useServerClock`）の値。端末の `Date.now()` は互いに 0.1〜数秒
+   * ずれているため、ここに入れてはいけない（実測で 0.66 秒ずれた端末がある）
+   */
   serverTime: number
 }
