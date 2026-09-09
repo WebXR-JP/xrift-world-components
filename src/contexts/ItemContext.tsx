@@ -16,7 +16,7 @@ export type ItemContextValue = {
   /** 配置オブジェクトの固有ID */
   id: string
   /**
-   * 設置者。プレビュー中（配置前）は自分。
+   * 設置者。プラットフォームはプレビュー中（配置前）に自分を渡す想定。
    * 設置者を特定できない場合（永続シーン由来、Provider に渡されていない）は null
    */
   placedBy: ItemPlacer | null
