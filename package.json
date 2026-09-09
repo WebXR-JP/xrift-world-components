@@ -1,6 +1,6 @@
 {
   "name": "@xrift/world-components",
-  "version": "0.48.0",
+  "version": "0.49.0",
   "description": "Shared components and utilities for Xrift worlds",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,10 +8,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "dev": "vite",
-    "dev:build": "tsc --watch",
+    "dev:build": "tsc -p tsconfig.build.json --watch",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },
@@ -58,6 +59,7 @@
     "@react-three/uikit": "^1.0.62",
     "@triplex/api": "^0.1.4",
     "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.7",
     "@types/three": "^0.185.0",
     "@vitejs/plugin-react": "^6.0.1",
     "jsdom": "^28.0.0",
