@@ -1,16 +1,17 @@
 /**
  * @vitest-environment jsdom
  */
-import { act, type ReactNode } from 'react'
+import { act, type ComponentProps, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ItemProvider, useItem, type ItemContextValue, type ItemPlacer } from '../ItemContext'
 
 declare global {
-  // eslint-disable-next-line no-var
   var IS_REACT_ACT_ENVIRONMENT: boolean
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
+
+type ProviderProps = Omit<ComponentProps<typeof ItemProvider>, 'children'>
 
 const PLACER: ItemPlacer = {
   id: 'user-1',
@@ -26,8 +27,13 @@ const createProbe = () => {
     values.push(useItem())
     return null
   }
-  const latest = () => values[values.length - 1]
-  return { Probe, latest }
+  // Probe が一度も描画されていなければ throw し、アサーションが空虚に通るのを防ぐ
+  const latest = () => {
+    const value = values[values.length - 1]
+    if (!value) throw new Error('Probe has not rendered')
+    return value
+  }
+  return { Probe, latest, renderCount: () => values.length }
 }
 
 describe('useItem', () => {
@@ -47,19 +53,31 @@ describe('useItem', () => {
 
   const render = (node: ReactNode) => act(() => root.render(node))
 
+  /** 同じ Probe に対して props を変えて 2 回描画し、それぞれの context 値を返す */
+  const renderTwice = (first: ProviderProps, second: ProviderProps) => {
+    const { Probe, latest, renderCount } = createProbe()
+    render(
+      <ItemProvider {...first}>
+        <Probe />
+      </ItemProvider>,
+    )
+    const a = latest()
+    render(
+      <ItemProvider {...second}>
+        <Probe />
+      </ItemProvider>,
+    )
+    const b = latest()
+    expect(renderCount()).toBe(2)
+    return [a, b] as const
+  }
+
   it('Provider 外で呼ぶと例外をスローする', () => {
     const { Probe } = createProbe()
-    // React はレンダー中の例外を console.error にも出すので抑制する
-    const originalError = console.error
-    console.error = () => {}
-    try {
-      expect(() => render(<Probe />)).toThrow('useItem must be used within ItemProvider')
-    } finally {
-      console.error = originalError
-    }
+    expect(() => render(<Probe />)).toThrow('useItem must be used within ItemProvider')
   })
 
-  it('id を返す', () => {
+  it('id を返し、placedBy を省略すると null になる', () => {
     const { Probe, latest } = createProbe()
     render(
       <ItemProvider id="item-1">
@@ -67,18 +85,7 @@ describe('useItem', () => {
       </ItemProvider>,
     )
 
-    expect(latest()?.id).toBe('item-1')
-  })
-
-  it('placedBy を省略すると null になる', () => {
-    const { Probe, latest } = createProbe()
-    render(
-      <ItemProvider id="item-1">
-        <Probe />
-      </ItemProvider>,
-    )
-
-    expect(latest()?.placedBy).toBeNull()
+    expect(latest()).toEqual({ id: 'item-1', placedBy: null })
   })
 
   it('placedBy を渡すと各フィールドがそのまま取得できる', () => {
@@ -89,66 +96,52 @@ describe('useItem', () => {
       </ItemProvider>,
     )
 
-    expect(latest()?.placedBy).toEqual(PLACER)
+    expect(latest().placedBy).toEqual(PLACER)
   })
 
-  it('placedBy の各フィールドが同じなら別オブジェクトを渡しても参照が変わらない', () => {
-    const { Probe, latest } = createProbe()
-    render(
-      <ItemProvider id="item-1" placedBy={{ ...PLACER }}>
-        <Probe />
-      </ItemProvider>,
-    )
-    const first = latest()
+  describe('参照同一性', () => {
+    it('placedBy 省略時、同じ id で再描画しても参照が変わらない', () => {
+      const [a, b] = renderTwice({ id: 'item-1' }, { id: 'item-1' })
 
-    render(
-      <ItemProvider id="item-1" placedBy={{ ...PLACER }}>
-        <Probe />
-      </ItemProvider>,
-    )
-    const second = latest()
+      expect(b).toBe(a)
+    })
 
-    expect(second).toBe(first)
-    expect(second?.placedBy).toBe(first?.placedBy)
-  })
+    it('placedBy の各フィールドが同じなら別オブジェクトを渡しても参照が変わらない', () => {
+      const [a, b] = renderTwice(
+        { id: 'item-1', placedBy: { ...PLACER } },
+        { id: 'item-1', placedBy: { ...PLACER } },
+      )
 
-  it('placedBy のフィールドが変わると新しい参照になる', () => {
-    const { Probe, latest } = createProbe()
-    render(
-      <ItemProvider id="item-1" placedBy={PLACER}>
-        <Probe />
-      </ItemProvider>,
-    )
-    const first = latest()
+      expect(b).toBe(a)
+      expect(b.placedBy).toBe(a.placedBy)
+    })
 
-    render(
-      <ItemProvider id="item-1" placedBy={{ ...PLACER, displayName: 'Bob' }}>
-        <Probe />
-      </ItemProvider>,
-    )
-    const second = latest()
+    it('placedBy のフィールドが変わると新しい参照になる', () => {
+      const [a, b] = renderTwice(
+        { id: 'item-1', placedBy: PLACER },
+        { id: 'item-1', placedBy: { ...PLACER, displayName: 'Bob' } },
+      )
 
-    expect(second).not.toBe(first)
-    expect(second?.placedBy?.displayName).toBe('Bob')
-  })
+      expect(b).not.toBe(a)
+      expect(b.placedBy?.displayName).toBe('Bob')
+    })
 
-  it('id が変わると新しい参照になる', () => {
-    const { Probe, latest } = createProbe()
-    render(
-      <ItemProvider id="item-1" placedBy={PLACER}>
-        <Probe />
-      </ItemProvider>,
-    )
-    const first = latest()
+    it('placedBy が null とオブジェクトの間で切り替わると新しい参照になる', () => {
+      const [a, b] = renderTwice({ id: 'item-1' }, { id: 'item-1', placedBy: PLACER })
 
-    render(
-      <ItemProvider id="item-2" placedBy={PLACER}>
-        <Probe />
-      </ItemProvider>,
-    )
-    const second = latest()
+      expect(b).not.toBe(a)
+      expect(a.placedBy).toBeNull()
+      expect(b.placedBy).toEqual(PLACER)
+    })
 
-    expect(second).not.toBe(first)
-    expect(second?.id).toBe('item-2')
+    it('id が変わると新しい参照になる', () => {
+      const [a, b] = renderTwice(
+        { id: 'item-1', placedBy: PLACER },
+        { id: 'item-2', placedBy: PLACER },
+      )
+
+      expect(b).not.toBe(a)
+      expect(b.id).toBe('item-2')
+    })
   })
 })

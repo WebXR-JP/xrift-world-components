@@ -8,10 +8,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "dev": "vite",
-    "dev:build": "tsc --watch",
+    "dev:build": "tsc -p tsconfig.build.json --watch",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },

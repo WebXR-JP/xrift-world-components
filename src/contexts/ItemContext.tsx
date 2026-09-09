@@ -24,34 +24,20 @@ export type ItemContextValue = {
 
 const ItemContext = createContext<ItemContextValue | null>(null)
 
-export function ItemProvider({
-  id,
-  placedBy = null,
-  children,
-}: {
+interface Props {
   id: string
   placedBy?: ItemPlacer | null
   children: ReactNode
-}) {
-  // placedBy はプラットフォーム側で毎レンダー組み直される可能性があるため、
-  // オブジェクト参照ではなく各フィールドの値をキーに安定化する
-  const placerId = placedBy?.id ?? null
-  const placerDisplayName = placedBy?.displayName ?? null
-  const placerAvatarUrl = placedBy?.avatarUrl ?? null
-  const placerIsLocalUser = placedBy?.isLocalUser ?? false
+}
 
-  const value = useMemo<ItemContextValue>(() => {
-    if (placerId === null) return { id, placedBy: null }
-    return {
-      id,
-      placedBy: {
-        id: placerId,
-        displayName: placerDisplayName,
-        avatarUrl: placerAvatarUrl,
-        isLocalUser: placerIsLocalUser,
-      },
-    }
-  }, [id, placerId, placerDisplayName, placerAvatarUrl, placerIsLocalUser])
+export function ItemProvider({ id, placedBy = null, children }: Props) {
+  // placedBy はプラットフォーム側で毎レンダー組み直される可能性があるため、
+  // オブジェクト参照ではなく各フィールドの値を依存にして安定化する
+  const value = useMemo<ItemContextValue>(
+    () => ({ id, placedBy }),
+    // eslint 未導入のため exhaustive-deps の警告は出ない。ItemPlacer にフィールドを足したらここにも追加する
+    [id, placedBy?.id, placedBy?.displayName, placedBy?.avatarUrl, placedBy?.isLocalUser],
+  )
 
   return <ItemContext.Provider value={value}>{children}</ItemContext.Provider>
 }

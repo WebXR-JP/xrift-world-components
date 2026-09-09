@@ -17,5 +17,7 @@ export default defineConfig({
   },
   test: {
     root: '.',
+    // dist にコピーされたテストを二重に収集しないよう src に限定する
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 })
