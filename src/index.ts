@@ -110,6 +110,7 @@ export {
   ItemProvider,
   useItem,
   type ItemContextValue,
+  type ItemPlacer,
 } from './contexts/ItemContext'
 
 export {
