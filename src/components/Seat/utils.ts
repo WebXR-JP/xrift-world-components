@@ -12,7 +12,9 @@ const _forward = new Vector3()
 /**
  * <Seat> の group のワールド行列から座面の姿勢を取り出す。
  * 親の group・乗り物・回転台の変換がそのまま伝わるので、作者は「置くだけ」でよい。
- * スケールは捨てる（座面は点と向きだけで決まる）
+ *
+ * **スケールは捨てる**（座面は点と向きだけで決まる）。親を拡大している場合も、
+ * 座面の位置と向きは正しく求まり、降車位置だけがワールドのメートルのまま残る
  */
 export function decomposeSeatSurface(matrixWorld: Matrix4): SeatSurface {
   matrixWorld.decompose(_position, _quaternion, _scale)

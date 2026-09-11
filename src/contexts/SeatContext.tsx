@@ -45,11 +45,13 @@ export interface SeatContextValue {
   unregisterSeat: (id: string, entry: SeatEntry) => void
   /** ローカルプレイヤーをその座席に座らせる（<Seat> のクリックから呼ばれる） */
   sit: (seatId: string) => void
-  /** ローカルプレイヤーが座っている座席 ID（未着席なら null） */
-  getLocalSeatId: () => string | null
-  /** ローカルの着席状態の変化を購読する（useSyncExternalStore 互換） */
-  subscribeLocalSeatId: (listener: () => void) => () => void
-  /** その座席に座っているプレイヤーの ID（自分を含む。誰も座っていなければ null） */
+  /**
+   * その座席に座っているプレイヤーの ID（自分を含む。誰も座っていなければ null）
+   *
+   * ワールド内の <Seat> ごとに、占有の変化のたびに呼ばれる。実装側は
+   * 「座席ID → 占有者」の対応表を位置更新ごとに1回だけ作り直し、ここでは引くだけにすること
+   * （毎回すべてのプレイヤーを走査すると 座席数 × 人数 の計算量になる）
+   */
   getOccupantId: (seatId: string) => string | null
   /** 占有状態の変化を購読する（useSyncExternalStore 互換） */
   subscribeOccupancy: (listener: () => void) => () => void
@@ -69,8 +71,6 @@ export const createDefaultSeatImplementation = (): SeatContextValue => {
       if (registry.get(id) === entry) registry.delete(id)
     },
     sit: () => {},
-    getLocalSeatId: () => null,
-    subscribeLocalSeatId: () => () => {},
     getOccupantId: () => null,
     subscribeOccupancy: () => () => {},
   }

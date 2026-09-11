@@ -52,7 +52,12 @@ export const Seat: FC<Props> = ({
   }, [id, registerSeat, unregisterSeat])
 
   // 他人（または自分）が座っている間はプロンプトを出さない
-  const occupantId = useSyncExternalStore(subscribeOccupancy, () => getOccupantId(id))
+  // 第3引数はSSR時のスナップショット。未着席（null）が安全側
+  const occupantId = useSyncExternalStore(
+    subscribeOccupancy,
+    () => getOccupantId(id),
+    () => null,
+  )
 
   const handleInteract = useCallback(() => sit(id), [sit, id])
 
