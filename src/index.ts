@@ -162,6 +162,16 @@ export {
   type GrabbableTransform,
   type GrabResultTransform,
 } from './contexts/GrabbableContext'
+export {
+  SeatContext,
+  SeatProvider,
+  useSeatContext,
+  createDefaultSeatImplementation,
+  type SeatContextValue,
+  type SeatEntry,
+  type SeatSurface,
+  type Quaternion3D,
+} from './contexts/SeatContext'
 
 export {
   VoiceVolumeOverrideContext,
@@ -189,6 +199,7 @@ export {
 } from './components/Grabbable'
 
 export { GRABBABLE_USER_DATA_KEY } from './components/Grabbable/constants'
+export { Seat, type SeatProps, type SeatExitOffset } from './components/Seat'
 
 export { Mirror, type MirrorProps } from './components/Mirror'
 

@@ -35,6 +35,7 @@ import {
 } from './FileInputContext'
 import { UsersProvider, type UsersContextValue } from './UsersContext'
 import { GrabbableProvider, type GrabbableContextValue } from './GrabbableContext'
+import { SeatProvider, type SeatContextValue } from './SeatContext'
 import {
   InstanceEventProvider,
   createDefaultInstanceEventImplementation,
@@ -175,6 +176,11 @@ interface Props {
    */
   grabbableImplementation?: GrabbableContextValue
   /**
+   * 座席（<Seat>）の実装（オプション）
+   * 指定しない場合はデフォルト実装（登録のみ・座れない）が使用される
+   */
+  seatImplementation?: SeatContextValue
+  /**
    * World Storage（ワールド単位のKV永続化）の実装（オプション）
    * 指定しない場合はデフォルト実装（インメモリ・リロードで消える）が使用される
    */
@@ -227,6 +233,7 @@ export const XRiftProvider = ({
   fileInputImplementation,
   sharedFileImplementation,
   grabbableImplementation,
+  seatImplementation,
   worldStorageImplementation,
   serverClockImplementation,
   placementMode,
@@ -333,6 +340,7 @@ export const XRiftProvider = ({
     [SpawnPointProvider, { implementation: spawnPointImplementation }],
     [UsersProvider, { implementation: usersImplementation }],
     [GrabbableProvider, { implementation: grabbableImplementation }],
+    [SeatProvider, { implementation: seatImplementation }],
     [InstanceEventProvider, { value: instanceEventImpl }],
     [TeleportProvider, { value: teleportImpl }],
     [ConfirmProvider, { value: confirmImpl }],
