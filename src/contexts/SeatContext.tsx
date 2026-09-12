@@ -61,6 +61,37 @@ export interface SeatEntry {
    * 出し分けに使える。値は毎回読み直すこと（作者が prop を付け外しできる）
    */
   onControlInput?: (input: SeatControlInput, delta: number) => void
+  /**
+   * この席が運転する乗り物の ID（`<Vehicle>` の中の `<Seat driver>` だけ持つ）。
+   * プラットフォームは「自分が座っている席 → この ID → 乗り物の姿勢」を辿って同期に流す
+   */
+  drivesVehicleId?: string
+}
+
+/**
+ * 乗り物の姿勢（`<Vehicle>` のルートの位置と向き）。
+ *
+ * **親から見た姿勢（ローカル）**。ワールド姿勢ではない。
+ * 作者が `onDrive` で書くのもここ（`translateZ` / `rotateY` はローカルに効く）で、
+ * 親の変換は全員のクライアントで同じものが掛かるため、ローカルのまま渡せば同じ場所に再現される
+ * （動く床や回転台の上に乗り物を置いても、親の動きと二重に足されない）
+ */
+export interface VehiclePose {
+  position: Position3D
+  quaternion: Quaternion3D
+}
+
+/**
+ * `<Vehicle>` がプラットフォームに登録する情報。
+ * 運転者のクライアントはここから姿勢を読んで同期に流す。
+ *
+ * 逆向き（同期されてきた姿勢を当てる）は `getRemoteVehiclePose` を
+ * `<Vehicle>` が毎フレーム読む形にしてある。補間しながら寄せる必要があり、
+ * 「渡された瞬間に当てる」形では書けないため
+ */
+export interface VehicleEntry {
+  /** 乗り物の姿勢を返す（運転中は毎フレーム呼ばれる） */
+  getPose: () => VehiclePose
 }
 
 /**
@@ -92,6 +123,16 @@ export interface SeatContextValue {
    * 出入りの通知で「自分かどうか」を判別するために使う
    */
   getLocalUserId: () => string | null
+  /** 乗り物を登録する（`<Vehicle>` から呼ばれる） */
+  registerVehicle: (id: string, entry: VehicleEntry) => void
+  /** 乗り物の登録を解除する。entry が一致するときだけ削除すること */
+  unregisterVehicle: (id: string, entry: VehicleEntry) => void
+  /**
+   * 同期されてきた乗り物の姿勢。**自分が運転している、または誰も運転していない**なら null
+   * （その場合は自分の `onDrive` の結果をそのまま使う）。
+   * 乗り物を動かしているのは運転者のクライアントだけなので、他の人はこれを当てる
+   */
+  getRemoteVehiclePose: (vehicleId: string) => VehiclePose | null
 }
 
 /**
@@ -111,6 +152,9 @@ export const createDefaultSeatImplementation = (): SeatContextValue => {
     getOccupantId: () => null,
     subscribeOccupancy: () => () => {},
     getLocalUserId: () => null,
+    registerVehicle: () => {},
+    unregisterVehicle: () => {},
+    getRemoteVehiclePose: () => null,
   }
 }
 
