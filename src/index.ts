@@ -172,7 +172,6 @@ export {
   type SeatSurface,
   type SeatControlInput,
   type SeatOccupant,
-  type SeatOccupancyListener,
   type Quaternion3D,
 } from './contexts/SeatContext'
 

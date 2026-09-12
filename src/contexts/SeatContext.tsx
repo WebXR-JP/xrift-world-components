@@ -55,15 +55,12 @@ export interface SeatEntry {
    * 操縦入力を受け取る（運転席のみ）。
    * **ローカルプレイヤーがこの座席に座っている間だけ**毎フレーム呼ばれる。
    * 他人が座っている座席では呼ばれない（乗り物は運転者のクライアントが動かし、
-   * 他のクライアントはその結果を再現するため）
+   * 他のクライアントはその結果を再現するため）。
+   *
+   * **これが undefined なら運転席ではない**（普通の椅子）。運転操作 UI の
+   * 出し分けに使える。値は毎回読み直すこと（作者が prop を付け外しできる）
    */
   onControlInput?: (input: SeatControlInput, delta: number) => void
-}
-
-/** 座席の出入りの通知。誰が座っても呼ばれる（`isLocalUser` で自分か判別する） */
-export interface SeatOccupancyListener {
-  onEnter?: (occupant: SeatOccupant) => void
-  onLeave?: (occupant: SeatOccupant) => void
 }
 
 /**
