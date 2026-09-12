@@ -61,6 +61,28 @@ export interface SeatEntry {
    * 出し分けに使える。値は毎回読み直すこと（作者が prop を付け外しできる）
    */
   onControlInput?: (input: SeatControlInput, delta: number) => void
+  /**
+   * この席が運転する乗り物の ID（`<Vehicle>` の中の `<Seat driver>` だけ持つ）。
+   * プラットフォームは「自分が座っている席 → この ID → 乗り物の姿勢」を辿って同期に流す
+   */
+  drivesVehicleId?: string
+}
+
+/** 乗り物のワールド姿勢（`<Vehicle>` のルートの位置と向き） */
+export interface VehiclePose {
+  position: Position3D
+  quaternion: Quaternion3D
+}
+
+/**
+ * `<Vehicle>` がプラットフォームに登録する情報。
+ * 運転者のクライアントはここから姿勢を読んで同期に流す
+ */
+export interface VehicleEntry {
+  /** 乗り物のワールド姿勢を返す（運転中は毎フレーム呼ばれる） */
+  getPose: () => VehiclePose
+  /** 同期されてきた姿勢を当てる（自分が運転していないときに呼ばれる） */
+  applyPose: (pose: VehiclePose) => void
 }
 
 /**
@@ -92,6 +114,18 @@ export interface SeatContextValue {
    * 出入りの通知で「自分かどうか」を判別するために使う
    */
   getLocalUserId: () => string | null
+  /** 乗り物を登録する（`<Vehicle>` から呼ばれる） */
+  registerVehicle: (id: string, entry: VehicleEntry) => void
+  /** 乗り物の登録を解除する。entry が一致するときだけ削除すること */
+  unregisterVehicle: (id: string, entry: VehicleEntry) => void
+  /**
+   * 同期されてきた乗り物の姿勢。**自分が運転している、または誰も運転していない**なら null
+   * （その場合は自分の `onDrive` の結果をそのまま使う）。
+   * 乗り物を動かしているのは運転者のクライアントだけなので、他の人はこれを当てる
+   */
+  getRemoteVehiclePose: (vehicleId: string) => VehiclePose | null
+  /** 同期されてきた姿勢の変化を購読する（useSyncExternalStore 互換） */
+  subscribeVehiclePose: (listener: () => void) => () => void
 }
 
 /**
@@ -111,6 +145,10 @@ export const createDefaultSeatImplementation = (): SeatContextValue => {
     getOccupantId: () => null,
     subscribeOccupancy: () => () => {},
     getLocalUserId: () => null,
+    registerVehicle: () => {},
+    unregisterVehicle: () => {},
+    getRemoteVehiclePose: () => null,
+    subscribeVehiclePose: () => () => {},
   }
 }
 

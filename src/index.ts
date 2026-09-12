@@ -172,6 +172,8 @@ export {
   type SeatSurface,
   type SeatControlInput,
   type SeatOccupant,
+  type VehicleEntry,
+  type VehiclePose,
   type Quaternion3D,
 } from './contexts/SeatContext'
 
@@ -202,6 +204,7 @@ export {
 
 export { GRABBABLE_USER_DATA_KEY } from './components/Grabbable/constants'
 export { Seat, type SeatProps, type SeatExitOffset } from './components/Seat'
+export { Vehicle, type VehicleProps } from './components/Vehicle'
 
 export { Mirror, type MirrorProps } from './components/Mirror'
 

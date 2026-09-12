@@ -2,6 +2,7 @@ import { type FC, useCallback, useEffect, useRef, useSyncExternalStore } from 'r
 import type { Group } from 'three'
 import { type SeatControlInput, type SeatEntry, useSeatContext } from '../../contexts/SeatContext'
 import { Interactable } from '../Interactable'
+import { useVehicleSlot } from '../Vehicle/context'
 import { DEFAULT_INTERACTION_TEXT } from './constants'
 import type { Props } from './types'
 import { computeExitPosition, decomposeSeatSurface, diffSeatOccupancy } from './utils'
@@ -24,6 +25,7 @@ export type { Props as SeatProps, SeatExitOffset } from './types'
 export const Seat: FC<Props> = ({
   id,
   exitOffset,
+  driver = false,
   onEnter,
   onLeave,
   onControlInput,
@@ -35,6 +37,8 @@ export const Seat: FC<Props> = ({
   const { registerSeat, unregisterSeat, sit, getOccupantId, subscribeOccupancy, getLocalUserId } =
     useSeatContext()
   const groupRef = useRef<Group>(null)
+  const driverRef = useRef(driver)
+  driverRef.current = driver
 
   // 登録エントリは props の最新値を ref 経由で読む。
   // props が変わるたびに登録し直すと、着席中に登録が入れ替わって座席が消えたと誤認される
@@ -42,6 +46,11 @@ export const Seat: FC<Props> = ({
   exitOffsetRef.current = exitOffset
   const onControlInputRef = useRef(onControlInput)
   onControlInputRef.current = onControlInput
+  // <Vehicle> の中なら、運転席の入力は乗り物側の onDrive へ流す
+  const vehicleSlot = useVehicleSlot()
+  const vehicleSlotRef = useRef(vehicleSlot)
+  vehicleSlotRef.current = vehicleSlot
+  const drivesVehicleId = driver ? vehicleSlot?.vehicleId : undefined
   const onEnterRef = useRef(onEnter)
   onEnterRef.current = onEnter
   const onLeaveRef = useRef(onLeave)
@@ -55,9 +64,12 @@ export const Seat: FC<Props> = ({
       group.updateWorldMatrix(true, false)
       return decomposeSeatSurface(group.matrixWorld)
     }
-    // ref 経由で呼ぶので、ハンドラを毎レンダー作り直しても登録し直しにならない
-    const callControlInput = (input: SeatControlInput, delta: number) =>
+    // ref 経由で呼ぶので、ハンドラを毎レンダー作り直しても登録し直しにならない。
+    // 運転席なら乗り物へ、そうでなければ作者の onControlInput へ流す
+    const callControlInput = (input: SeatControlInput, delta: number) => {
+      if (driverRef.current) vehicleSlotRef.current?.handleControlInput(input, delta)
       onControlInputRef.current?.(input, delta)
+    }
 
     const entry: SeatEntry = {
       getSeatSurface,
@@ -67,12 +79,15 @@ export const Seat: FC<Props> = ({
       // getter にしているのは、prop の有無が変わっても登録し直さずに済ませるため
       // （着席中に登録が入れ替わると「座席が消えた」と誤認される）
       get onControlInput() {
-        return onControlInputRef.current ? callControlInput : undefined
+        // 運転席なら作者の onControlInput が無くても入力が要る（乗り物へ流すため）
+        return driverRef.current || onControlInputRef.current ? callControlInput : undefined
       },
+      drivesVehicleId,
     }
     registerSeat(id, entry)
     return () => unregisterSeat(id, entry)
-  }, [id, registerSeat, unregisterSeat])
+    // drivesVehicleId はエントリに焼き込む値なので、変わったら登録し直す
+  }, [id, drivesVehicleId, registerSeat, unregisterSeat])
 
   // 他人（または自分）が座っている間はプロンプトを出さない
   // 第3引数はSSR時のスナップショット。未着席（null）が安全側
