@@ -1,6 +1,6 @@
 import { type FC, useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
 import type { Group } from 'three'
-import { type SeatControlInput, useSeatContext } from '../../contexts/SeatContext'
+import { type SeatControlInput, type SeatEntry, useSeatContext } from '../../contexts/SeatContext'
 import { Interactable } from '../Interactable'
 import { DEFAULT_INTERACTION_TEXT } from './constants'
 import type { Props } from './types'
@@ -15,8 +15,8 @@ export type { Props as SeatProps, SeatExitOffset } from './types'
  * 座面の姿勢は props ではなく**置かれた場所のワールド行列**から毎フレーム取るので、
  * 親の group・乗り物・回転台の下に置いても、動いても傾いても、そのまま追従する。
  *
- * `onControlInput` を渡すと運転席になり、自分が座っている間だけ操縦入力が毎フレーム届く
- * （`useSeatControl` を使うとこの prop を書かずに済む）。
+ * `onControlInput` を渡すとその座席は運転席になり、自分が座っている間だけ
+ * 操縦入力が毎フレーム届く。
  *
  * 座る・追従・降車・同期はプラットフォーム側（SeatContext の実装）が担う。
  * 未注入（DevEnvironment 等）では登録だけ行い、クリックしても何も起きない
@@ -55,12 +55,20 @@ export const Seat: FC<Props> = ({
       group.updateWorldMatrix(true, false)
       return decomposeSeatSurface(group.matrixWorld)
     }
-    const entry = {
+    // ref 経由で呼ぶので、ハンドラを毎レンダー作り直しても登録し直しにならない
+    const callControlInput = (input: SeatControlInput, delta: number) =>
+      onControlInputRef.current?.(input, delta)
+
+    const entry: SeatEntry = {
       getSeatSurface,
       getExitPosition: () => computeExitPosition(getSeatSurface(), exitOffsetRef.current),
-      // ref 経由で呼ぶので、ハンドラを毎レンダー作り直しても登録し直しにならない
-      onControlInput: (input: SeatControlInput, delta: number) =>
-        onControlInputRef.current?.(input, delta),
+      // **prop が無いときは undefined を返す**。プラットフォームはこれの有無で
+      // 「運転席かどうか」を判別する（VR・モバイルで運転操作 UI を出し分けるのに要る）。
+      // getter にしているのは、prop の有無が変わっても登録し直さずに済ませるため
+      // （着席中に登録が入れ替わると「座席が消えた」と誤認される）
+      get onControlInput() {
+        return onControlInputRef.current ? callControlInput : undefined
+      },
     }
     registerSeat(id, entry)
     return () => unregisterSeat(id, entry)
