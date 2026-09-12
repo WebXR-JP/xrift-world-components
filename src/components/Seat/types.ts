@@ -1,5 +1,6 @@
 import type { ThreeElements } from '@react-three/fiber'
 import type { ReactNode } from 'react'
+import type { SeatControlInput, SeatOccupant } from '../../contexts/SeatContext'
 
 /**
  * 降車位置（座席ローカル・**ワールドのメートル**）。
@@ -35,6 +36,20 @@ export type Props = Omit<ThreeElements['group'], 'id' | 'children' | 'ref' | 'sc
   interactionText?: string
   /** 座れるかどうか（false で一時的に座れなくする。他人が座っている間は自動で false） */
   enabled?: boolean
+  /**
+   * 誰かがこの座席に座ったときに呼ばれる（自分・他人の両方）。
+   * `occupant.isLocalUser` で自分かどうかを判別する
+   */
+  onEnter?: (occupant: SeatOccupant) => void
+  /** 誰かがこの座席から降りたときに呼ばれる（自分・他人の両方） */
+  onLeave?: (occupant: SeatOccupant) => void
+  /**
+   * 操縦入力を受け取る（この座席を運転席にする）。
+   * **自分がこの座席に座っている間だけ**毎フレーム呼ばれる。
+   * 乗り物は運転者のクライアントが動かし、他のクライアントはその結果を再現するため、
+   * 他人が座っているときには呼ばれない
+   */
+  onControlInput?: (input: SeatControlInput, delta: number) => void
   /** 子要素（見た目・クリック対象。座面原点からのローカル座標で書く） */
   children: ReactNode
 }

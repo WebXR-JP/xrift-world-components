@@ -1,6 +1,7 @@
 import { Matrix4, Quaternion, Vector3 } from 'three'
 import type { Position3D } from '../../types/movement'
 import type { SeatSurface } from '../../contexts/SeatContext'
+import type { SeatOccupant } from '../../contexts/SeatContext'
 import type { SeatExitOffset } from './types'
 import { DEFAULT_EXIT_OFFSET } from './constants'
 
@@ -51,5 +52,26 @@ export function computeExitPosition(surface: SeatSurface, exitOffset?: SeatExitO
     x: surface.position.x - sin * forward + cos * right,
     y: surface.position.y + up,
     z: surface.position.z - cos * forward - sin * right,
+  }
+}
+
+/**
+ * 占有者の変化から、呼ぶべき出入りの通知を求める。
+ *
+ * 席を譲ったとき（A が降りて B が座る）に **leave が先・enter が後**になるよう順序を固定する。
+ * 逆になると「降りた後始末」が「座った初期化」を上書きしてしまう。
+ *
+ * 変化がなければ両方 undefined（通知しない）
+ */
+export function diffSeatOccupancy(
+  previous: string | null,
+  next: string | null,
+  localUserId: string | null,
+): { leave?: SeatOccupant; enter?: SeatOccupant } {
+  if (previous === next) return {}
+  const toOccupant = (id: string): SeatOccupant => ({ id, isLocalUser: id === localUserId })
+  return {
+    ...(previous !== null ? { leave: toOccupant(previous) } : {}),
+    ...(next !== null ? { enter: toOccupant(next) } : {}),
   }
 }

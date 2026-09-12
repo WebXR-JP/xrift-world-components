@@ -18,6 +18,28 @@ export interface SeatSurface {
   quaternion: Quaternion3D
 }
 
+/** 座席に座っているプレイヤー */
+export interface SeatOccupant {
+  /** プレイヤーの userId */
+  id: string
+  /** 自分（ローカルユーザー）かどうか */
+  isLocalUser: boolean
+}
+
+/**
+ * 操縦入力（運転席に座っているプレイヤーの操作意図）
+ *
+ * 「どれだけ動くか」ではなく「どの向きに動かしたいか」を -1〜1 で渡す。
+ * 実際に乗り物をどう動かすかは乗り物側が決める。たとえば `right` は、
+ * 車なら旋回（ハンドル）、ホバークラフトなら横滑りとして解釈してよい
+ */
+export interface SeatControlInput {
+  /** 前後。前が +1、後ろが -1（キーボードなら W / S） */
+  forward: number
+  /** 左右。右が +1、左が -1（キーボードなら D / A） */
+  right: number
+}
+
 /**
  * <Seat> がプラットフォームに登録する情報
  * 着席中はプラットフォーム側が毎フレーム getSeatSurface() を読んでプレイヤーを追従させる。
@@ -29,6 +51,19 @@ export interface SeatEntry {
   getSeatSurface: () => SeatSurface
   /** 降車時にプレイヤーの足元を置くワールド位置を返す */
   getExitPosition: () => Position3D
+  /**
+   * 操縦入力を受け取る（運転席のみ）。
+   * **ローカルプレイヤーがこの座席に座っている間だけ**毎フレーム呼ばれる。
+   * 他人が座っている座席では呼ばれない（乗り物は運転者のクライアントが動かし、
+   * 他のクライアントはその結果を再現するため）
+   */
+  onControlInput?: (input: SeatControlInput, delta: number) => void
+}
+
+/** 座席の出入りの通知。誰が座っても呼ばれる（`isLocalUser` で自分か判別する） */
+export interface SeatOccupancyListener {
+  onEnter?: (occupant: SeatOccupant) => void
+  onLeave?: (occupant: SeatOccupant) => void
 }
 
 /**
@@ -55,6 +90,11 @@ export interface SeatContextValue {
   getOccupantId: (seatId: string) => string | null
   /** 占有状態の変化を購読する（useSyncExternalStore 互換） */
   subscribeOccupancy: (listener: () => void) => () => void
+  /**
+   * ローカルユーザーの ID（未確定なら null）。
+   * 出入りの通知で「自分かどうか」を判別するために使う
+   */
+  getLocalUserId: () => string | null
 }
 
 /**
@@ -73,6 +113,7 @@ export const createDefaultSeatImplementation = (): SeatContextValue => {
     sit: () => {},
     getOccupantId: () => null,
     subscribeOccupancy: () => () => {},
+    getLocalUserId: () => null,
   }
 }
 
