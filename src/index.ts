@@ -170,6 +170,9 @@ export {
   type SeatContextValue,
   type SeatEntry,
   type SeatSurface,
+  type SeatControlInput,
+  type SeatOccupant,
+  type SeatOccupancyListener,
   type Quaternion3D,
 } from './contexts/SeatContext'
 

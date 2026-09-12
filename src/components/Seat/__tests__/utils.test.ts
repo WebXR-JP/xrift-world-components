@@ -1,7 +1,7 @@
 import { Euler, Matrix4, Quaternion, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
 import type { SeatSurface } from '../../../contexts/SeatContext'
-import { computeExitPosition, decomposeSeatSurface, seatYaw } from '../utils'
+import { computeExitPosition, decomposeSeatSurface, diffSeatOccupancy, seatYaw } from '../utils'
 
 const matrixOf = (position: Vector3, euler: Euler, scale = 1) =>
   new Matrix4().compose(
@@ -94,5 +94,42 @@ describe('computeExitPosition', () => {
     const exit = computeExitPosition(surfaceOf(new Euler()), { up: 0.2 })
     expect(exit.z).toBeCloseTo(-0.6)
     expect(exit.y).toBeCloseTo(0.2)
+  })
+})
+
+describe('diffSeatOccupancy', () => {
+  it('空席に座ったら enter だけ', () => {
+    const { leave, enter } = diffSeatOccupancy(null, 'alice', 'me')
+    expect(leave).toBeUndefined()
+    expect(enter).toEqual({ id: 'alice', isLocalUser: false })
+  })
+
+  it('降りたら leave だけ', () => {
+    const { leave, enter } = diffSeatOccupancy('alice', null, 'me')
+    expect(leave).toEqual({ id: 'alice', isLocalUser: false })
+    expect(enter).toBeUndefined()
+  })
+
+  it('席を譲ったら leave と enter の両方を返す', () => {
+    const { leave, enter } = diffSeatOccupancy('alice', 'bob', 'me')
+    expect(leave).toEqual({ id: 'alice', isLocalUser: false })
+    expect(enter).toEqual({ id: 'bob', isLocalUser: false })
+  })
+
+  it('自分なら isLocalUser が true', () => {
+    expect(diffSeatOccupancy(null, 'me', 'me').enter).toEqual({ id: 'me', isLocalUser: true })
+    expect(diffSeatOccupancy('me', null, 'me').leave).toEqual({ id: 'me', isLocalUser: true })
+  })
+
+  it('変化がなければ何も返さない（同じ占有者で呼ばれ続けても通知しない）', () => {
+    expect(diffSeatOccupancy('alice', 'alice', 'me')).toEqual({})
+    expect(diffSeatOccupancy(null, null, 'me')).toEqual({})
+  })
+
+  it('ローカルユーザーIDが未確定なら isLocalUser は false', () => {
+    expect(diffSeatOccupancy(null, 'alice', null).enter).toEqual({
+      id: 'alice',
+      isLocalUser: false,
+    })
   })
 })

@@ -1,10 +1,10 @@
 import { type FC, useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
 import type { Group } from 'three'
-import { useSeatContext } from '../../contexts/SeatContext'
+import { type SeatControlInput, useSeatContext } from '../../contexts/SeatContext'
 import { Interactable } from '../Interactable'
 import { DEFAULT_INTERACTION_TEXT } from './constants'
 import type { Props } from './types'
-import { computeExitPosition, decomposeSeatSurface } from './utils'
+import { computeExitPosition, decomposeSeatSurface, diffSeatOccupancy } from './utils'
 
 export type { Props as SeatProps, SeatExitOffset } from './types'
 
@@ -15,18 +15,24 @@ export type { Props as SeatProps, SeatExitOffset } from './types'
  * 座面の姿勢は props ではなく**置かれた場所のワールド行列**から毎フレーム取るので、
  * 親の group・乗り物・回転台の下に置いても、動いても傾いても、そのまま追従する。
  *
+ * `onControlInput` を渡すと運転席になり、自分が座っている間だけ操縦入力が毎フレーム届く
+ * （`useSeatControl` を使うとこの prop を書かずに済む）。
+ *
  * 座る・追従・降車・同期はプラットフォーム側（SeatContext の実装）が担う。
  * 未注入（DevEnvironment 等）では登録だけ行い、クリックしても何も起きない
  */
 export const Seat: FC<Props> = ({
   id,
   exitOffset,
+  onEnter,
+  onLeave,
+  onControlInput,
   interactionText = DEFAULT_INTERACTION_TEXT,
   enabled = true,
   children,
   ...groupProps
 }) => {
-  const { registerSeat, unregisterSeat, sit, getOccupantId, subscribeOccupancy } =
+  const { registerSeat, unregisterSeat, sit, getOccupantId, subscribeOccupancy, getLocalUserId } =
     useSeatContext()
   const groupRef = useRef<Group>(null)
 
@@ -34,6 +40,12 @@ export const Seat: FC<Props> = ({
   // props が変わるたびに登録し直すと、着席中に登録が入れ替わって座席が消えたと誤認される
   const exitOffsetRef = useRef(exitOffset)
   exitOffsetRef.current = exitOffset
+  const onControlInputRef = useRef(onControlInput)
+  onControlInputRef.current = onControlInput
+  const onEnterRef = useRef(onEnter)
+  onEnterRef.current = onEnter
+  const onLeaveRef = useRef(onLeave)
+  onLeaveRef.current = onLeave
 
   useEffect(() => {
     const group = groupRef.current
@@ -46,6 +58,9 @@ export const Seat: FC<Props> = ({
     const entry = {
       getSeatSurface,
       getExitPosition: () => computeExitPosition(getSeatSurface(), exitOffsetRef.current),
+      // ref 経由で呼ぶので、ハンドラを毎レンダー作り直しても登録し直しにならない
+      onControlInput: (input: SeatControlInput, delta: number) =>
+        onControlInputRef.current?.(input, delta),
     }
     registerSeat(id, entry)
     return () => unregisterSeat(id, entry)
@@ -58,6 +73,21 @@ export const Seat: FC<Props> = ({
     () => getOccupantId(id),
     () => null,
   )
+
+  // 出入りを通知する。描画中に呼ぶと「レンダー中の副作用」になるので effect で出す。
+  // 直前の占有者を覚えておき、変化したぶんだけ leave → enter の順で呼ぶ
+  // （席を譲ったときに「降りた」より先に「座った」が来ないようにする）
+  const previousOccupantRef = useRef<string | null>(null)
+  useEffect(() => {
+    const { leave, enter } = diffSeatOccupancy(
+      previousOccupantRef.current,
+      occupantId,
+      getLocalUserId(),
+    )
+    previousOccupantRef.current = occupantId
+    if (leave) onLeaveRef.current?.(leave)
+    if (enter) onEnterRef.current?.(enter)
+  }, [occupantId, getLocalUserId])
 
   const handleInteract = useCallback(() => sit(id), [sit, id])
 
