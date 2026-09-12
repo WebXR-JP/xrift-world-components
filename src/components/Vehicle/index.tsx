@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import { type FC, useCallback, useEffect, useMemo, useRef } from 'react'
-import type { Group } from 'three'
+import { type Group, Quaternion, Vector3 } from 'three'
 import {
   type SeatControlInput,
   type VehicleEntry,
@@ -8,8 +8,13 @@ import {
 } from '../../contexts/SeatContext'
 import { VehicleSlotContext, type VehicleSlotValue } from './context'
 import type { Props } from './types'
+import { remotePoseLerpFactor } from './utils'
 
 export type { Props as VehicleProps } from './types'
+
+// 毎フレーム使う作業用。useFrame の中で同期的に使い切るので全インスタンスで共有してよい
+const _remotePosition = new Vector3()
+const _remoteQuaternion = new Quaternion()
 
 /**
  * 乗り物。中に `<Seat driver>` を置くと運転できるようになる。
@@ -18,7 +23,7 @@ export type { Props as VehicleProps } from './types'
  * 同期は意識しなくてよい。
  *
  * - 運転者のクライアント: `onDrive` の結果で動き、その姿勢が同期に流れる
- * - それ以外のクライアント: `onDrive` は呼ばれず、届いた姿勢がそのまま当たる
+ * - それ以外のクライアント: `onDrive` は呼ばれず、届いた姿勢へ滑らかに寄せる
  *
  * 乗り物ごと動くので、**空いている同乗席も正しい位置**に来る。流れる姿勢も 1 台につき 1 本。
  */
@@ -35,8 +40,9 @@ export const Vehicle: FC<Props> = ({ id, onDrive, children, ...groupProps }) => 
     if (!group) return
 
     const entry: VehicleEntry = {
+      // 親から見た姿勢をそのまま渡す。onDrive が書くのもここ（translateZ / rotateY はローカル）で、
+      // 親の変換は全員のクライアントで同じものが掛かるので、これで同じ場所に再現される
       getPose: () => {
-        group.updateWorldMatrix(true, false)
         const { position, quaternion } = group
         return {
           position: { x: position.x, y: position.y, z: position.z },
@@ -47,15 +53,6 @@ export const Vehicle: FC<Props> = ({ id, onDrive, children, ...groupProps }) => 
             w: quaternion.w,
           },
         }
-      },
-      applyPose: (pose) => {
-        group.position.set(pose.position.x, pose.position.y, pose.position.z)
-        group.quaternion.set(
-          pose.quaternion.x,
-          pose.quaternion.y,
-          pose.quaternion.z,
-          pose.quaternion.w,
-        )
       },
     }
     registerVehicle(id, entry)
@@ -73,20 +70,23 @@ export const Vehicle: FC<Props> = ({ id, onDrive, children, ...groupProps }) => 
     [id, handleControlInput],
   )
 
-  // 自分が運転していない間は、同期されてきた姿勢を当て続ける。
+  // 自分が運転していない間は、同期されてきた姿勢へ寄せ続ける。
   // 誰も運転していなければ null が返り、その場の姿勢のまま止まる
-  useFrame(() => {
+  useFrame((_state, delta) => {
     const group = groupRef.current
     if (!group) return
     const pose = getRemoteVehiclePose(id)
     if (!pose) return
-    group.position.set(pose.position.x, pose.position.y, pose.position.z)
-    group.quaternion.set(
+    _remotePosition.set(pose.position.x, pose.position.y, pose.position.z)
+    _remoteQuaternion.set(
       pose.quaternion.x,
       pose.quaternion.y,
       pose.quaternion.z,
       pose.quaternion.w,
     )
+    const factor = remotePoseLerpFactor(delta, group.position.distanceTo(_remotePosition))
+    group.position.lerp(_remotePosition, factor)
+    group.quaternion.slerp(_remoteQuaternion, factor)
   })
 
   return (

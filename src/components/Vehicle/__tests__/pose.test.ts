@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { VehiclePose } from '../../../contexts/SeatContext'
 
 /**
- * <Vehicle> の getPose / applyPose と同じ読み書きを、Group に対して行う。
+ * <Vehicle> の getPose と、同期されてきた姿勢の当て方を、Group に対して行う。
  * コンポーネントを描画せずに「Group ⇄ VehiclePose の往復で姿勢が保たれるか」を見る
  */
 const readPose = (group: Group): VehiclePose => ({

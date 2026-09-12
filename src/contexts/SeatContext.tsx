@@ -68,7 +68,14 @@ export interface SeatEntry {
   drivesVehicleId?: string
 }
 
-/** 乗り物のワールド姿勢（`<Vehicle>` のルートの位置と向き） */
+/**
+ * 乗り物の姿勢（`<Vehicle>` のルートの位置と向き）。
+ *
+ * **親から見た姿勢（ローカル）**。ワールド姿勢ではない。
+ * 作者が `onDrive` で書くのもここ（`translateZ` / `rotateY` はローカルに効く）で、
+ * 親の変換は全員のクライアントで同じものが掛かるため、ローカルのまま渡せば同じ場所に再現される
+ * （動く床や回転台の上に乗り物を置いても、親の動きと二重に足されない）
+ */
 export interface VehiclePose {
   position: Position3D
   quaternion: Quaternion3D
@@ -76,13 +83,15 @@ export interface VehiclePose {
 
 /**
  * `<Vehicle>` がプラットフォームに登録する情報。
- * 運転者のクライアントはここから姿勢を読んで同期に流す
+ * 運転者のクライアントはここから姿勢を読んで同期に流す。
+ *
+ * 逆向き（同期されてきた姿勢を当てる）は `getRemoteVehiclePose` を
+ * `<Vehicle>` が毎フレーム読む形にしてある。補間しながら寄せる必要があり、
+ * 「渡された瞬間に当てる」形では書けないため
  */
 export interface VehicleEntry {
-  /** 乗り物のワールド姿勢を返す（運転中は毎フレーム呼ばれる） */
+  /** 乗り物の姿勢を返す（運転中は毎フレーム呼ばれる） */
   getPose: () => VehiclePose
-  /** 同期されてきた姿勢を当てる（自分が運転していないときに呼ばれる） */
-  applyPose: (pose: VehiclePose) => void
 }
 
 /**
@@ -124,8 +133,6 @@ export interface SeatContextValue {
    * 乗り物を動かしているのは運転者のクライアントだけなので、他の人はこれを当てる
    */
   getRemoteVehiclePose: (vehicleId: string) => VehiclePose | null
-  /** 同期されてきた姿勢の変化を購読する（useSyncExternalStore 互換） */
-  subscribeVehiclePose: (listener: () => void) => () => void
 }
 
 /**
@@ -148,7 +155,6 @@ export const createDefaultSeatImplementation = (): SeatContextValue => {
     registerVehicle: () => {},
     unregisterVehicle: () => {},
     getRemoteVehiclePose: () => null,
-    subscribeVehiclePose: () => () => {},
   }
 }
 

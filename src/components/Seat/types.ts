@@ -46,7 +46,10 @@ export type Props = Omit<ThreeElements['group'], 'id' | 'children' | 'ref' | 'sc
   /**
    * この席を**運転席**にする（`<Vehicle>` の中でのみ意味を持つ）。
    * 自分がここに座っている間、操縦入力が `<Vehicle>` の `onDrive` へ流れ、
-   * 乗り物の姿勢が同期される
+   * 乗り物の姿勢が同期される。
+   *
+   * `<Vehicle>` の外で付けても運転席にはならず、普通の椅子として扱われる
+   * （開発時は console に警告が出る）
    */
   driver?: boolean
   /**
