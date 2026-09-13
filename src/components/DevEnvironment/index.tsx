@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { GrabbableProvider } from '../../contexts/GrabbableContext'
+import { SeatProvider } from '../../contexts/SeatContext'
 import { SpawnPointProvider } from '../../contexts/SpawnPointContext'
 import { UsersProvider, type UsersContextValue, type User } from '../../contexts/UsersContext'
 import { XRiftContext, type XRiftContextValue } from '../../contexts/XRiftContext'
@@ -27,6 +28,7 @@ import {
 import { PhysicsPlayer } from './components/PhysicsPlayer'
 import { GrabSystem } from './components/GrabSystem'
 import { createDevGrabStore } from './components/GrabSystem/store'
+import { createDevSeatStore } from './components/DevSeat/store'
 import { CenterRaycaster } from './components/CenterRaycaster'
 import { Crosshair } from './components/Crosshair'
 import { PointerLockStatus } from './components/PointerLockStatus'
@@ -78,6 +80,8 @@ export function DevEnvironment({
   const [isHit, setIsHit] = useState(false)
   // ローカル掴みストア（<Grabbable> の登録先 & 開発プレビュー用 GrabSystem の状態）
   const [grabStore] = useState(createDevGrabStore)
+  // ローカル座席ストア（<Seat> / <Vehicle> の登録先 & 着席状態。単独プレイヤー用）
+  const [seatStore] = useState(createDevSeatStore)
   const isPointerLocked = useSyncExternalStore(
     subscribePointerLock,
     getPointerLockSnapshot,
@@ -170,15 +174,18 @@ export function DevEnvironment({
             <SpawnPointProvider>
               <UsersProvider implementation={usersImplementation}>
                 <GrabbableProvider implementation={grabStore.contextValue}>
-                  <PhysicsPlayer
-                    moveSpeed={moveSpeed}
-                    spawnPosition={spawnPosition}
-                    respawnThreshold={respawnThreshold}
-                    allowInfiniteJump={allowInfiniteJump}
-                    movementRef={localMovementRef}
-                  />
-                  <GrabSystem store={grabStore} />
-                  {children}
+                  <SeatProvider implementation={seatStore.contextValue}>
+                    <PhysicsPlayer
+                      moveSpeed={moveSpeed}
+                      spawnPosition={spawnPosition}
+                      respawnThreshold={respawnThreshold}
+                      allowInfiniteJump={allowInfiniteJump}
+                      movementRef={localMovementRef}
+                      seatStore={seatStore}
+                    />
+                    <GrabSystem store={grabStore} />
+                    {children}
+                  </SeatProvider>
                 </GrabbableProvider>
               </UsersProvider>
             </SpawnPointProvider>

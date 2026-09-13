@@ -20,7 +20,7 @@ export type { Props as SeatProps, SeatExitOffset } from './types'
  * 操縦入力が毎フレーム届く。
  *
  * 座る・追従・降車・同期はプラットフォーム側（SeatContext の実装）が担う。
- * 未注入（DevEnvironment 等）では登録だけ行い、クリックしても何も起きない
+ * DevEnvironment では単独プレイヤー用の実装が入っているので、そのまま座って試せる
  */
 export const Seat: FC<Props> = ({
   id,

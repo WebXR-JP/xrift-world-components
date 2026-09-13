@@ -7,6 +7,8 @@ import { Grabbable } from "../components/Grabbable"
 import type { GrabbableTransform } from "../contexts/GrabbableContext"
 import { Mirror } from "../components/Mirror"
 import { ScreenShareDisplay } from "../components/ScreenShareDisplay"
+import { Seat } from "../components/Seat"
+import { Vehicle } from "../components/Vehicle"
 
 const GRABBABLE_BALL_INITIAL: GrabbableTransform = {
   position: { x: 2, y: 0.5, z: -2 },
@@ -28,6 +30,72 @@ function GrabbableBall() {
         <meshStandardMaterial color="gold" metalness={0.5} roughness={0.3} />
       </mesh>
     </Grabbable>
+  )
+}
+
+const CART_SPEED = 3
+const CART_TURN_RATE = 1.8
+
+/**
+ * 乗り物の動作確認用カート（運転席に座る → WASD で操縦 → Space で降車）
+ * ドキュメントの Vehicle の例と同じ作り
+ */
+function Cart() {
+  return (
+    <Vehicle
+      id="dev-cart"
+      position={[3, 0, 1]}
+      onDrive={(input, delta, vehicle) => {
+        vehicle.translateZ(-input.forward * CART_SPEED * delta)
+        vehicle.rotateY(-input.right * CART_TURN_RATE * delta)
+      }}
+    >
+      {/* 車体 */}
+      <mesh position={[0, 0.25, 0]}>
+        <boxGeometry args={[1.2, 0.3, 2]} />
+        <meshStandardMaterial color="tomato" />
+      </mesh>
+      {/* 車輪 */}
+      {[
+        [-0.65, 0.2, -0.7],
+        [0.65, 0.2, -0.7],
+        [-0.65, 0.2, 0.7],
+        [0.65, 0.2, 0.7],
+      ].map((position, i) => (
+        <mesh key={i} position={position as [number, number, number]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.2, 0.2, 0.15, 16]} />
+          <meshStandardMaterial color="#333333" />
+        </mesh>
+      ))}
+      {/* 運転席 */}
+      <Seat id="dev-cart-driver" driver position={[0, 0.45, -0.35]} exitOffset={{ forward: 0, right: -1.2 }}>
+        <mesh>
+          <boxGeometry args={[0.5, 0.1, 0.5]} />
+          <meshStandardMaterial color="steelblue" />
+        </mesh>
+      </Seat>
+      {/* 同乗席 */}
+      <Seat id="dev-cart-back" position={[0, 0.45, 0.55]} exitOffset={{ forward: 0, right: 1.2 }}>
+        <mesh>
+          <boxGeometry args={[0.5, 0.1, 0.5]} />
+          <meshStandardMaterial color="seagreen" />
+        </mesh>
+      </Seat>
+    </Vehicle>
+  )
+}
+
+const STOOL_HEIGHT = 0.45
+
+/** 普通の椅子の動作確認用スツール（座る → Space で降りる） */
+function Stool() {
+  return (
+    <Seat id="dev-stool" position={[-2, STOOL_HEIGHT, 1]}>
+      <mesh position={[0, -STOOL_HEIGHT / 2, 0]}>
+        <boxGeometry args={[0.5, STOOL_HEIGHT, 0.5]} />
+        <meshStandardMaterial color="saddlebrown" />
+      </mesh>
+    </Seat>
   )
 }
 
@@ -101,6 +169,12 @@ export function TestScene() {
 
       {/* 掴めるボール */}
       <GrabbableBall />
+
+      {/* 椅子（座る → Space で降りる） */}
+      <Stool />
+
+      {/* 乗り物カート（運転席で WASD 操縦 → Space で降車） */}
+      <Cart />
 
       {/* ワープポイント */}
       {WARP_POINTS.map((wp, i) => (

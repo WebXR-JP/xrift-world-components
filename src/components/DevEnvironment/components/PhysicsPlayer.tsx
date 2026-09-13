@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import type { MutableRefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import {
@@ -7,8 +7,8 @@ import {
   RigidBody,
 } from '@react-three/rapier'
 import type { RapierRigidBody } from '@react-three/rapier'
-import { Vector3 } from 'three'
-import type { Group, Mesh } from 'three'
+import { Euler, Quaternion, Vector3 } from 'three'
+import type { Camera, Group, Mesh } from 'three'
 import { useSpawnPoint } from '../../../hooks/useSpawnPoint'
 import { LAYERS } from '../../../constants/layers'
 import type { PlayerMovement } from '../../../types/movement'
@@ -19,7 +19,18 @@ import {
   LINEAR_DAMPING,
   CAMERA_Y_OFFSET,
   DEV_AVATAR_HEIGHT,
+  DEV_EYE_HEIGHT,
 } from '../constants'
+import type { DevSeatStore } from './DevSeat/store'
+import {
+  DEV_SEAT_CAMERA_FORWARD_CLEARANCE,
+  computeSeatedEyePosition,
+  computeSeatedFeetPosition,
+  estimateSeatOffsets,
+  moveIntentFromKeys,
+  toSeatControlInput,
+  type DevSeatOffsets,
+} from './DevSeat/utils'
 
 interface Props {
   moveSpeed: number
@@ -27,7 +38,11 @@ interface Props {
   respawnThreshold: number
   allowInfiniteJump: boolean
   movementRef?: MutableRefObject<PlayerMovement>
+  seatStore: DevSeatStore
 }
+
+/** RigidBody 原点（カプセル中心）から足元までの高さ */
+const FEET_OFFSET_Y = PLAYER_HALF_HEIGHT + PLAYER_RADIUS
 
 export function PhysicsPlayer({
   moveSpeed,
@@ -35,6 +50,7 @@ export function PhysicsPlayer({
   respawnThreshold,
   allowInfiniteJump,
   movementRef,
+  seatStore,
 }: Props) {
   const rigidBodyRef = useRef<RapierRigidBody>(null)
   const avatarGroupRef = useRef<Group>(null)
@@ -44,6 +60,17 @@ export function PhysicsPlayer({
   const prevSpaceRef = useRef(false)
   const forwardRef = useRef(new Vector3())
   const rightRef = useRef(new Vector3())
+  // 着席中の座席姿勢まわり（GC回避のため使い回す）
+  const seatQuatRef = useRef(new Quaternion())
+  const prevSeatQuatRef = useRef(new Quaternion())
+  const invQuatRef = useRef(new Quaternion())
+  const deltaQuatRef = useRef(new Quaternion())
+  const lookQuatRef = useRef(new Quaternion())
+  const eulerRef = useRef(new Euler(0, 0, 0, 'YXZ'))
+  const prevSeatIdRef = useRef<string | null>(null)
+  const seatedOffsetsRef = useRef<DevSeatOffsets | null>(null)
+  const feetPosRef = useRef({ x: 0, y: 0, z: 0 })
+  const eyePosRef = useRef({ x: 0, y: 0, z: 0 })
 
   const { camera } = useThree()
   const spawnPoint = useSpawnPoint()
@@ -121,9 +148,146 @@ export function PhysicsPlayer({
     }
   }, [])
 
-  useFrame(() => {
+  // 着席中は座席へ追従する（椅子でも乗り物でも同一パス）。
+  // 本番（xrift-frontend の useRigidBodyMovement.handleSeatedFrame）と同順序:
+  // 降車判定 → 操縦入力の委譲（onDrive が乗り物を動かす）→ 動かしたあとの座面に体を載せる。
+  // このフレームを消費した（通常移動を行わない）とき true を返す
+  const handleSeatedFrame = useCallback(
+    (rb: RapierRigidBody, cam: Camera, delta: number): boolean => {
+      const seatId = seatStore.getSeatId()
+      if (!seatId) {
+        prevSeatIdRef.current = null
+        seatedOffsetsRef.current = null
+        return false
+      }
+      const entry = seatStore.getSeat(seatId)
+      if (!entry) {
+        // 座席が消えた（アンマウント等）→ その場で立たせて通常移動に戻す
+        seatStore.standUp()
+        prevSeatIdRef.current = null
+        seatedOffsetsRef.current = null
+        return false
+      }
+
+      const keys = pressedKeysRef.current
+      const spacePressed =
+        keys.has('Space') || keys.has(' ') || keys.has('KeyE') || keys.has('e')
+
+      // 着席した瞬間は押しっぱなしの Space を降車エッジとして拾わない
+      if (prevSeatIdRef.current !== seatId) {
+        prevSeatIdRef.current = seatId
+        prevSpaceRef.current = spacePressed
+        seatedOffsetsRef.current = estimateSeatOffsets(DEV_AVATAR_HEIGHT, DEV_EYE_HEIGHT)
+        // 座った瞬間は座席の正面を向かせる（ピッチだけ維持）。
+        // 向いていた方角のままにすると首だけねじれた姿勢になる
+        const surface = entry.getSeatSurface()
+        seatQuatRef.current.set(
+          surface.quaternion.x,
+          surface.quaternion.y,
+          surface.quaternion.z,
+          surface.quaternion.w,
+        )
+        eulerRef.current.setFromQuaternion(cam.quaternion, 'YXZ')
+        cam.quaternion
+          .copy(seatQuatRef.current)
+          .multiply(lookQuatRef.current.setFromEuler(eulerRef.current.set(eulerRef.current.x, 0, 0)))
+        prevSeatQuatRef.current.copy(seatQuatRef.current)
+      } else if (spacePressed && !prevSpaceRef.current) {
+        // 降車（Space のエッジ）。足元を降車位置に置き、重力を復帰させる
+        const exit = entry.getExitPosition()
+        rb.setTranslation(
+          { x: exit.x, y: exit.y + FEET_OFFSET_Y, z: exit.z },
+          true,
+        )
+        rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
+        seatStore.standUp()
+        prevSeatIdRef.current = null
+        seatedOffsetsRef.current = null
+        prevSpaceRef.current = spacePressed
+        return true
+      }
+      prevSpaceRef.current = spacePressed
+
+      const offsets = seatedOffsetsRef.current
+      if (!offsets) return false
+
+      // 操縦入力の委譲。運転席に自分が座っている間だけ「どちらへ動かしたいか」を渡す。
+      // **体を置く前に呼ぶ。** onDrive が乗り物を動かしたあとの座面に体を載せないと、
+      // 1 コマ分だけ座面から遅れて座って見える
+      entry.onControlInput?.(toSeatControlInput(moveIntentFromKeys(keys)), delta)
+
+      // 座面の姿勢はこのフレームで1回だけ引く
+      const surface = entry.getSeatSurface()
+      seatQuatRef.current.set(
+        surface.quaternion.x,
+        surface.quaternion.y,
+        surface.quaternion.z,
+        surface.quaternion.w,
+      )
+
+      // 視点は座席と一緒に回す。PointerLockControls のマウスルックは残したまま、
+      // 座席の回転差分だけカメラに足す（ユーザーの見回しと喧嘩しない）
+      invQuatRef.current.copy(prevSeatQuatRef.current).invert()
+      deltaQuatRef.current.copy(seatQuatRef.current).multiply(invQuatRef.current)
+      cam.quaternion.premultiply(deltaQuatRef.current)
+      prevSeatQuatRef.current.copy(seatQuatRef.current)
+
+      // 腰を座面に載せる。傾いた座席では「座席の下方向」に足元を下げる
+      const feet = computeSeatedFeetPosition(surface, offsets.hipOffset, feetPosRef.current)
+      rb.setTranslation({ x: feet.x, y: feet.y + FEET_OFFSET_Y, z: feet.z }, true)
+      rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
+      rb.setRotation(
+        {
+          x: seatQuatRef.current.x,
+          y: seatQuatRef.current.y,
+          z: seatQuatRef.current.z,
+          w: seatQuatRef.current.w,
+        },
+        true,
+      )
+
+      // カメラは座面から組み立てる（腰から目までの高さ＋前方クリアランス）
+      const eye = computeSeatedEyePosition(
+        surface,
+        offsets.eyeOffset - offsets.hipOffset,
+        DEV_SEAT_CAMERA_FORWARD_CLEARANCE,
+        eyePosRef.current,
+      )
+      cam.position.set(eye.x, eye.y, eye.z)
+
+      // DummyAvatar も座席の姿勢そのまま（傾きも含む）
+      if (avatarGroupRef.current) {
+        avatarGroupRef.current.position.set(eye.x, eye.y, eye.z)
+        avatarGroupRef.current.quaternion.copy(seatQuatRef.current)
+      }
+
+      // useUsers 用の PlayerMovement を更新（足元基準）
+      if (movementRef) {
+        const m = movementRef.current
+        m.position.x = feet.x
+        m.position.y = feet.y
+        m.position.z = feet.z
+        m.direction.x = 0
+        m.direction.z = 0
+        m.horizontalSpeed = 0
+        m.verticalSpeed = 0
+        cam.getWorldDirection(forwardRef.current)
+        m.rotation.yaw = -Math.atan2(forwardRef.current.x, -forwardRef.current.z)
+        m.rotation.pitch = Math.asin(forwardRef.current.y)
+        m.isGrounded = true
+        m.isJumping = false
+      }
+      return true
+    },
+    [seatStore, movementRef],
+  )
+
+  useFrame(({ camera: frameCamera }, delta) => {
     const rb = rigidBodyRef.current
     if (!rb) return
+
+    // 着席中は座席へ追従（WASD は歩行ではなく操縦入力になる）
+    if (handleSeatedFrame(rb, frameCamera, delta)) return
 
     const keys = pressedKeysRef.current
 
