@@ -24,6 +24,7 @@ import {
 import type { DevSeatStore } from './DevSeat/store'
 import {
   DEV_SEAT_CAMERA_FORWARD_CLEARANCE,
+  DEV_MAX_FRAME_DELTA,
   computeSeatedEyePosition,
   computeSeatedFeetPosition,
   estimateSeatOffsets,
@@ -213,8 +214,10 @@ export function PhysicsPlayer({
 
       // 操縦入力の委譲。運転席に自分が座っている間だけ「どちらへ動かしたいか」を渡す。
       // **体を置く前に呼ぶ。** onDrive が乗り物を動かしたあとの座面に体を載せないと、
-      // 1 コマ分だけ座面から遅れて座って見える
-      entry.onControlInput?.(toSeatControlInput(moveIntentFromKeys(keys)), delta)
+      // 1 コマ分だけ座面から遅れて座って見える。
+      // delta は上限で丸める（タブ切り替え復帰時の大きな delta で乗り物が跳ばないように）
+      const dt = Math.min(Math.max(delta, 0), DEV_MAX_FRAME_DELTA)
+      entry.onControlInput?.(toSeatControlInput(moveIntentFromKeys(keys)), dt)
 
       // 座面の姿勢はこのフレームで1回だけ引く
       const surface = entry.getSeatSurface()

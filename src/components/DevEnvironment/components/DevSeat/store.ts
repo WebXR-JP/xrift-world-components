@@ -34,6 +34,14 @@ export function createDevSeatStore(): DevSeatStore {
   const listeners = new Set<() => void>()
   let seatId: string | null = null
 
+  const getOccupantId = (seatIdToCheck: string): string | null =>
+    seatIdToCheck === seatId ? DEV_LOCAL_USER_ID : null
+
+  const subscribeOccupancy = (listener: () => void): (() => void) => {
+    listeners.add(listener)
+    return () => listeners.delete(listener)
+  }
+
   const notify = () => {
     for (const listener of listeners) listener()
   }
@@ -58,11 +66,8 @@ export function createDevSeatStore(): DevSeatStore {
       if (seatRegistry.get(id) === entry) seatRegistry.delete(id)
     },
     sit,
-    getOccupantId: (id) => (seatId === id ? DEV_LOCAL_USER_ID : null),
-    subscribeOccupancy: (listener) => {
-      listeners.add(listener)
-      return () => listeners.delete(listener)
-    },
+    getOccupantId,
+    subscribeOccupancy,
     getLocalUserId: () => DEV_LOCAL_USER_ID,
     registerVehicle: (id, entry) => {
       vehicleRegistry.set(id, entry)
@@ -77,8 +82,8 @@ export function createDevSeatStore(): DevSeatStore {
 
   return {
     getSeat: (id) => seatRegistry.get(id),
-    getOccupantId: (id) => (seatId === id ? DEV_LOCAL_USER_ID : null),
-    subscribeOccupancy: contextValue.subscribeOccupancy,
+    getOccupantId,
+    subscribeOccupancy,
     getSeatId: () => seatId,
     sit,
     standUp,

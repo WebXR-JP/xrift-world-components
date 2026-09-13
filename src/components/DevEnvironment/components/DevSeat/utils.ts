@@ -3,13 +3,14 @@ import type { SeatControlInput, SeatSurface } from '../../../../contexts/SeatCon
 import type { Position3D } from '../../../../types/movement'
 import {
   DEV_SEAT_CAMERA_FORWARD_CLEARANCE,
+  DEV_MAX_FRAME_DELTA,
   ESTIMATED_SEATED_HIP_RATIO,
   FALLBACK_EYE_HEIGHT_RATIO,
   SEAT_CONTACT_BELOW_HIPS_RATIO,
   STANDING_HIP_RATIO,
 } from './constants'
 
-export { DEV_SEAT_CAMERA_FORWARD_CLEARANCE }
+export { DEV_SEAT_CAMERA_FORWARD_CLEARANCE, DEV_MAX_FRAME_DELTA }
 
 const _quaternion = new Quaternion()
 const _offset = new Vector3()

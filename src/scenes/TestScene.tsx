@@ -56,13 +56,15 @@ function Cart() {
         <meshStandardMaterial color="tomato" />
       </mesh>
       {/* 車輪 */}
-      {[
-        [-0.65, 0.2, -0.7],
-        [0.65, 0.2, -0.7],
-        [-0.65, 0.2, 0.7],
-        [0.65, 0.2, 0.7],
-      ].map((position, i) => (
-        <mesh key={i} position={position as [number, number, number]} rotation={[0, 0, Math.PI / 2]}>
+      {(
+        [
+          [-0.65, 0.2, -0.7],
+          [0.65, 0.2, -0.7],
+          [-0.65, 0.2, 0.7],
+          [0.65, 0.2, 0.7],
+        ] as [number, number, number][]
+      ).map((position, i) => (
+        <mesh key={i} position={position} rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.2, 0.2, 0.15, 16]} />
           <meshStandardMaterial color="#333333" />
         </mesh>
