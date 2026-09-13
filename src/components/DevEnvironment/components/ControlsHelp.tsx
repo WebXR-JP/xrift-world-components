@@ -49,6 +49,18 @@ export function ControlsHelp() {
       <div>
         <Kbd>G</Kbd> 掴む / 置く（Grabbable）
       </div>
+      <div>
+        <Kbd>Click</Kbd> 座る（Seat / Vehicle の運転席）
+      </div>
+      <div>
+        <Kbd>W</Kbd>
+        <Kbd>A</Kbd>
+        <Kbd>S</Kbd>
+        <Kbd>D</Kbd> 着席中は操縦
+      </div>
+      <div>
+        <Kbd>Space</Kbd> 着席中は降りる
+      </div>
     </div>
   )
 }
