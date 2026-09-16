@@ -2,37 +2,45 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useUsers } from '../../../contexts/UsersContext'
 import { useInstanceState } from '../../../hooks/useInstanceState'
 import { useInstanceEvent } from '../../../hooks/useInstanceEvent'
+import { useServerClock } from '../../../hooks/useServerClock'
 import { DEFAULT_LOGS } from '../constants'
+import { type LogEntry, type UserLeftEvent } from '../types'
 import {
-  type LogEntry,
-  type UserJoinedEvent,
-  type UserLeftEvent,
-} from '../types'
-import { createLogEntry, enrichLogsWithCache, isWriterAmong, mergeLogs } from '../utils'
+  createLogEntry,
+  enrichLogsWithCache,
+  isValidLogEntry,
+  isWriterAmong,
+  lastUserLog,
+  mergeLogs,
+} from '../utils'
 
 interface UseEntryLogOptions {
   stateNamespace: string
   maxEntries: number
   displayNameFallback: string
-  formatTimestamp: (date: Date) => string
   onJoin?: (entry: LogEntry) => void
   onLeave?: (entry: LogEntry) => void
 }
 
 export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
   const { localUser, remoteUsers } = useUsers()
+  const { now } = useServerClock()
   const [logs, setLogs] = useInstanceState<LogEntry[]>(
     `${options.stateNamespace}-logs`,
     DEFAULT_LOGS,
   )
 
-  // logs の最新値を ref で保持（イベントコールバック内で参照）
-  const logsRef = useRef(logs)
-  logsRef.current = logs
+  // 旧仕様（timestamp が文字列）のエントリを除外。共有状態に残っていても
+  // 表示崩れせず、maxEntries の切り捨てで自然に消える
+  const validLogs = useMemo(() => logs.filter(isValidLogEntry), [logs])
+  const validLogsRef = useRef(validLogs)
+  validLogsRef.current = validLogs
 
-  // options を ref で保持（stale closure 回避）
+  // options・共有時計を ref で保持（stale closure 回避）
   const optionsRef = useRef(options)
   optionsRef.current = options
+  const nowRef = useRef(now)
+  nowRef.current = now
 
   // ユーザー情報キャッシュ（退室時に useUsers から消えている可能性があるため）
   // レンダー本体で同期的に更新し、イベントコールバックより先にキャッシュを確定させる
@@ -52,59 +60,31 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
     })
   }
 
-  // 自分自身の入室ログ補完（最初のユーザーのみ）
-  // 他のユーザーがいる場合はライターが user-joined イベントで書いてくれるため、
-  // ここでは自分しかいない（＝最初のユーザー）場合のみ自分の入室ログを追加する。
-  // 自分で書くと未同期のローカル状態で上書きしてしまうため。
+  // 自分自身の入室ログは自分で書く
+  // localUser の情報がそのまま使えるためキャッシュミス（Unknown）が起きない。
+  // 他者の入室は各本人が書くので、user-joined イベントの購読もライター選出も不要。
+  // 最後が leave（再入室時）の場合のみ新たに書く。最後が join なら記録済み。
   const selfJoinedRef = useRef(false)
   useEffect(() => {
     if (!localUser || selfJoinedRef.current) return
     selfJoinedRef.current = true
-    const alreadyJoined = logsRef.current.some(
-      (log) => log.type === 'join' && log.userId === localUser.id,
-    )
-    if (alreadyJoined) return
-    // 他のユーザーがいる場合、ライターが user-joined で書くので自分では書かない
-    if (remoteUsers.length > 0) return
+    if (lastUserLog(validLogsRef.current, localUser.id)?.type === 'join') return
     const opts = optionsRef.current
     const entry = createLogEntry(
       'join',
       localUser.id,
       localUser.displayName,
       localUser.avatarUrl,
-      logsRef.current,
-      opts.formatTimestamp,
+      nowRef.current(),
     )
     setLogs((prev) => mergeLogs(prev, entry, opts.maxEntries))
     opts.onJoin?.(entry)
   }, [localUser, setLogs])
 
-  // user-joined イベント
-  // 入室者を除いた既存ユーザーの中で辞書順最小のクライアントだけが書き込む
-  useInstanceEvent<UserJoinedEvent>('user-joined', (data) => {
-    if (!localUser) return
-    const existingIds = [
-      localUser.id,
-      ...remoteUsers.filter((u) => u.id !== data.userId).map((u) => u.id),
-    ]
-    if (!isWriterAmong(existingIds, localUser.id)) return
-
-    const opts = optionsRef.current
-    const cached = userCacheRef.current.get(data.userId)
-    const entry = createLogEntry(
-      'join',
-      data.userId,
-      cached?.displayName ?? opts.displayNameFallback,
-      cached?.avatarUrl ?? null,
-      logsRef.current,
-      opts.formatTimestamp,
-    )
-    setLogs((prev) => mergeLogs(prev, entry, opts.maxEntries))
-    opts.onJoin?.(entry)
-  })
-
   // user-left イベント
-  // 退室者を除いた残存ユーザーの中で辞書順最小のクライアントだけが書き込む
+  // 退室者本人は書けないため、残存ユーザーの中で辞書順最小のクライアントだけが書き込む。
+  // ライター選出が分裂して重複書き込みが起きても、最後が既に leave なら書かないため
+  // 同期後は1件に収まる（伝播遅延中のみ一時的に2件並ぶことがある）。
   useInstanceEvent<UserLeftEvent>('user-left', (data) => {
     if (!localUser) return
     const remainingIds = [
@@ -112,6 +92,7 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
       ...remoteUsers.filter((u) => u.id !== data.userId).map((u) => u.id),
     ]
     if (!isWriterAmong(remainingIds, localUser.id)) return
+    if (lastUserLog(validLogsRef.current, data.userId)?.type === 'leave') return
 
     const opts = optionsRef.current
     const cached = userCacheRef.current.get(data.userId)
@@ -120,20 +101,19 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
       data.userId,
       cached?.displayName ?? opts.displayNameFallback,
       cached?.avatarUrl ?? null,
-      logsRef.current,
-      opts.formatTimestamp,
+      nowRef.current(),
     )
     setLogs((prev) => mergeLogs(prev, entry, opts.maxEntries))
     opts.onLeave?.(entry)
   })
 
   // Unknown ログの永続修復（ライターのみ）
-  // user-joined 発火時に remoteUsers 未更新でキャッシュミスした Unknown エントリを、
+  // 退室イベント処理時にキャッシュミスした Unknown エントリを、
   // 次のレンダーでキャッシュが更新された後に修正する
   useEffect(() => {
     if (!localUser) return
     const fallback = optionsRef.current.displayNameFallback
-    const currentLogs = logsRef.current
+    const currentLogs = validLogsRef.current
     if (!currentLogs.some((log) => log.displayName === fallback)) return
 
     const allIds = [localUser.id, ...remoteUsers.map((u) => u.id)]
@@ -155,10 +135,10 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
   return useMemo(
     () =>
       enrichLogsWithCache(
-        logs,
+        validLogs,
         options.displayNameFallback,
         userCacheRef.current,
       ),
-    [logs, options.displayNameFallback, cacheSize],
+    [validLogs, options.displayNameFallback, cacheSize],
   )
 }

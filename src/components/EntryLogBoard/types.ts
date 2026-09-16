@@ -3,7 +3,7 @@ export type LogType = 'join' | 'leave'
 
 /** 入退室ログの1件分 */
 export interface LogEntry {
-  /** 決定論的に生成されるID（冪等なマージ用） */
+  /** 書き込み主体と共有時計時刻から一意に決まるID（重複書き込みの排除用） */
   id: string
   /** ログ種別 */
   type: LogType
@@ -13,8 +13,11 @@ export interface LogEntry {
   displayName: string
   /** アバターアイコンURL */
   avatarUrl: string | null
-  /** フォーマット済みタイムスタンプ */
-  timestamp: string
+  /**
+   * 入退室時刻（epoch ms・共有時計基準）
+   * 全クライアントで同一の瞬間を指す。表示文字列への変換は描画時に行う
+   */
+  timestamp: number
 }
 
 /** ラベル文言のカスタマイズ */
@@ -37,12 +40,6 @@ export interface Colors {
   text: string
 }
 
-/** user-joined イベントのデータ型 */
-export interface UserJoinedEvent {
-  userId: string
-  isGuest: boolean
-}
-
 /** user-left イベントのデータ型 */
 export interface UserLeftEvent {
   userId: string
@@ -54,8 +51,8 @@ export interface Props {
   stateNamespace?: string
   /** 最大表示件数 */
   maxEntries?: number
-  /** タイムスタンプのフォーマット関数 */
-  formatTimestamp?: (date: Date) => string
+  /** タイムスタンプのフォーマット関数（引数は epoch ms） */
+  formatTimestamp?: (timestampMs: number) => string
   /** 表示名が取得できない場合のフォールバック */
   displayNameFallback?: string
   /** ラベル文言 */

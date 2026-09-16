@@ -13,6 +13,7 @@ interface Props {
   entry: LogEntry
   labels: Labels
   colors: Colors
+  formatTimestamp: (timestampMs: number) => string
   y: number
   scale: number
 }
@@ -21,7 +22,14 @@ const ROW_HEIGHT = 0.25
 const AVATAR_SIZE = 0.18
 const FONT_SIZE = 0.1
 
-export const LogRow = ({ entry, labels, colors, y, scale }: Props) => {
+export const LogRow = ({
+  entry,
+  labels,
+  colors,
+  formatTimestamp,
+  y,
+  scale,
+}: Props) => {
   const rowHeight = ROW_HEIGHT * scale
   const avatarSize = AVATAR_SIZE * scale
   const fontSize = FONT_SIZE * scale
@@ -45,7 +53,7 @@ export const LogRow = ({ entry, labels, colors, y, scale }: Props) => {
         anchorX="left"
         anchorY="middle"
       >
-        {entry.timestamp}
+        {formatTimestamp(entry.timestamp)}
       </Text>
 
       {/* 表示名 */}
