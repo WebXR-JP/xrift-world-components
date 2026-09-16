@@ -3,9 +3,9 @@ import { useEffect, useRef } from 'react'
 import type { Camera, PerspectiveCamera } from 'three'
 import { Color, Group, Mesh, PlaneGeometry, ShaderMaterial, Vector3 } from 'three'
 import { Reflector } from 'three/addons/objects/Reflector.js'
-import { DEFAULT_LOD_DISTANCE, LOD_HYSTERESIS_RATIO } from './constants'
+import { DEFAULT_LOD_DISTANCE, DEFAULT_REFLECTION_INTERVAL, LOD_HYSTERESIS_RATIO } from './constants'
 import { MirrorProps } from './types'
-import { shouldUseReflector } from './utils'
+import { shouldUpdateReflection, shouldUseReflector } from './utils'
 
 export type { MirrorProps } from './types'
 
@@ -44,12 +44,19 @@ export function Mirror({
   color = 0xcccccc,
   textureResolution = 512,
   lodDistance = DEFAULT_LOD_DISTANCE,
+  reflectionInterval = DEFAULT_REFLECTION_INTERVAL,
 }: MirrorProps) {
   const groupRef = useRef<Group>(null)
   const reflectorRef = useRef<Reflector | null>(null)
   const fallbackRef = useRef<Mesh | null>(null)
   const usingReflectorRef = useRef(true)
   const gl = useThree((s) => s.gl)
+
+  // reflectionInterval の最新値を保持（onBeforeRender ゲート内で参照）
+  const intervalRef = useRef(reflectionInterval)
+  intervalRef.current = reflectionInterval
+  // 1フレームに1だけ進む自前カウンタ。onBeforeRender の更新判定に使う
+  const frameRef = useRef(0)
 
   useEffect(() => {
     const currentGroup = groupRef.current
@@ -73,6 +80,16 @@ export function Mirror({
     reflector.position.set(0, 0, 0)
     currentGroup.add(reflector)
     reflectorRef.current = reflector
+
+    // 反射テクスチャの更新間隔ゲート。更新しないフレームは前回のテクスチャが
+    // そのまま残るため、見た目はほぼ変わらず描画コストだけが約 1/interval になる。
+    // renderer.info.render.frame は Reflector 内部の再帰 render() で余分に進むため
+    // 使わず、useFrame で進める自前カウンタ（frameRef）で判定する。
+    const originalOnBeforeRender = reflector.onBeforeRender.bind(reflector)
+    reflector.onBeforeRender = (renderer, scene, camera, geometry, material, group) => {
+      if (!shouldUpdateReflection(frameRef.current, intervalRef.current)) return
+      originalOnBeforeRender(renderer, scene, camera, geometry, material, group)
+    }
 
     // Fallback mesh: Fresnel シェーダーによる擬似ミラー
     const fallbackGeometry = new PlaneGeometry(size[0], size[1])
@@ -110,6 +127,8 @@ export function Mirror({
   // VRMFirstPersonのレイヤー設定により、メインカメラではThirdPersonOnlyレイヤー（頭部）が
   // 非表示になっているが、鏡には全身を映す必要があるため
   useFrame(({ camera, gl }) => {
+    frameRef.current += 1
+
     const reflector = reflectorRef.current
     if (!reflector) return
 
