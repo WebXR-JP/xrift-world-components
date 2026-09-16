@@ -2,7 +2,10 @@
  * EntryLogBoard コンポーネント
  *
  * ワールドへの入退室ログを3D空間のボードに表示する。
- * useInstanceEvent でプラットフォームの user-joined / user-left イベントを受信し、
+ * 入室ログは各クライアントが自分自身の分を書き込み、
+ * 退室ログは user-left イベントを受けて残存者の代表1名が書き込む。
+ * 時刻は useServerClock（共有時計）の epoch ミリ秒で保持し、描画時にフォーマットするため
+ * 全クライアントで同一の瞬間を示す。
  * useInstanceState でログを全クライアント間で同期する。
  */
 import { useMemo } from 'react'
@@ -52,7 +55,6 @@ export const EntryLogBoard = ({
     stateNamespace,
     maxEntries,
     displayNameFallback,
-    formatTimestamp,
     onJoin,
     onLeave,
   })
@@ -102,6 +104,7 @@ export const EntryLogBoard = ({
             entry={entry}
             labels={labels}
             colors={colors}
+            formatTimestamp={formatTimestamp}
             y={y}
             scale={scale}
           />
