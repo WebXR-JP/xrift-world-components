@@ -3,7 +3,7 @@ export type LogType = 'join' | 'leave'
 
 /** 入退室ログの1件分 */
 export interface LogEntry {
-  /** 決定論的に生成されるID（冪等なマージ用） */
+  /** 書き込み主体と共有時計時刻から一意に決まるID（重複書き込みの排除用） */
   id: string
   /** ログ種別 */
   type: LogType

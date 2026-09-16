@@ -6,7 +6,9 @@ import {
   createLogEntry,
   defaultFormatTimestamp,
   enrichLogsWithCache,
+  isValidLogEntry,
   isWriterAmong,
+  lastUserLog,
   mergeLogs,
 } from '../utils'
 
@@ -24,6 +26,10 @@ describe('defaultFormatTimestamp', () => {
   it('0時0分をゼロパディングする', () => {
     const ms = new Date(2024, 0, 1, 0, 0).getTime()
     expect(defaultFormatTimestamp(ms)).toBe('00:00')
+  })
+
+  it('不正な時刻は --:-- を返す', () => {
+    expect(defaultFormatTimestamp(Number.NaN)).toBe('--:--')
   })
 })
 
@@ -83,6 +89,74 @@ describe('createLogEntry', () => {
       avatarUrl: null,
       timestamp: 1700000000000,
     })
+  })
+})
+
+describe('isValidLogEntry', () => {
+  const baseEntry: LogEntry = {
+    id: 'join-user-1-1700000000000',
+    type: 'join',
+    userId: 'user-1',
+    displayName: 'Alice',
+    avatarUrl: null,
+    timestamp: 1700000000000,
+  }
+
+  it('現行仕様のエントリは true', () => {
+    expect(isValidLogEntry(baseEntry)).toBe(true)
+  })
+
+  it('旧仕様（timestamp が文字列）は false', () => {
+    const legacy = { ...baseEntry, timestamp: '10:00' } as unknown as LogEntry
+    expect(isValidLogEntry(legacy)).toBe(false)
+  })
+
+  it('不正な type は false', () => {
+    const invalid = { ...baseEntry, type: 'unknown' } as unknown as LogEntry
+    expect(isValidLogEntry(invalid)).toBe(false)
+  })
+})
+
+describe('lastUserLog', () => {
+  const join1: LogEntry = {
+    id: 'join-user-1-1700000000000',
+    type: 'join',
+    userId: 'user-1',
+    displayName: 'Alice',
+    avatarUrl: null,
+    timestamp: 1700000000000,
+  }
+  const leave1: LogEntry = {
+    ...join1,
+    id: 'leave-user-1-1700000001000',
+    type: 'leave',
+    timestamp: 1700000001000,
+  }
+  const join2: LogEntry = {
+    ...join1,
+    id: 'join-user-1-1700000002000',
+    timestamp: 1700000002000,
+  }
+
+  it('該当ユーザーがいなければ undefined', () => {
+    expect(lastUserLog([join1], 'user-9')).toBeUndefined()
+  })
+
+  it('最後のエントリを返す（join のみ → join）', () => {
+    expect(lastUserLog([join1], 'user-1')).toBe(join1)
+  })
+
+  it('退室後は leave を返す（再入室判定用）', () => {
+    expect(lastUserLog([join1, leave1], 'user-1')).toBe(leave1)
+  })
+
+  it('再入室後は新しい join を返す', () => {
+    expect(lastUserLog([join1, leave1, join2], 'user-1')).toBe(join2)
+  })
+
+  it('他ユーザーのログは無視する', () => {
+    const other: LogEntry = { ...join2, userId: 'user-2' }
+    expect(lastUserLog([join1, other], 'user-1')).toBe(join1)
   })
 })
 

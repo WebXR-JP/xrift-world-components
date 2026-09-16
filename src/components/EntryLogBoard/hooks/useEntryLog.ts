@@ -8,7 +8,9 @@ import { type LogEntry, type UserLeftEvent } from '../types'
 import {
   createLogEntry,
   enrichLogsWithCache,
+  isValidLogEntry,
   isWriterAmong,
+  lastUserLog,
   mergeLogs,
 } from '../utils'
 
@@ -28,9 +30,11 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
     DEFAULT_LOGS,
   )
 
-  // logs の最新値を ref で保持（イベントコールバック内で参照）
-  const logsRef = useRef(logs)
-  logsRef.current = logs
+  // 旧仕様（timestamp が文字列）のエントリを除外。共有状態に残っていても
+  // 表示崩れせず、maxEntries の切り捨てで自然に消える
+  const validLogs = useMemo(() => logs.filter(isValidLogEntry), [logs])
+  const validLogsRef = useRef(validLogs)
+  validLogsRef.current = validLogs
 
   // options・共有時計を ref で保持（stale closure 回避）
   const optionsRef = useRef(options)
@@ -59,14 +63,12 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
   // 自分自身の入室ログは自分で書く
   // localUser の情報がそのまま使えるためキャッシュミス（Unknown）が起きない。
   // 他者の入室は各本人が書くので、user-joined イベントの購読もライター選出も不要。
+  // 最後が leave（再入室時）の場合のみ新たに書く。最後が join なら記録済み。
   const selfJoinedRef = useRef(false)
   useEffect(() => {
     if (!localUser || selfJoinedRef.current) return
     selfJoinedRef.current = true
-    const alreadyJoined = logsRef.current.some(
-      (log) => log.type === 'join' && log.userId === localUser.id,
-    )
-    if (alreadyJoined) return
+    if (lastUserLog(validLogsRef.current, localUser.id)?.type === 'join') return
     const opts = optionsRef.current
     const entry = createLogEntry(
       'join',
@@ -80,7 +82,9 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
   }, [localUser, setLogs])
 
   // user-left イベント
-  // 退室者本人は書けないため、残存ユーザーの中で辞書順最小のクライアントだけが書き込む
+  // 退室者本人は書けないため、残存ユーザーの中で辞書順最小のクライアントだけが書き込む。
+  // ライター選出が分裂して重複書き込みが起きても、最後が既に leave なら書かないため
+  // 同期後は1件に収まる（伝播遅延中のみ一時的に2件並ぶことがある）。
   useInstanceEvent<UserLeftEvent>('user-left', (data) => {
     if (!localUser) return
     const remainingIds = [
@@ -88,6 +92,7 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
       ...remoteUsers.filter((u) => u.id !== data.userId).map((u) => u.id),
     ]
     if (!isWriterAmong(remainingIds, localUser.id)) return
+    if (lastUserLog(validLogsRef.current, data.userId)?.type === 'leave') return
 
     const opts = optionsRef.current
     const cached = userCacheRef.current.get(data.userId)
@@ -108,7 +113,7 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
   useEffect(() => {
     if (!localUser) return
     const fallback = optionsRef.current.displayNameFallback
-    const currentLogs = logsRef.current
+    const currentLogs = validLogsRef.current
     if (!currentLogs.some((log) => log.displayName === fallback)) return
 
     const allIds = [localUser.id, ...remoteUsers.map((u) => u.id)]
@@ -130,10 +135,10 @@ export function useEntryLog(options: UseEntryLogOptions): LogEntry[] {
   return useMemo(
     () =>
       enrichLogsWithCache(
-        logs,
+        validLogs,
         options.displayNameFallback,
         userCacheRef.current,
       ),
-    [logs, options.displayNameFallback, cacheSize],
+    [validLogs, options.displayNameFallback, cacheSize],
   )
 }

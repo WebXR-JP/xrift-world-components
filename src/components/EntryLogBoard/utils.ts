@@ -7,6 +7,7 @@ import { type LogEntry, type LogType } from './types'
  */
 export const defaultFormatTimestamp = (timestampMs: number): string => {
   const date = new Date(timestampMs)
+  if (Number.isNaN(date.getTime())) return '--:--'
   const hours = date.getHours().toString().padStart(2, '0')
   const minutes = date.getMinutes().toString().padStart(2, '0')
   return `${hours}:${minutes}`
@@ -47,6 +48,37 @@ export const createLogEntry = (
   avatarUrl,
   timestamp: timestampMs,
 })
+
+/**
+ * ログエントリの形が現行仕様かを判定する
+ *
+ * 旧仕様（timestamp がフォーマット済み文字列）のエントリが
+ * 共有状態に残っている場合に表示崩れ（NaN:NaN）を防ぐため、
+ * 読み出し側で除外する。除外された旧エントリは maxEntries の
+ * 切り捨てで自然に消える。
+ */
+export const isValidLogEntry = (log: LogEntry): boolean => {
+  if (log.type !== 'join' && log.type !== 'leave') return false
+  if (typeof log.userId !== 'string') return false
+  if (typeof log.displayName !== 'string') return false
+  if (typeof log.timestamp !== 'number' || Number.isNaN(log.timestamp)) return false
+  return true
+}
+
+/**
+ * 指定ユーザーの最新のログエントリを返す
+ *
+ * 再入室判定用。最後が join なら入室済み、leave（または無し）なら未記録として扱う。
+ */
+export const lastUserLog = (
+  logs: LogEntry[],
+  userId: string,
+): LogEntry | undefined => {
+  for (let i = logs.length - 1; i >= 0; i--) {
+    if (logs[i].userId === userId) return logs[i]
+  }
+  return undefined
+}
 
 /**
  * 候補ID群の中で辞書順最小のIDがtargetIdと一致するかを判定する
