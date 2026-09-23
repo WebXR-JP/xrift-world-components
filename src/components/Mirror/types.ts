@@ -11,10 +11,4 @@ export interface MirrorProps {
   textureResolution?: number
   /** この距離（メートル）を超えると envMap ベースの擬似ミラーに切り替え（デフォルト: 10） */
   lodDistance?: number
-  /**
-   * 反射テクスチャの更新間隔（フレーム数、デフォルト: 2）
-   * N フレームに1回だけ更新し、描画コストが約 1/N になる。
-   * 更新しないフレームは前回のテクスチャが残るため見た目はほぼ変わらない
-   */
-  reflectionInterval?: number
 }

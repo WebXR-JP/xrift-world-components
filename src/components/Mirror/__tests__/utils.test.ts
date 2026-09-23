@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { shouldUpdateReflection, shouldUseReflector } from '../utils'
+import { shouldUseReflector } from '../utils'
 import { LOD_HYSTERESIS_RATIO } from '../constants'
 
 describe('shouldUseReflector', () => {
@@ -45,27 +45,5 @@ describe('shouldUseReflector', () => {
       expect(shouldUseReflector(0, 0, true, hysteresis)).toBe(true)
       expect(shouldUseReflector(0.1, 0, true, hysteresis)).toBe(false)
     })
-  })
-})
-
-describe('shouldUpdateReflection', () => {
-  it('interval が 1 以下なら毎フレーム true', () => {
-    expect(shouldUpdateReflection(0, 1)).toBe(true)
-    expect(shouldUpdateReflection(7, 1)).toBe(true)
-    expect(shouldUpdateReflection(7, 0)).toBe(true)
-    expect(shouldUpdateReflection(7, -2)).toBe(true)
-  })
-
-  it('interval フレームに1回だけ true', () => {
-    expect(shouldUpdateReflection(0, 3)).toBe(true)
-    expect(shouldUpdateReflection(1, 3)).toBe(false)
-    expect(shouldUpdateReflection(2, 3)).toBe(false)
-    expect(shouldUpdateReflection(3, 3)).toBe(true)
-    expect(shouldUpdateReflection(6, 3)).toBe(true)
-  })
-
-  it('小数は切り捨てて扱う', () => {
-    expect(shouldUpdateReflection(2, 2.9)).toBe(true)
-    expect(shouldUpdateReflection(3, 2.9)).toBe(false)
   })
 })
