@@ -5,7 +5,7 @@ import { Color, Group, Mesh, PlaneGeometry, ShaderMaterial, Vector3 } from 'thre
 import { Reflector } from 'three/addons/objects/Reflector.js'
 import { DEFAULT_LOD_DISTANCE, LOD_HYSTERESIS_RATIO } from './constants'
 import { MirrorProps } from './types'
-import { shouldUseReflector } from './utils'
+import { applyThirdPersonLayers, shouldUseReflector } from './utils'
 
 export type { MirrorProps } from './types'
 
@@ -106,9 +106,9 @@ export function Mirror({
     }
   }, [size[0], size[1], color, textureResolution, gl])
 
-  // Reflectorのリフレクションカメラの全レイヤーを有効化
-  // VRMFirstPersonのレイヤー設定により、メインカメラではThirdPersonOnlyレイヤー（頭部）が
-  // 非表示になっているが、鏡には全身を映す必要があるため
+  // LOD の切り替えと、リフレクションカメラを三人称視点のレイヤー構成にする処理。
+  // VRMFirstPerson のレイヤー設定により、メインカメラは一人称（頭部なしコピーを表示・
+  // 頭部込みの全身を非表示）になっているが、鏡には頭部込みの全身を映す必要があるため
   useFrame(({ camera, gl }) => {
     const reflector = reflectorRef.current
     if (!reflector) return
@@ -141,8 +141,8 @@ export function Mirror({
 
     // three r184+ ではリフレクション用カメラがメインカメラごとの clone に変わり、
     // getReflectionCamera(camera) で取得する。clone はメインカメラのレイヤー設定
-    // （ThirdPersonOnly 無効）を継承するため、そのままだと鏡に頭部が映らない。
-    // リフレクションカメラの全レイヤーを有効化して全身を映す。
+    // （一人称 = FIRST_PERSON_ONLY 有効・THIRD_PERSON_ONLY 無効）を継承する。
+    // 鏡は三人称視点なので applyThirdPersonLayers で切り替える（理由は utils.ts）。
     // 型定義にないため any 相当でキャストしてアクセスする。
     const reflectorApi = reflector as unknown as {
       camera?: PerspectiveCamera
@@ -153,16 +153,16 @@ export function Mirror({
         // VR ではシーンが左右の目のサブカメラ（cameraL/cameraR）で個別に描画され、
         // Reflector の onBeforeRender にもサブカメラが渡るため、WeakMap もサブカメラを
         // キーに clone を保持する。ArrayCamera 本体（getCamera()）をキーにすると描画に
-        // 使われない clone を触るだけになるので、サブカメラごとに enableAll() する。
+        // 使われない clone を触るだけになるので、サブカメラごとに設定する。
         for (const eyeCamera of gl.xr.getCamera().cameras) {
-          reflectorApi.getReflectionCamera(eyeCamera).layers.enableAll()
+          applyThirdPersonLayers(reflectorApi.getReflectionCamera(eyeCamera).layers)
         }
       } else {
-        reflectorApi.getReflectionCamera(camera).layers.enableAll()
+        applyThirdPersonLayers(reflectorApi.getReflectionCamera(camera).layers)
       }
     } else if (reflectorApi.camera) {
       // three r183 以前: 単一の内部カメラ
-      reflectorApi.camera.layers.enableAll()
+      applyThirdPersonLayers(reflectorApi.camera.layers)
     }
   })
 
