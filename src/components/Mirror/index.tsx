@@ -3,10 +3,9 @@ import { useEffect, useRef } from 'react'
 import type { Camera, PerspectiveCamera } from 'three'
 import { Color, Group, Mesh, PlaneGeometry, ShaderMaterial, Vector3 } from 'three'
 import { Reflector } from 'three/addons/objects/Reflector.js'
-import { LAYERS } from '../../constants/layers'
 import { DEFAULT_LOD_DISTANCE, LOD_HYSTERESIS_RATIO } from './constants'
 import { MirrorProps } from './types'
-import { shouldUseReflector } from './utils'
+import { applyThirdPersonLayers, shouldUseReflector } from './utils'
 
 export type { MirrorProps } from './types'
 
@@ -107,9 +106,9 @@ export function Mirror({
     }
   }, [size[0], size[1], color, textureResolution, gl])
 
-  // Reflectorのリフレクションカメラの全レイヤーを有効化
-  // VRMFirstPersonのレイヤー設定により、メインカメラではThirdPersonOnlyレイヤー（頭部）が
-  // 非表示になっているが、鏡には全身を映す必要があるため
+  // LOD の切り替えと、リフレクションカメラを三人称視点のレイヤー構成にする処理。
+  // VRMFirstPerson のレイヤー設定により、メインカメラは一人称（頭部なしコピーを表示・
+  // 頭部込みの全身を非表示）になっているが、鏡には頭部込みの全身を映す必要があるため
   useFrame(({ camera, gl }) => {
     const reflector = reflectorRef.current
     if (!reflector) return
@@ -143,17 +142,11 @@ export function Mirror({
     // three r184+ ではリフレクション用カメラがメインカメラごとの clone に変わり、
     // getReflectionCamera(camera) で取得する。clone はメインカメラのレイヤー設定
     // （一人称 = FIRST_PERSON_ONLY 有効・THIRD_PERSON_ONLY 無効）を継承する。
-    // 鏡は三人称視点なので、FIRST_PERSON_ONLY を無効化し THIRD_PERSON_ONLY を
-    // 有効化する。enableAll() にすると頭部なし身体コピー（9層）と全身（10層）の
-    // 両方が映り、アバターが二重にブレて見えるため使ってはいけない。
+    // 鏡は三人称視点なので applyThirdPersonLayers で切り替える（理由は utils.ts）。
     // 型定義にないため any 相当でキャストしてアクセスする。
     const reflectorApi = reflector as unknown as {
       camera?: PerspectiveCamera
       getReflectionCamera?: (camera: Camera) => Camera
-    }
-    const applyThirdPersonLayers = (target: Camera): void => {
-      target.layers.disable(LAYERS.FIRST_PERSON_ONLY)
-      target.layers.enable(LAYERS.THIRD_PERSON_ONLY)
     }
     if (typeof reflectorApi.getReflectionCamera === 'function') {
       if (gl.xr.isPresenting) {
@@ -162,14 +155,14 @@ export function Mirror({
         // キーに clone を保持する。ArrayCamera 本体（getCamera()）をキーにすると描画に
         // 使われない clone を触るだけになるので、サブカメラごとに設定する。
         for (const eyeCamera of gl.xr.getCamera().cameras) {
-          applyThirdPersonLayers(reflectorApi.getReflectionCamera(eyeCamera))
+          applyThirdPersonLayers(reflectorApi.getReflectionCamera(eyeCamera).layers)
         }
       } else {
-        applyThirdPersonLayers(reflectorApi.getReflectionCamera(camera))
+        applyThirdPersonLayers(reflectorApi.getReflectionCamera(camera).layers)
       }
     } else if (reflectorApi.camera) {
       // three r183 以前: 単一の内部カメラ
-      applyThirdPersonLayers(reflectorApi.camera)
+      applyThirdPersonLayers(reflectorApi.camera.layers)
     }
   })
 
