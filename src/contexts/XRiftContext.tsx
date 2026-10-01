@@ -62,6 +62,11 @@ import {
   createDefaultServerClockImplementation,
   type ServerClockContextValue,
 } from './ServerClockContext'
+import {
+  createDefaultItemLoaderImplementation,
+  type ItemLoaderContextValue,
+  ItemLoaderProvider,
+} from './ItemLoaderContext'
 
 // デフォルトの画面共有実装（開発環境用）
 const createDefaultScreenShareImplementation = (): ScreenShareContextValue => ({
@@ -191,6 +196,11 @@ interface Props {
    */
   serverClockImplementation?: ServerClockContextValue
   /**
+   * ワールドに最初から置くアイテム（`<Item itemId>`）の読み込みの実装（オプション）
+   * 指定しない場合はデフォルト実装（読めない＝仮の箱を出す）が使用される
+   */
+  itemLoaderImplementation?: ItemLoaderContextValue
+  /**
    * アイテムの配置状態（オプション）
    * 'preview': プレビュー中、'placed': 設置済み
    * 指定しない場合は Provider をスキップ（フォールバックで 'placed' が返る）
@@ -236,6 +246,7 @@ export const XRiftProvider = ({
   seatImplementation,
   worldStorageImplementation,
   serverClockImplementation,
+  itemLoaderImplementation,
   placementMode,
   children,
 }: Props) => {
@@ -314,6 +325,12 @@ export const XRiftProvider = ({
     [serverClockImplementation],
   )
 
+  // アイテム読み込みの実装（指定がない場合はデフォルト実装 = 読めない）
+  const itemLoaderImpl = useMemo(
+    () => itemLoaderImplementation ?? createDefaultItemLoaderImplementation(),
+    [itemLoaderImplementation],
+  )
+
   // オブジェクトの登録
   const registerInteractable = useCallback((object: Object3D) => {
     interactableObjects.add(object)
@@ -349,6 +366,7 @@ export const XRiftProvider = ({
     [AudioVolumeProvider, { value: audioVolumeImpl }],
     [WorldStorageProvider, { value: worldStorageImpl }],
     [ServerClockProvider, { value: serverClockImpl }],
+    [ItemLoaderProvider, { value: itemLoaderImpl }],
   ]
 
   if (placementMode) {
