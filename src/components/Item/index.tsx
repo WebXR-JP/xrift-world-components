@@ -26,6 +26,16 @@ type LoadState =
   | { status: 'error'; error: ItemLoadError }
 
 const PLACEHOLDER_SIZE = 0.5
+
+/** 同じ失敗を配置の数だけ console に出さない（itemId × 理由で1回） */
+const loggedFailures = new Set<string>()
+
+function logLoadFailure(itemId: string, error: ItemLoadError): void {
+  const key = `${itemId}:${error.code}`
+  if (loggedFailures.has(key)) return
+  loggedFailures.add(key)
+  console.error(`[Item] アイテム ${itemId} を読み込めませんでした: ${error.message}`)
+}
 const PLACEHOLDER_COLOR = '#8a8f98'
 const ERROR_COLOR = '#c0392b'
 
@@ -41,15 +51,19 @@ function ItemPlaceholder({ state }: { state: Exclude<LoadState, { status: 'ready
         <boxGeometry args={[PLACEHOLDER_SIZE, PLACEHOLDER_SIZE, PLACEHOLDER_SIZE]} />
         <meshBasicMaterial color={color} wireframe />
       </mesh>
-      <Text
-        position={[0, PLACEHOLDER_SIZE + 0.15, 0]}
-        fontSize={0.08}
-        color={color}
-        anchorX="center"
-        anchorY="middle"
-      >
-        {label}
-      </Text>
+      {/* drei の Text はフォントの読み込みで suspend する。境界を置かないと上の Suspense まで
+          巻き込み、初回に Canvas 全体が一瞬消える */}
+      <Suspense fallback={null}>
+        <Text
+          position={[0, PLACEHOLDER_SIZE + 0.15, 0]}
+          fontSize={0.08}
+          color={color}
+          anchorX="center"
+          anchorY="middle"
+        >
+          {label}
+        </Text>
+      </Suspense>
     </group>
   )
 }
@@ -94,7 +108,7 @@ export function Item({ itemId, position = [0, 0, 0], rotation = [0, 0, 0], scale
       .catch((error: unknown) => {
         if (cancelled) return
         const itemError = toItemLoadError(error)
-        console.error(`[Item] アイテム ${itemId} を読み込めませんでした: ${itemError.message}`)
+        logLoadFailure(itemId, itemError)
         setState({ status: 'error', error: itemError })
       })
     return () => {

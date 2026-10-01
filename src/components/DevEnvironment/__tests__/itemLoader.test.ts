@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createDefaultItemLoaderImplementation } from '../../../contexts/ItemLoaderContext'
-import { errorFromResolveStatus } from '../itemLoader'
+import { createDevItemLoader, errorFromResolveStatus } from '../itemLoader'
 
 describe('errorFromResolveStatus', () => {
   it('HTTP の状態から理由を決める', () => {
@@ -22,5 +22,34 @@ describe('createDefaultItemLoaderImplementation', () => {
     await expect(createDefaultItemLoaderImplementation().load('item-1')).rejects.toMatchObject({
       code: 'NOT_AVAILABLE',
     })
+  })
+})
+
+describe('createDevItemLoader', () => {
+  it('差し込まれたローカルのアイテムは中継を叩かずに返し、表の差し替えに追従する', async () => {
+    const Local = () => null
+    const table: Record<string, typeof Local> = {}
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+    const loader = createDevItemLoader({ items: (itemId) => table[itemId] })
+
+    table['item-1'] = Local
+    const loaded = await loader.load('item-1')
+    expect(loaded.Item).toBe(Local)
+    expect(loaded.sceneUrl).toBe('/')
+    expect(fetchSpy).not.toHaveBeenCalled()
+    vi.unstubAllGlobals()
+  })
+
+  it('中継が JSON を返さなければ（Vite の index.html など）NOT_AVAILABLE', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } }),
+      ),
+    )
+    const loader = createDevItemLoader()
+    await expect(loader.load('item-1')).rejects.toMatchObject({ code: 'NOT_AVAILABLE' })
+    vi.unstubAllGlobals()
   })
 })

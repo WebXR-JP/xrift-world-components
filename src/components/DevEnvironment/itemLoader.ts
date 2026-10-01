@@ -10,12 +10,18 @@ import { buildDevShareScope } from './shareScope'
 /** 開発サーバー側（@xrift/sdk の Vite プラグイン）が API を中継するパス */
 export const DEV_ITEM_API_PREFIX = '/__xrift'
 
+/** itemId → ローカルのアイテムコンポーネント（表か、都度引く関数） */
+export type LocalItems =
+  | Record<string, ComponentType<ItemComponentProps>>
+  | ((itemId: string) => ComponentType<ItemComponentProps> | undefined)
+
 export interface DevItemLoaderOptions {
   /**
-   * itemId → ローカルのアイテムコンポーネント。アイテムとワールドを同時に作っているとき・
-   * まだアップロードしていないときに、本番の代わりに手元のソースを差し込む
+   * ローカルのアイテムコンポーネント。アイテムとワールドを同時に作っているとき・
+   * まだアップロードしていないときに、本番の代わりに手元のソースを差し込む。
+   * 関数を渡すと呼び出しのたびに引く（ローダーを作り直さずに表の差し替えに追従できる）
    */
-  items?: Record<string, ComponentType<ItemComponentProps>>
+  items?: LocalItems
   /** 中継先のパス（既定 '/__xrift'） */
   apiPrefix?: string
 }
@@ -74,20 +80,22 @@ async function loadFederatedItem(sceneUrl: string): Promise<LoadedItem> {
  * 失敗は覚えない（ログイン後にリロードせず置き直せるように）
  */
 export function createDevItemLoader(options: DevItemLoaderOptions = {}): ItemLoaderContextValue {
-  const { items = {}, apiPrefix = DEV_ITEM_API_PREFIX } = options
+  const { items, apiPrefix = DEV_ITEM_API_PREFIX } = options
+  const resolveLocal = (itemId: string) =>
+    typeof items === 'function' ? items(itemId) : items?.[itemId]
   const cache = new Map<string, Promise<LoadedItem>>()
 
   const resolveAndLoad = async (itemId: string): Promise<LoadedItem> => {
-    const local = items[itemId]
+    const local = resolveLocal(itemId)
     if (local) return { Item: local, sceneUrl: '/' }
 
     const response = await fetch(`${apiPrefix}/items/${encodeURIComponent(itemId)}/resolve`, {
       headers: { Accept: 'application/json' },
     })
-    if (!response.ok) {
-      // 中継が無いと Vite が index.html（text/html）を返す。API の 404 とは別物
-      const isProxyMissing = !(response.headers.get('content-type') ?? '').includes('application/json')
-      throw errorFromResolveStatus(response.status, isProxyMissing)
+    // 中継が無いと Vite が 404 のテキストや index.html（text/html）を返す。API の応答は必ず JSON
+    const isJson = (response.headers.get('content-type') ?? '').includes('application/json')
+    if (!response.ok || !isJson) {
+      throw errorFromResolveStatus(response.status, !isJson)
     }
     const resolved = (await response.json()) as ResolveResponse
     if (!resolved.sceneUrl) {

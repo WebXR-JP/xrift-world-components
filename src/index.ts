@@ -277,6 +277,7 @@ export {
   createDevItemLoader,
   DEV_ITEM_API_PREFIX,
   type DevItemLoaderOptions,
+  type LocalItems,
 } from './components/DevEnvironment/itemLoader'
 
 export {
