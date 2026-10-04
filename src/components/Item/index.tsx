@@ -9,12 +9,7 @@ import {
 } from '../../contexts/ItemLoaderContext'
 import { PlacementStateProvider } from '../../contexts/PlacementStateContext'
 import { XRiftContext, useXRift } from '../../contexts/XRiftContext'
-import {
-  baseUrlFromSceneUrl,
-  createPlacementIdRegistry,
-  defaultPlacementId,
-  placeholderLabel,
-} from './utils'
+import { baseUrlFromSceneUrl, createPlacementIdRegistry, placeholderLabel } from './utils'
 
 export interface ItemProps {
   /** 置くアイテムの id（マイアイテム・マーケットの URL 末尾）。xrift.json の `world.items` にも書く */
@@ -24,11 +19,13 @@ export interface ItemProps {
   rotation?: [number, number, number]
   scale?: number
   /**
-   * この配置の id（アイテム側の useItem().id）。省略時は itemId と置き方から決まる。
-   * 全クライアントで同じ値になることが要る（アイテムが共有状態のキーに使う）ので、
-   * 同じアイテムを同じ場所に2つ重ねるときだけ明示する
+   * この配置の名前（アイテム側の useItem().id）。ワールド内で一意にする（HTML の id 属性と同じ感覚）
+   *
+   * アイテムは共有状態（useInstanceState など）のキーにこれを使うので、全クライアントで同じ値で
+   * あることと、位置を動かしたり版を上げたりしても変わらないことが要る。自動で決めると
+   * （React の useId はツリー上の位置、置き方から組むと移動）どちらかが崩れるので作者が付ける
    */
-  id?: string
+  id: string
 }
 
 type LoadState =
@@ -96,7 +93,7 @@ function ItemBaseUrl({ sceneUrl, children }: { sceneUrl: string; children: React
  * ワールドに最初から置くアイテム（ユーザー作成アイテム）
  *
  * ```tsx
- * <Item itemId="xxxxxxxx-...." position={[2, 0, -3]} />
+ * <Item id="lamp-entrance" itemId="xxxxxxxx-...." position={[2, 0, -3]} />
  * ```
  *
  * - 本体の読み込みはプラットフォームが注入する（本番は xrift-frontend、ローカルは DevEnvironment）
@@ -104,29 +101,22 @@ function ItemBaseUrl({ sceneUrl, children }: { sceneUrl: string; children: React
  *   （先読みと訪問者の解決がその一覧から行われる）
  * - 読めるまで・読めないときは仮の箱（ワイヤーフレーム）と短い理由を出す
  * - アイテムから見た設置者（useItem().placedBy）は null（ワールドの一部で、置いた人がいない）
- * - useItem().id は itemId と置き方から決まる（全クライアントで同じ。defaultPlacementId）
+ * - useItem().id は id プロップ（作者が付けるワールド内で一意の名前）
  */
-export function Item({
-  itemId,
-  position = [0, 0, 0],
-  rotation = [0, 0, 0],
-  scale = 1,
-  id,
-}: ItemProps) {
+export function Item({ id, itemId, position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 }: ItemProps) {
   const loader = useItemLoaderContext()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
-  const placementId = id ?? defaultPlacementId(itemId, position, rotation, scale)
 
-  // 同じアイテムを同じ場所に同じ置き方で2つ置くと名札が重なり、共有状態を使うアイテムは
-  // 2つが連動した1つのように振る舞う。順番で振り直すと人ごとにずれるので、知らせるだけにする
+  // 同じ id を2つ書くと、共有状態を使うアイテムは2つが連動した1つのように振る舞う。
+  // 自動で振り直すとクライアントごとにずれるので、名前は変えずに知らせるだけにする
   useEffect(() => {
-    if (placementIds.register(placementId)) {
+    if (placementIds.register(id)) {
       console.warn(
-        `[Item] 同じ id の配置が重なっています（${placementId}）。同じアイテムを同じ場所に置くときは id プロップで別の名前を付けてください`,
+        `[Item] 同じ id の配置が重なっています（${id}）。<Item> の id はワールド内で一意にしてください`,
       )
     }
-    return () => placementIds.unregister(placementId)
-  }, [placementId])
+    return () => placementIds.unregister(id)
+  }, [id])
 
   useEffect(() => {
     let cancelled = false
@@ -150,7 +140,7 @@ export function Item({
   return (
     <group position={position} rotation={rotation} scale={scale}>
       {state.status === 'ready' ? (
-        <ItemProvider id={placementId} placedBy={null}>
+        <ItemProvider id={id} placedBy={null}>
           <ItemBaseUrl sceneUrl={state.loaded.sceneUrl}>
             <PlacementStateProvider mode="placed">
               <Suspense fallback={<ItemPlaceholder state={{ status: 'loading' }} />}>
