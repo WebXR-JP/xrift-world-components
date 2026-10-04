@@ -1,5 +1,5 @@
 import { Text } from '@react-three/drei'
-import { type ReactNode, Suspense, useEffect, useId, useMemo, useState } from 'react'
+import { type ReactNode, Suspense, useEffect, useMemo, useState } from 'react'
 import { ItemProvider } from '../../contexts/ItemContext'
 import {
   type ItemLoadError,
@@ -9,7 +9,7 @@ import {
 } from '../../contexts/ItemLoaderContext'
 import { PlacementStateProvider } from '../../contexts/PlacementStateContext'
 import { XRiftContext, useXRift } from '../../contexts/XRiftContext'
-import { baseUrlFromSceneUrl, placeholderLabel } from './utils'
+import { baseUrlFromSceneUrl, defaultPlacementId, placeholderLabel } from './utils'
 
 export interface ItemProps {
   /** 置くアイテムの id（マイアイテム・マーケットの URL 末尾）。xrift.json の `world.items` にも書く */
@@ -18,6 +18,12 @@ export interface ItemProps {
   /** オイラー角（ラジアン） */
   rotation?: [number, number, number]
   scale?: number
+  /**
+   * この配置の id（アイテム側の useItem().id）。省略時は itemId と置き方から決まる。
+   * 全クライアントで同じ値になることが要る（アイテムが共有状態のキーに使う）ので、
+   * 同じアイテムを同じ場所に2つ重ねるときだけ明示する
+   */
+  id?: string
 }
 
 type LoadState =
@@ -90,12 +96,18 @@ function ItemBaseUrl({ sceneUrl, children }: { sceneUrl: string; children: React
  *   （先読みと訪問者の解決がその一覧から行われる）
  * - 読めるまで・読めないときは仮の箱（ワイヤーフレーム）と短い理由を出す
  * - アイテムから見た設置者（useItem().placedBy）は null（ワールドの一部で、置いた人がいない）
+ * - useItem().id は itemId と置き方から決まる（全クライアントで同じ。defaultPlacementId）
  */
-export function Item({ itemId, position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 }: ItemProps) {
+export function Item({
+  itemId,
+  position = [0, 0, 0],
+  rotation = [0, 0, 0],
+  scale = 1,
+  id,
+}: ItemProps) {
   const loader = useItemLoaderContext()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
-  // 配置ごとに安定した id（同じアイテムを2か所に置いても useItem().id が別になる）
-  const id = useId()
+  const placementId = id ?? defaultPlacementId(itemId, position, rotation, scale)
 
   useEffect(() => {
     let cancelled = false
@@ -119,7 +131,7 @@ export function Item({ itemId, position = [0, 0, 0], rotation = [0, 0, 0], scale
   return (
     <group position={position} rotation={rotation} scale={scale}>
       {state.status === 'ready' ? (
-        <ItemProvider id={id} placedBy={null}>
+        <ItemProvider id={placementId} placedBy={null}>
           <ItemBaseUrl sceneUrl={state.loaded.sceneUrl}>
             <PlacementStateProvider mode="placed">
               <Suspense fallback={<ItemPlaceholder state={{ status: 'loading' }} />}>

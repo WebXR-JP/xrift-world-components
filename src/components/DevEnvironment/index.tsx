@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
@@ -86,7 +86,11 @@ export function DevEnvironment({
   // だけで再レンダーのたびに作り直され、キャッシュが消えて全部の <Item> が読み直す
   // （DevEnvironment は十字線のヒット判定で頻繁に再レンダーする）。表は ref から都度引く
   const itemsRef = useRef(items)
-  itemsRef.current = items
+  // 描画中に ref へ書かない（React の決まり）。ローダーが ref を読むのは <Item> の effect からなので、
+  // layout effect で写しておけば間に合う
+  useLayoutEffect(() => {
+    itemsRef.current = items
+  }, [items])
   const [itemLoader] = useState(() =>
     createDevItemLoader({ items: (itemId) => itemsRef.current?.[itemId] }),
   )

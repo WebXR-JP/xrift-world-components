@@ -26,3 +26,20 @@ export function placeholderLabel(status: 'loading' | 'error', code?: ItemLoadErr
       return 'Item: failed to load'
   }
 }
+
+/**
+ * 配置の id を itemId と置き方から決める（全クライアントで同じ値になる）
+ *
+ * useItem().id はアイテムが useInstanceState のキーなどに使う（「設置者だけが操作できる」等）。
+ * React の useId はツリー上の位置から決まるので、VR と PC で描画が分岐するワールドでは
+ * 人ごとにずれ、同じアイテムの共有状態が別物になる。置き方から組めば誰が見ても同じになる。
+ * 同じアイテムを同じ場所に2つ重ねるときは id プロップで明示する
+ */
+export function defaultPlacementId(
+  itemId: string,
+  position: readonly [number, number, number],
+  rotation: readonly [number, number, number],
+  scale: number,
+): string {
+  return `item:${itemId}:${position.join(',')}:${rotation.join(',')}:${scale}`
+}
