@@ -3,10 +3,15 @@
  *
  * アイテムのバンドルは react / three / fiber などをホストから受け取る前提でビルドされている。
  * xrift-frontend が本番で渡す表と同じ形・同じ版キーを、このワールドプロジェクトに
- * インストールされている実体で組む（版キーの理由は SHARED_IMPORTS のコメント）。
+ * インストールされている実体で組む（版キーは FEDERATION_SHARED_VERSIONS が正本）。
  *
  * 表にあるのは、このパッケージが依存しているもの（＝ワールド側に必ず入っているもの）だけ
  */
+
+import {
+  FEDERATION_SHARED_VERSIONS,
+  type FederationSharedName,
+} from '../../federationShared'
 
 type SharedModuleEntry = {
   get: () => Promise<() => unknown>
@@ -17,33 +22,27 @@ type SharedModuleEntry = {
 export type ShareScope = Record<string, Record<string, SharedModuleEntry>>
 
 /**
- * 版キーは本番（xrift-frontend）が渡す共有表と同じ値にする
+ * 共有する名前と、それを読む方法。版キーは FEDERATION_SHARED_VERSIONS（正本）から引く
  *
- * アイテムは `requiredVersion` でこのキーを照合する。いまのテンプレートは '*' だが、以前の
- * テンプレートで作ったアイテムは `^19.0.0` のような範囲を持っていて、'0.0.0' では満たせず
- * 同梱の fallback チャンク（配信されていない）を取りに行って 404 になる。
- * 公開済みのアイテムはこの表で動いている実績がある（frontend の DEV_SHARED_DEPENDENCIES）。
- * three/addons は requiredVersion を持たないので版キーは何でもよい
+ * 表にあるのは、このパッケージ自身が静的に import しているもの（＝ワールド側に必ず入っている）と
+ * three の一部だけ。入っていないパッケージを文字列で import() すると、実行時ではなく Vite の
+ * 依存最適化の時点で開発サーバーが起動しなくなるので、そういうものはこの表に入れない
+ * （react-dom はそれで外した。アイテムが react-dom を直接使うことはまず無い）
  */
-const SHARED_IMPORTS: Array<[name: string, version: string, load: () => Promise<unknown>]> = [
-  ['react', '19.1.1', () => import('react')],
-  ['react/jsx-runtime', '19.1.1', () => import('react/jsx-runtime')],
-  ['three', '0.176.0', () => import('three')],
-  // three の一部なので、three が入っていれば必ず解決できる
-  ['three/addons/loaders/GLTFLoader.js', '0.0.0', () => import('three/examples/jsm/loaders/GLTFLoader.js')],
-  ['three/addons/loaders/DRACOLoader.js', '0.0.0', () => import('three/examples/jsm/loaders/DRACOLoader.js')],
-  ['three/addons/loaders/KTX2Loader.js', '0.0.0', () => import('three/examples/jsm/loaders/KTX2Loader.js')],
-  ['@react-three/fiber', '9.3.0', () => import('@react-three/fiber')],
-  // ここから下はこのパッケージ自身が静的に import しているもの（ワールド側に必ず入っている）。
-  // 入っていないパッケージを文字列で import() すると、実行時ではなく Vite の依存最適化の時点で
-  // 開発サーバーが起動しなくなるので、そういうものはこの表に入れない（react-dom はそれで外した。
-  // アイテムが react-dom を直接使うことはまず無い）
-  ['@react-three/rapier', '2.1.0', () => import('@react-three/rapier')],
-  ['@react-three/drei', '10.7.3', () => import('@react-three/drei')],
-  ['@react-three/uikit', '1.0.64', () => import('@react-three/uikit')],
-  ['@pmndrs/uikit', '1.0.64', () => import('@pmndrs/uikit')],
+const SHARED_IMPORTS: Array<[name: FederationSharedName, load: () => Promise<unknown>]> = [
+  ['react', () => import('react')],
+  ['react/jsx-runtime', () => import('react/jsx-runtime')],
+  ['three', () => import('three')],
+  ['three/addons/loaders/GLTFLoader.js', () => import('three/examples/jsm/loaders/GLTFLoader.js')],
+  ['three/addons/loaders/DRACOLoader.js', () => import('three/examples/jsm/loaders/DRACOLoader.js')],
+  ['three/addons/loaders/KTX2Loader.js', () => import('three/examples/jsm/loaders/KTX2Loader.js')],
+  ['@react-three/fiber', () => import('@react-three/fiber')],
+  ['@react-three/rapier', () => import('@react-three/rapier')],
+  ['@react-three/drei', () => import('@react-three/drei')],
+  ['@react-three/uikit', () => import('@react-three/uikit')],
+  ['@pmndrs/uikit', () => import('@pmndrs/uikit')],
   // 自分自身。アイテムの useItem / Interactable などがワールドと同じ Context を見るために必須
-  ['@xrift/world-components', '0.1.0', () => import('../../index')],
+  ['@xrift/world-components', () => import('../../index')],
 ]
 
 let cached: Promise<ShareScope> | null = null
@@ -53,11 +52,15 @@ export function buildDevShareScope(): Promise<ShareScope> {
   cached = (async () => {
     const scope: ShareScope = {}
     await Promise.all(
-      SHARED_IMPORTS.map(async ([name, version, load]) => {
+      SHARED_IMPORTS.map(async ([name, load]) => {
         try {
           const module = await load()
           scope[name] = {
-            [version]: { get: async () => () => module, loaded: true, scope: 'default' },
+            [FEDERATION_SHARED_VERSIONS[name]]: {
+              get: async () => () => module,
+              loaded: true,
+              scope: 'default',
+            },
           }
         } catch {
           // 読めなかった依存は共有しない（アイテムがそれを使っていれば本番と同じく読み込みに失敗する）

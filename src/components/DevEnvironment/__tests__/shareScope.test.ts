@@ -2,6 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, expect, it } from 'vitest'
+import { FEDERATION_SHARED_VERSIONS } from '../../../federationShared'
 import { Item } from '../../Item'
 import { buildDevShareScope } from '../shareScope'
 
@@ -24,8 +25,13 @@ describe('buildDevShareScope', () => {
         'three/addons/loaders/KTX2Loader.js',
       ].sort(),
     )
+    // 版キーは正本の表と一致する（本番の xrift-frontend も同じ表を使う）
+    for (const [name, versions] of Object.entries(scope)) {
+      expect(Object.keys(versions)).toEqual([
+        FEDERATION_SHARED_VERSIONS[name as keyof typeof FEDERATION_SHARED_VERSIONS],
+      ])
+    }
     expect(Object.keys(scope.react)).toEqual(['19.1.1'])
-    expect(Object.keys(scope['@xrift/world-components'])).toEqual(['0.1.0'])
   })
 
   it('自分自身はワールドが import しているのと同じ実体を渡す（Context が別物にならない）', async () => {

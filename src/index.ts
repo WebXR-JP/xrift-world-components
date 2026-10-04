@@ -260,6 +260,8 @@ export { Portal, type PortalProps } from './components/Portal'
 
 export { Item, type ItemProps } from './components/Item'
 
+export { FEDERATION_SHARED_VERSIONS, type FederationSharedName } from './federationShared'
+
 export {
   ItemLoaderContext,
   ItemLoaderProvider,
