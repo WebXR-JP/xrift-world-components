@@ -19,13 +19,14 @@ export interface ItemProps {
   rotation?: [number, number, number]
   scale?: number
   /**
-   * この配置の名前（アイテム側の useItem().id）。ワールド内で一意にする（HTML の id 属性と同じ感覚）
+   * この配置の id（アイテム側には useItem().id として渡る）。ワールド内で一意にする
    *
-   * アイテムは共有状態（useInstanceState など）のキーにこれを使うので、全クライアントで同じ値で
-   * あることと、位置を動かしたり版を上げたりしても変わらないことが要る。自動で決めると
-   * （React の useId はツリー上の位置、置き方から組むと移動）どちらかが崩れるので作者が付ける
+   * itemId が「何を置くか」、placementId が「どの配置か」。アイテムは共有状態（useInstanceState など）
+   * のキーにこれを使うので、全クライアントで同じ値であることと、位置を動かしたり版を上げたりしても
+   * 変わらないことが要る。自動で決めると（React の useId はツリー上の位置、置き方から組むと移動）
+   * どちらかが崩れるので作者が付ける
    */
-  id: string
+  placementId: string
 }
 
 type LoadState =
@@ -93,7 +94,7 @@ function ItemBaseUrl({ sceneUrl, children }: { sceneUrl: string; children: React
  * ワールドに最初から置くアイテム（ユーザー作成アイテム）
  *
  * ```tsx
- * <Item id="lamp-entrance" itemId="xxxxxxxx-...." position={[2, 0, -3]} />
+ * <Item placementId="lamp-entrance" itemId="xxxxxxxx-...." position={[2, 0, -3]} />
  * ```
  *
  * - 本体の読み込みはプラットフォームが注入する（本番は xrift-frontend、ローカルは DevEnvironment）
@@ -101,22 +102,28 @@ function ItemBaseUrl({ sceneUrl, children }: { sceneUrl: string; children: React
  *   （先読みと訪問者の解決がその一覧から行われる）
  * - 読めるまで・読めないときは仮の箱（ワイヤーフレーム）と短い理由を出す
  * - アイテムから見た設置者（useItem().placedBy）は null（ワールドの一部で、置いた人がいない）
- * - useItem().id は id プロップ（作者が付けるワールド内で一意の名前）
+ * - useItem().id は placementId プロップ（作者が付けるワールド内で一意の名前）
  */
-export function Item({ id, itemId, position = [0, 0, 0], rotation = [0, 0, 0], scale = 1 }: ItemProps) {
+export function Item({
+  placementId,
+  itemId,
+  position = [0, 0, 0],
+  rotation = [0, 0, 0],
+  scale = 1,
+}: ItemProps) {
   const loader = useItemLoaderContext()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
 
-  // 同じ id を2つ書くと、共有状態を使うアイテムは2つが連動した1つのように振る舞う。
-  // 自動で振り直すとクライアントごとにずれるので、名前は変えずに知らせるだけにする
+  // 同じ placementId を2つ書くと、共有状態を使うアイテムは2つが連動した1つのように振る舞う。
+  // 自動で振り直すとクライアントごとにずれるので、値は変えずに知らせるだけにする
   useEffect(() => {
-    if (placementIds.register(id)) {
+    if (placementIds.register(placementId)) {
       console.warn(
-        `[Item] 同じ id の配置が重なっています（${id}）。<Item> の id はワールド内で一意にしてください`,
+        `[Item] 同じ placementId の配置が重なっています（${placementId}）。<Item> の placementId はワールド内で一意にしてください`,
       )
     }
-    return () => placementIds.unregister(id)
-  }, [id])
+    return () => placementIds.unregister(placementId)
+  }, [placementId])
 
   useEffect(() => {
     let cancelled = false
@@ -140,7 +147,7 @@ export function Item({ id, itemId, position = [0, 0, 0], rotation = [0, 0, 0], s
   return (
     <group position={position} rotation={rotation} scale={scale}>
       {state.status === 'ready' ? (
-        <ItemProvider id={id} placedBy={null}>
+        <ItemProvider id={placementId} placedBy={null}>
           <ItemBaseUrl sceneUrl={state.loaded.sceneUrl}>
             <PlacementStateProvider mode="placed">
               <Suspense fallback={<ItemPlaceholder state={{ status: 'loading' }} />}>
