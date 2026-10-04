@@ -258,6 +258,30 @@ export {
 
 export { Portal, type PortalProps } from './components/Portal'
 
+export { Item, type ItemProps } from './components/Item'
+
+export { FEDERATION_SHARED_VERSIONS, type FederationSharedName } from './federationShared'
+
+export {
+  ItemLoaderContext,
+  ItemLoaderProvider,
+  useItemLoaderContext,
+  createDefaultItemLoaderImplementation,
+  ItemLoadError,
+  toItemLoadError,
+  type ItemLoaderContextValue,
+  type ItemLoadErrorCode,
+  type LoadedItem,
+  type ItemComponentProps,
+} from './contexts/ItemLoaderContext'
+
+export {
+  createDevItemLoader,
+  DEV_ITEM_API_PREFIX,
+  type DevItemLoaderOptions,
+  type LocalItems,
+} from './components/DevEnvironment/itemLoader'
+
 export {
   BillboardY,
   useBillboardY,

@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
+import type { ItemComponentProps } from '../../contexts/ItemLoaderContext'
 
 export interface PhysicsConfig {
   /** 重力加速度（デフォルト: 9.81） */
@@ -16,6 +17,14 @@ export interface CameraConfig {
 
 export interface Props {
   children: ReactNode
+  /**
+   * `<Item itemId>` に差し込むローカルのアイテム（itemId → コンポーネント）
+   *
+   * アイテムとワールドを同時に作っているとき・まだアップロードしていないときに使う。
+   * 指定の無い itemId は、開発サーバーの中継（@xrift/sdk/vite の xriftDev()）経由で本番の
+   * バンドルを読む
+   */
+  items?: Record<string, ComponentType<ItemComponentProps>>
   /** カメラ設定 */
   camera?: { position?: [number, number, number]; fov?: number; near?: number; far?: number }
   /** 移動速度（デフォルト: 5.0） */

@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { GrabbableProvider } from '../../contexts/GrabbableContext'
+import { ItemLoaderProvider } from '../../contexts/ItemLoaderContext'
 import { SeatProvider } from '../../contexts/SeatContext'
 import { SpawnPointProvider } from '../../contexts/SpawnPointContext'
 import { UsersProvider, type UsersContextValue, type User } from '../../contexts/UsersContext'
@@ -33,6 +34,7 @@ import { CenterRaycaster } from './components/CenterRaycaster'
 import { Crosshair } from './components/Crosshair'
 import { PointerLockStatus } from './components/PointerLockStatus'
 import { ControlsHelp } from './components/ControlsHelp'
+import { createDevItemLoader } from './itemLoader'
 
 const DEV_LOCAL_USER: User = {
   id: DEV_LOCAL_USER_ID,
@@ -76,8 +78,22 @@ export function DevEnvironment({
   respawnThreshold = RESPAWN_Y_THRESHOLD,
   physicsConfig,
   outputBufferType: outputBufferTypeStr,
+  items,
 }: Props) {
   const [isHit, setIsHit] = useState(false)
+  // <Item itemId> の読み込み（差し込まれたローカルのソース → 開発サーバーの中継）。
+  // ローダーは1回だけ作る。items をそのまま依存に取ると、dev.tsx で items={{...}} と書いた
+  // だけで再レンダーのたびに作り直され、キャッシュが消えて全部の <Item> が読み直す
+  // （DevEnvironment は十字線のヒット判定で頻繁に再レンダーする）。表は ref から都度引く
+  const itemsRef = useRef(items)
+  // 描画中に ref へ書かない（React の決まり）。ローダーが ref を読むのは <Item> の effect からなので、
+  // layout effect で写しておけば間に合う
+  useLayoutEffect(() => {
+    itemsRef.current = items
+  }, [items])
+  const [itemLoader] = useState(() =>
+    createDevItemLoader({ items: (itemId) => itemsRef.current?.[itemId] }),
+  )
   // ローカル掴みストア（<Grabbable> の登録先 & 開発プレビュー用 GrabSystem の状態）
   const [grabStore] = useState(createDevGrabStore)
   // ローカル座席ストア（<Seat> / <Vehicle> の登録先 & 着席状態。単独プレイヤー用）
@@ -175,16 +191,18 @@ export function DevEnvironment({
               <UsersProvider implementation={usersImplementation}>
                 <GrabbableProvider implementation={grabStore.contextValue}>
                   <SeatProvider implementation={seatStore.contextValue}>
-                    <PhysicsPlayer
-                      moveSpeed={moveSpeed}
-                      spawnPosition={spawnPosition}
-                      respawnThreshold={respawnThreshold}
-                      allowInfiniteJump={allowInfiniteJump}
-                      movementRef={localMovementRef}
-                      seatStore={seatStore}
-                    />
-                    <GrabSystem store={grabStore} />
-                    {children}
+                    <ItemLoaderProvider value={itemLoader}>
+                      <PhysicsPlayer
+                        moveSpeed={moveSpeed}
+                        spawnPosition={spawnPosition}
+                        respawnThreshold={respawnThreshold}
+                        allowInfiniteJump={allowInfiniteJump}
+                        movementRef={localMovementRef}
+                        seatStore={seatStore}
+                      />
+                      <GrabSystem store={grabStore} />
+                      {children}
+                    </ItemLoaderProvider>
                   </SeatProvider>
                 </GrabbableProvider>
               </UsersProvider>
