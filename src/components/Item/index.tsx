@@ -9,7 +9,12 @@ import {
 } from '../../contexts/ItemLoaderContext'
 import { PlacementStateProvider } from '../../contexts/PlacementStateContext'
 import { XRiftContext, useXRift } from '../../contexts/XRiftContext'
-import { baseUrlFromSceneUrl, defaultPlacementId, placeholderLabel } from './utils'
+import {
+  baseUrlFromSceneUrl,
+  createPlacementIdRegistry,
+  defaultPlacementId,
+  placeholderLabel,
+} from './utils'
 
 export interface ItemProps {
   /** 置くアイテムの id（マイアイテム・マーケットの URL 末尾）。xrift.json の `world.items` にも書く */
@@ -44,6 +49,9 @@ function logLoadFailure(itemId: string, error: ItemLoadError): void {
 }
 const PLACEHOLDER_COLOR = '#8a8f98'
 const ERROR_COLOR = '#c0392b'
+
+/** 画面にある配置の名札。同じ名札が重なったら開発者に知らせる（名札は変えない） */
+const placementIds = createPlacementIdRegistry()
 
 function ItemPlaceholder({ state }: { state: Exclude<LoadState, { status: 'ready' }> }) {
   const color = state.status === 'error' ? ERROR_COLOR : PLACEHOLDER_COLOR
@@ -108,6 +116,17 @@ export function Item({
   const loader = useItemLoaderContext()
   const [state, setState] = useState<LoadState>({ status: 'loading' })
   const placementId = id ?? defaultPlacementId(itemId, position, rotation, scale)
+
+  // 同じアイテムを同じ場所に同じ置き方で2つ置くと名札が重なり、共有状態を使うアイテムは
+  // 2つが連動した1つのように振る舞う。順番で振り直すと人ごとにずれるので、知らせるだけにする
+  useEffect(() => {
+    if (placementIds.register(placementId)) {
+      console.warn(
+        `[Item] 同じ id の配置が重なっています（${placementId}）。同じアイテムを同じ場所に置くときは id プロップで別の名前を付けてください`,
+      )
+    }
+    return () => placementIds.unregister(placementId)
+  }, [placementId])
 
   useEffect(() => {
     let cancelled = false
