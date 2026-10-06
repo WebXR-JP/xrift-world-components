@@ -19,6 +19,9 @@ describe('errorFromResolveStatus', () => {
     expect(error.message).toBe('xrift.json の world.items に宣言されていません')
     // 知らない code は status から決める。code があって文言が無ければ code を保ち既定の文言を使う
     expect(errorFromResolveStatus(404, false, { code: 'SOMETHING', error: 'x' }).code).toBe('NOT_FOUND')
+    // プロトタイプの名前は code として受け付けない
+    expect(errorFromResolveStatus(404, false, { code: 'constructor', error: 'x' }).code).toBe('NOT_FOUND')
+    expect(errorFromResolveStatus(404, false, { code: 'toString' }).code).toBe('NOT_FOUND')
     const noMessage = errorFromResolveStatus(404, false, { code: 'NOT_DECLARED' })
     expect(noMessage.code).toBe('NOT_DECLARED')
     expect(noMessage.message).toContain('world.items')

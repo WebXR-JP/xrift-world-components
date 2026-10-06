@@ -55,7 +55,8 @@ const BODY_ERROR_MESSAGES = {
 type BodyErrorCode = keyof typeof BODY_ERROR_MESSAGES
 
 function isBodyErrorCode(value: unknown): value is BodyErrorCode {
-  return typeof value === 'string' && value in BODY_ERROR_MESSAGES
+  // `in` だと 'constructor' などプロトタイプの名前まで通ってしまうので、自前のキーだけ見る
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(BODY_ERROR_MESSAGES, value)
 }
 
 /**
