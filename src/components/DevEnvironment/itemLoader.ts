@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import {
   type ItemComponentProps,
   ItemLoadError,
+  type ItemLoadErrorCode,
   type ItemLoaderContextValue,
   type LoadedItem,
 } from '../../contexts/ItemLoaderContext'
@@ -39,12 +40,22 @@ interface ResolveErrorBody {
   error?: unknown
 }
 
-/** 本文の code として受け付ける理由。中継（開発サーバー）が本番と同じ理由を伝えてくるときに使う */
-const BODY_ERROR_CODES = ['NOT_DECLARED', 'NOT_FOUND', 'FORBIDDEN', 'LOGIN_REQUIRED'] as const
-type BodyErrorCode = (typeof BODY_ERROR_CODES)[number]
+/**
+ * 本文の code として受け付ける理由と、本文に文言が無いときの既定の文言。
+ * 中継（開発サーバー）が本番と同じ理由を伝えてくるときに使う。code だけで文言が無くても
+ * 理由は落とさない（NOT_DECLARED が NOT_FOUND に化けると、直し方が変わってしまう）
+ */
+const BODY_ERROR_MESSAGES = {
+  NOT_DECLARED: 'このアイテムは xrift.json の world.items に宣言されていません。追加してください',
+  NOT_FOUND: 'アイテムが見つかりません',
+  FORBIDDEN: 'このアイテムを使う権利がありません（自作かライブラリに入れたものだけ使えます）',
+  LOGIN_REQUIRED: 'ログインが必要です（xrift login を実行してください）',
+  LOAD_FAILED: 'アイテムの解決に失敗しました',
+} as const satisfies Partial<Record<ItemLoadErrorCode, string>>
+type BodyErrorCode = keyof typeof BODY_ERROR_MESSAGES
 
 function isBodyErrorCode(value: unknown): value is BodyErrorCode {
-  return typeof value === 'string' && (BODY_ERROR_CODES as readonly string[]).includes(value)
+  return typeof value === 'string' && value in BODY_ERROR_MESSAGES
 }
 
 /**
@@ -64,8 +75,10 @@ export function errorFromResolveStatus(
       'アイテムを読む中継（/__xrift）がありません。vite.config に @xrift/sdk/vite の xriftDev() を追加してください',
     )
   }
-  if (body && isBodyErrorCode(body.code) && typeof body.error === 'string' && body.error !== '') {
-    return new ItemLoadError(body.code, body.error)
+  if (body && isBodyErrorCode(body.code)) {
+    const message =
+      typeof body.error === 'string' && body.error !== '' ? body.error : BODY_ERROR_MESSAGES[body.code]
+    return new ItemLoadError(body.code, message)
   }
   if (status === 401) {
     return new ItemLoadError('LOGIN_REQUIRED', 'ログインが必要です（xrift login を実行してください）')
@@ -107,6 +120,25 @@ async function loadFederatedItem(sceneUrl: string): Promise<LoadedItem> {
 }
 
 /**
+ * xrift.json の world.items を中継（GET /__xrift/world-items。@xrift/sdk 0.2.0 以降）から読む
+ * @returns 宣言の一覧（小文字）。中継が無い・古い・宣言を見ない状態（items: null）は null
+ */
+async function fetchDeclaredItems(apiPrefix: string): Promise<ReadonlySet<string> | null> {
+  const response = await fetch(`${apiPrefix}/world-items`, { headers: { Accept: 'application/json' } })
+  const isJson = (response.headers.get('content-type') ?? '').includes('application/json')
+  if (!isJson) return null
+  if (!response.ok) {
+    // xrift.json が壊れているなど、中継が理由を伝えてきたときはそれを出す（黙って見ないことにしない）
+    const body = await readErrorBody(response, true)
+    if (body && isBodyErrorCode(body.code)) throw errorFromResolveStatus(response.status, false, body)
+    return null
+  }
+  const body = (await response.json()) as { items?: unknown }
+  if (!Array.isArray(body.items)) return null
+  return new Set(body.items.filter((id): id is string => typeof id === 'string').map((id) => id.toLowerCase()))
+}
+
+/**
  * ローカル開発（DevEnvironment）用のアイテム読み込み
  *
  * 1. `items` に差し込まれていればそれ（ローカルのソース）
@@ -121,10 +153,33 @@ export function createDevItemLoader(options: DevItemLoaderOptions = {}): ItemLoa
   const resolveLocal = (itemId: string) =>
     typeof items === 'function' ? items(itemId) : items?.[itemId]
   const cache = new Map<string, Promise<LoadedItem>>()
+  // 宣言の一覧は 1 回だけ読む（xrift.json を書き足したらリロードで効く。失敗は覚えない）
+  let declaredItems: Promise<ReadonlySet<string> | null> | undefined
+
+  const getDeclaredItems = () => {
+    declaredItems ??= fetchDeclaredItems(apiPrefix).catch((error: unknown) => {
+      declaredItems = undefined
+      // 中継が理由を伝えてきたもの（xrift.json が壊れている等）はそのまま出す。通信の失敗などは見ない扱い
+      if (error instanceof ItemLoadError) throw error
+      return null
+    })
+    return declaredItems
+  }
 
   const resolveAndLoad = async (itemId: string): Promise<LoadedItem> => {
     const local = resolveLocal(itemId)
-    if (local) return { Item: local, sceneUrl: '/' }
+    if (local) {
+      // ローカルのアイテムは中継を通らないので、宣言し忘れをここで本番と同じ理由で止める。
+      // 手元で動く→アップロードしたら箱、を避けるため。宣言の一覧が取れなければ見ない
+      const declared = await getDeclaredItems()
+      if (declared !== null && !declared.has(itemId.toLowerCase())) {
+        throw new ItemLoadError(
+          'NOT_DECLARED',
+          `アイテム ${itemId} は xrift.json の world.items に宣言されていません。本番では読まれないので、world.items に追加してください（ローカルのアイテムも同じ）`,
+        )
+      }
+      return { Item: local, sceneUrl: '/' }
+    }
 
     const response = await fetch(`${apiPrefix}/items/${encodeURIComponent(itemId)}/resolve`, {
       headers: { Accept: 'application/json' },
