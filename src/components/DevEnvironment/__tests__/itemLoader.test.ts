@@ -10,6 +10,18 @@ describe('errorFromResolveStatus', () => {
     expect(errorFromResolveStatus(500, false).code).toBe('LOAD_FAILED')
   })
 
+  it('本文に code があればそれを優先する（中継が「宣言されていない」を伝えてくる）', () => {
+    const error = errorFromResolveStatus(404, false, {
+      code: 'NOT_DECLARED',
+      error: 'xrift.json の world.items に宣言されていません',
+    })
+    expect(error.code).toBe('NOT_DECLARED')
+    expect(error.message).toBe('xrift.json の world.items に宣言されていません')
+    // 知らない code・本文なしは status から決める
+    expect(errorFromResolveStatus(404, false, { code: 'SOMETHING', error: 'x' }).code).toBe('NOT_FOUND')
+    expect(errorFromResolveStatus(404, false, { code: 'NOT_DECLARED' }).code).toBe('NOT_FOUND')
+  })
+
   it('中継が無い（JSON でない応答）ときは状態に関係なく NOT_AVAILABLE', () => {
     const error = errorFromResolveStatus(404, true)
     expect(error.code).toBe('NOT_AVAILABLE')
@@ -39,6 +51,23 @@ describe('createDevItemLoader', () => {
     expect(loaded.sceneUrl).toBe('/')
     expect(fetchSpy).not.toHaveBeenCalled()
     vi.unstubAllGlobals()
+  })
+
+  it('中継の失敗応答（JSON）の code を ItemLoadError に写す', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: 'NOT_DECLARED', error: '宣言されていません' }), {
+          status: 404,
+          headers: { 'content-type': 'application/json; charset=utf-8' },
+        }),
+      ),
+    )
+    const loader = createDevItemLoader()
+    await expect(loader.load('item-1')).rejects.toMatchObject({
+      code: 'NOT_DECLARED',
+      message: '宣言されていません',
+    })
   })
 
   it('中継が JSON を返さなければ（Vite の index.html など）NOT_AVAILABLE', async () => {

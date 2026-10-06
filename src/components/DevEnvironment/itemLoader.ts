@@ -33,13 +33,39 @@ interface ResolveResponse {
   status?: string
 }
 
-/** HTTP の失敗を ItemLoadError にする（status から理由を決める） */
-export function errorFromResolveStatus(status: number, isProxyMissing: boolean): ItemLoadError {
+/** 中継が JSON の本文で返す理由（@xrift/sdk の xriftDev が付ける） */
+interface ResolveErrorBody {
+  code?: unknown
+  error?: unknown
+}
+
+/** 本文の code として受け付ける理由。中継（開発サーバー）が本番と同じ理由を伝えてくるときに使う */
+const BODY_ERROR_CODES = ['NOT_DECLARED', 'NOT_FOUND', 'FORBIDDEN', 'LOGIN_REQUIRED'] as const
+type BodyErrorCode = (typeof BODY_ERROR_CODES)[number]
+
+function isBodyErrorCode(value: unknown): value is BodyErrorCode {
+  return typeof value === 'string' && (BODY_ERROR_CODES as readonly string[]).includes(value)
+}
+
+/**
+ * HTTP の失敗を ItemLoadError にする
+ *
+ * 本文に code があればそれを優先する（中継が「xrift.json に宣言されていない」のように、
+ * HTTP の状態だけでは区別できない理由を伝えてくるため）。無ければ status から決める
+ */
+export function errorFromResolveStatus(
+  status: number,
+  isProxyMissing: boolean,
+  body?: ResolveErrorBody,
+): ItemLoadError {
   if (isProxyMissing) {
     return new ItemLoadError(
       'NOT_AVAILABLE',
       'アイテムを読む中継（/__xrift）がありません。vite.config に @xrift/sdk/vite の xriftDev() を追加してください',
     )
+  }
+  if (body && isBodyErrorCode(body.code) && typeof body.error === 'string' && body.error !== '') {
+    return new ItemLoadError(body.code, body.error)
   }
   if (status === 401) {
     return new ItemLoadError('LOGIN_REQUIRED', 'ログインが必要です（xrift login を実行してください）')
@@ -51,6 +77,17 @@ export function errorFromResolveStatus(status: number, isProxyMissing: boolean):
     return new ItemLoadError('NOT_FOUND', 'アイテムが見つかりません')
   }
   return new ItemLoadError('LOAD_FAILED', `アイテムの解決に失敗しました（HTTP ${status}）`)
+}
+
+/** 失敗応答の JSON 本文（読めなければ undefined。理由は status から決める） */
+async function readErrorBody(response: Response, isJson: boolean): Promise<ResolveErrorBody | undefined> {
+  if (!isJson) return undefined
+  try {
+    const body: unknown = await response.json()
+    return body !== null && typeof body === 'object' ? (body as ResolveErrorBody) : undefined
+  } catch {
+    return undefined
+  }
 }
 
 /**
@@ -95,7 +132,7 @@ export function createDevItemLoader(options: DevItemLoaderOptions = {}): ItemLoa
     // 中継が無いと Vite が 404 のテキストや index.html（text/html）を返す。API の応答は必ず JSON
     const isJson = (response.headers.get('content-type') ?? '').includes('application/json')
     if (!response.ok || !isJson) {
-      throw errorFromResolveStatus(response.status, !isJson)
+      throw errorFromResolveStatus(response.status, !isJson, await readErrorBody(response, isJson))
     }
     const resolved = (await response.json()) as ResolveResponse
     if (!resolved.sceneUrl) {
