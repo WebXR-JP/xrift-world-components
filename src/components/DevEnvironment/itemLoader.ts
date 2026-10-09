@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 import {
   type ItemComponentProps,
   ItemLoadError,
+  type ItemLoadErrorCode,
   type ItemLoaderContextValue,
   type LoadedItem,
 } from '../../contexts/ItemLoaderContext'
@@ -33,13 +34,52 @@ interface ResolveResponse {
   status?: string
 }
 
-/** HTTP の失敗を ItemLoadError にする（status から理由を決める） */
-export function errorFromResolveStatus(status: number, isProxyMissing: boolean): ItemLoadError {
+/** 中継が JSON の本文で返す理由（@xrift/sdk の xriftDev が付ける） */
+interface ResolveErrorBody {
+  code?: unknown
+  error?: unknown
+}
+
+/**
+ * 本文の code として受け付ける理由と、本文に文言が無いときの既定の文言。
+ * 中継（開発サーバー）が本番と同じ理由を伝えてくるときに使う。code だけで文言が無くても
+ * 理由は落とさない（NOT_DECLARED が NOT_FOUND に化けると、直し方が変わってしまう）
+ */
+const BODY_ERROR_MESSAGES = {
+  NOT_DECLARED: 'このアイテムは xrift.json の world.items に宣言されていません。追加してください',
+  NOT_FOUND: 'アイテムが見つかりません',
+  FORBIDDEN: 'このアイテムを使う権利がありません（自作かライブラリに入れたものだけ使えます）',
+  LOGIN_REQUIRED: 'ログインが必要です（xrift login を実行してください）',
+  LOAD_FAILED: 'アイテムの解決に失敗しました',
+} as const satisfies Partial<Record<ItemLoadErrorCode, string>>
+type BodyErrorCode = keyof typeof BODY_ERROR_MESSAGES
+
+function isBodyErrorCode(value: unknown): value is BodyErrorCode {
+  // `in` だと 'constructor' などプロトタイプの名前まで通ってしまうので、自前のキーだけ見る
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(BODY_ERROR_MESSAGES, value)
+}
+
+/**
+ * HTTP の失敗を ItemLoadError にする
+ *
+ * 本文に code があればそれを優先する（中継が「xrift.json に宣言されていない」のように、
+ * HTTP の状態だけでは区別できない理由を伝えてくるため）。無ければ status から決める
+ */
+export function errorFromResolveStatus(
+  status: number,
+  isProxyMissing: boolean,
+  body?: ResolveErrorBody,
+): ItemLoadError {
   if (isProxyMissing) {
     return new ItemLoadError(
       'NOT_AVAILABLE',
       'アイテムを読む中継（/__xrift）がありません。vite.config に @xrift/sdk/vite の xriftDev() を追加してください',
     )
+  }
+  if (body && isBodyErrorCode(body.code)) {
+    const message =
+      typeof body.error === 'string' && body.error !== '' ? body.error : BODY_ERROR_MESSAGES[body.code]
+    return new ItemLoadError(body.code, message)
   }
   if (status === 401) {
     return new ItemLoadError('LOGIN_REQUIRED', 'ログインが必要です（xrift login を実行してください）')
@@ -51,6 +91,17 @@ export function errorFromResolveStatus(status: number, isProxyMissing: boolean):
     return new ItemLoadError('NOT_FOUND', 'アイテムが見つかりません')
   }
   return new ItemLoadError('LOAD_FAILED', `アイテムの解決に失敗しました（HTTP ${status}）`)
+}
+
+/** 失敗応答の JSON 本文（読めなければ undefined。理由は status から決める） */
+async function readErrorBody(response: Response, isJson: boolean): Promise<ResolveErrorBody | undefined> {
+  if (!isJson) return undefined
+  try {
+    const body: unknown = await response.json()
+    return body !== null && typeof body === 'object' ? (body as ResolveErrorBody) : undefined
+  } catch {
+    return undefined
+  }
 }
 
 /**
@@ -70,6 +121,25 @@ async function loadFederatedItem(sceneUrl: string): Promise<LoadedItem> {
 }
 
 /**
+ * xrift.json の world.items を中継（GET /__xrift/world-items。@xrift/sdk 0.2.0 以降）から読む
+ * @returns 宣言の一覧（小文字）。中継が無い・古い・宣言を見ない状態（items: null）は null
+ */
+async function fetchDeclaredItems(apiPrefix: string): Promise<ReadonlySet<string> | null> {
+  const response = await fetch(`${apiPrefix}/world-items`, { headers: { Accept: 'application/json' } })
+  const isJson = (response.headers.get('content-type') ?? '').includes('application/json')
+  if (!isJson) return null
+  if (!response.ok) {
+    // xrift.json が壊れているなど、中継が理由を伝えてきたときはそれを出す（黙って見ないことにしない）
+    const body = await readErrorBody(response, true)
+    if (body && isBodyErrorCode(body.code)) throw errorFromResolveStatus(response.status, false, body)
+    return null
+  }
+  const body = (await response.json()) as { items?: unknown }
+  if (!Array.isArray(body.items)) return null
+  return new Set(body.items.filter((id): id is string => typeof id === 'string').map((id) => id.toLowerCase()))
+}
+
+/**
  * ローカル開発（DevEnvironment）用のアイテム読み込み
  *
  * 1. `items` に差し込まれていればそれ（ローカルのソース）
@@ -84,10 +154,33 @@ export function createDevItemLoader(options: DevItemLoaderOptions = {}): ItemLoa
   const resolveLocal = (itemId: string) =>
     typeof items === 'function' ? items(itemId) : items?.[itemId]
   const cache = new Map<string, Promise<LoadedItem>>()
+  // 宣言の一覧は 1 回だけ読む（xrift.json を書き足したらリロードで効く。失敗は覚えない）
+  let declaredItems: Promise<ReadonlySet<string> | null> | undefined
+
+  const getDeclaredItems = () => {
+    declaredItems ??= fetchDeclaredItems(apiPrefix).catch((error: unknown) => {
+      declaredItems = undefined
+      // 中継が理由を伝えてきたもの（xrift.json が壊れている等）はそのまま出す。通信の失敗などは見ない扱い
+      if (error instanceof ItemLoadError) throw error
+      return null
+    })
+    return declaredItems
+  }
 
   const resolveAndLoad = async (itemId: string): Promise<LoadedItem> => {
     const local = resolveLocal(itemId)
-    if (local) return { Item: local, sceneUrl: '/' }
+    if (local) {
+      // ローカルのアイテムは中継を通らないので、宣言し忘れをここで本番と同じ理由で止める。
+      // 手元で動く→アップロードしたら箱、を避けるため。宣言の一覧が取れなければ見ない
+      const declared = await getDeclaredItems()
+      if (declared !== null && !declared.has(itemId.toLowerCase())) {
+        throw new ItemLoadError(
+          'NOT_DECLARED',
+          `アイテム ${itemId} は xrift.json の world.items に宣言されていません。本番では読まれないので、world.items に追加してください（ローカルのアイテムも同じ）`,
+        )
+      }
+      return { Item: local, sceneUrl: '/' }
+    }
 
     const response = await fetch(`${apiPrefix}/items/${encodeURIComponent(itemId)}/resolve`, {
       headers: { Accept: 'application/json' },
@@ -95,7 +188,7 @@ export function createDevItemLoader(options: DevItemLoaderOptions = {}): ItemLoa
     // 中継が無いと Vite が 404 のテキストや index.html（text/html）を返す。API の応答は必ず JSON
     const isJson = (response.headers.get('content-type') ?? '').includes('application/json')
     if (!response.ok || !isJson) {
-      throw errorFromResolveStatus(response.status, !isJson)
+      throw errorFromResolveStatus(response.status, !isJson, await readErrorBody(response, isJson))
     }
     const resolved = (await response.json()) as ResolveResponse
     if (!resolved.sceneUrl) {
