@@ -151,6 +151,14 @@ export {
   type ServerClockContextValue,
   type ServerClockAccuracy,
 } from './contexts/ServerClockContext'
+export {
+  ViewpointContext,
+  ViewpointProvider,
+  useViewpointContext,
+  createDefaultViewpointImplementation,
+  type ViewpointContextValue,
+  type Viewpoint,
+} from './contexts/ViewpointContext'
 
 export {
   GrabbableContext,
@@ -305,6 +313,7 @@ export { useInstanceEvent } from './hooks/useInstanceEvent'
 export { useSharedFile } from './hooks/useSharedFile'
 export { useWorldStorage } from './hooks/useWorldStorage'
 export { useServerClock, type UseServerClockResult } from './hooks/useServerClock'
+export { useViewpoint, type UseViewpointResult } from './hooks/useViewpoint'
 export {
   computeTargetTime,
   decideVideoSyncAction,
