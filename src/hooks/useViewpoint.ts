@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { type ViewpointContextValue, useViewpointContext } from '../contexts/ViewpointContext'
 
 export interface UseViewpointResult extends ViewpointContextValue {
@@ -31,8 +32,9 @@ export interface UseViewpointResult extends ViewpointContextValue {
  */
 export const useViewpoint = (): UseViewpointResult => {
   const context = useViewpointContext()
-  return {
-    ...context,
-    isThirdPerson: context.viewpoint === 'third-person',
-  }
+  // 視点が変わったときだけ参照を変える（戻り値を effect の依存に入れても毎回走らない）
+  return useMemo(
+    () => ({ ...context, isThirdPerson: context.viewpoint === 'third-person' }),
+    [context],
+  )
 }

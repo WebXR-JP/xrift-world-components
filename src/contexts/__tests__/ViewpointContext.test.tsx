@@ -68,6 +68,19 @@ describe('useViewpoint', () => {
     expect(latest?.isThirdPerson).toBe(false)
   })
 
+  it('注入側が同じオブジェクトを渡し続ける間は同じ参照を返す（effect の依存に入れても毎回走らない）', () => {
+    const implementation: ViewpointContextValue = {
+      viewpoint: 'third-person',
+      getViewpoint: () => 'third-person',
+    }
+    render(implementation)
+    const first = latest
+
+    render(implementation)
+
+    expect(latest).toBe(first)
+  })
+
   it('getViewpoint は注入側の関数をそのまま返す（useFrame から最新値を読める）', () => {
     let current: ViewpointContextValue['viewpoint'] = 'first-person'
     render({ viewpoint: 'first-person', getViewpoint: () => current })
