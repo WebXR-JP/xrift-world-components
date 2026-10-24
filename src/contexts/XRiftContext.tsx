@@ -63,6 +63,11 @@ import {
   type ServerClockContextValue,
 } from './ServerClockContext'
 import {
+  ViewpointProvider,
+  createDefaultViewpointImplementation,
+  type ViewpointContextValue,
+} from './ViewpointContext'
+import {
   createDefaultItemLoaderImplementation,
   type ItemLoaderContextValue,
   ItemLoaderProvider,
@@ -196,6 +201,11 @@ interface Props {
    */
   serverClockImplementation?: ServerClockContextValue
   /**
+   * 視点（一人称・三人称）の実装（オプション）
+   * 指定しない場合はデフォルト実装（常に一人称）が使用される
+   */
+  viewpointImplementation?: ViewpointContextValue
+  /**
    * ワールドに最初から置くアイテム（`<Item itemId>`）の読み込みの実装（オプション）
    * 指定しない場合はデフォルト実装（読めない＝仮の箱を出す）が使用される
    */
@@ -246,6 +256,7 @@ export const XRiftProvider = ({
   seatImplementation,
   worldStorageImplementation,
   serverClockImplementation,
+  viewpointImplementation,
   itemLoaderImplementation,
   placementMode,
   children,
@@ -325,6 +336,12 @@ export const XRiftProvider = ({
     [serverClockImplementation],
   )
 
+  // 視点の実装（指定がない場合はデフォルト実装 = 常に一人称）
+  const viewpointImpl = useMemo(
+    () => viewpointImplementation ?? createDefaultViewpointImplementation(),
+    [viewpointImplementation],
+  )
+
   // アイテム読み込みの実装（指定がない場合はデフォルト実装 = 読めない）
   const itemLoaderImpl = useMemo(
     () => itemLoaderImplementation ?? createDefaultItemLoaderImplementation(),
@@ -366,6 +383,7 @@ export const XRiftProvider = ({
     [AudioVolumeProvider, { value: audioVolumeImpl }],
     [WorldStorageProvider, { value: worldStorageImpl }],
     [ServerClockProvider, { value: serverClockImpl }],
+    [ViewpointProvider, { value: viewpointImpl }],
     [ItemLoaderProvider, { value: itemLoaderImpl }],
   ]
 
