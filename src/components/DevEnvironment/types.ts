@@ -6,6 +6,8 @@ export interface PhysicsConfig {
   gravity?: number
   /** 無限ジャンプを許可するか（デフォルト: true） */
   allowInfiniteJump?: boolean
+  /** この高さ（Y）を下回るとリスポーンする（デフォルト: -10）。xrift.json の physics.respawnThreshold */
+  respawnThreshold?: number
 }
 
 export interface CameraConfig {
@@ -33,7 +35,7 @@ export interface Props {
   shadows?: boolean
   /** スポーン位置（デフォルト: [0.11, 1.6, 7.59]） */
   spawnPosition?: [number, number, number]
-  /** リスポーンの高さ閾値（デフォルト: -10） */
+  /** リスポーンの高さ閾値（デフォルト: -10）。指定すると physicsConfig.respawnThreshold より優先する */
   respawnThreshold?: number
   /** 物理設定 */
   physicsConfig?: PhysicsConfig
