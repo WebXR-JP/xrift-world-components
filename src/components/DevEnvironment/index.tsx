@@ -75,7 +75,7 @@ export function DevEnvironment({
   moveSpeed = MOVE_SPEED,
   shadows = true,
   spawnPosition = DEFAULT_SPAWN_POSITION,
-  respawnThreshold = RESPAWN_Y_THRESHOLD,
+  respawnThreshold: respawnThresholdProp,
   physicsConfig,
   outputBufferType: outputBufferTypeStr,
   items,
@@ -156,6 +156,15 @@ export function DevEnvironment({
   const gravity = physicsConfig?.gravity ?? DEFAULT_GRAVITY
   const allowInfiniteJump =
     physicsConfig?.allowInfiniteJump ?? DEFAULT_ALLOW_INFINITE_JUMP
+  // xrift.json 由来の値は型どおりとは限らないので、本番（frontend の normalizeWorldPhysics）と同じく
+  // 有限の数値だけを使う。文字列などを素通しすると、ローカルと本番でリスポーンの高さが食い違う
+  const physicsRespawnThreshold = physicsConfig?.respawnThreshold
+  const respawnThreshold =
+    respawnThresholdProp ??
+    (typeof physicsRespawnThreshold === 'number' &&
+    Number.isFinite(physicsRespawnThreshold)
+      ? physicsRespawnThreshold
+      : RESPAWN_Y_THRESHOLD)
 
   const outputBufferType = toThreeOutputBufferType(outputBufferTypeStr)
   const glProps = useMemo(
