@@ -309,7 +309,12 @@ export { useFileInput } from './hooks/useFileInput'
 export { useTeleport } from './hooks/useTeleport'
 export { useInstance } from './hooks/useInstance'
 export { useWorld } from './hooks/useWorld'
-export { useInstanceEvent } from './hooks/useInstanceEvent'
+export {
+  useInstanceEvent,
+  type InstanceEvent,
+  type UserJoinedEventData,
+  type UserLeftEventData,
+} from './hooks/useInstanceEvent'
 export { useSharedFile } from './hooks/useSharedFile'
 export { useWorldStorage } from './hooks/useWorldStorage'
 export { useServerClock, type UseServerClockResult } from './hooks/useServerClock'
