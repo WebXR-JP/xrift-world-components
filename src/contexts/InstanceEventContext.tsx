@@ -8,35 +8,16 @@ export interface InstanceEventContextValue {
 }
 
 /**
- * 開発環境用のデフォルト実装（ローカル EventEmitter）
+ * 開発環境用のデフォルト実装
  * プラットフォーム側が WebSocket 実装を注入しない場合に使用される
+ *
+ * 本番ではカスタムイベントは送った本人には届かず、ほかの参加者にだけ届く。
+ * 開発環境にはほかの参加者が居ないので、送ったイベントはどこにも届かない
+ * （以前は送った本人に届いていたため、開発環境では動くのに本番で自分の画面に出ない、が起きていた）
  */
 export const createDefaultInstanceEventImplementation = (): InstanceEventContextValue => {
-  const listeners = new Map<string, Set<(data: unknown) => void>>()
-
-  const subscribe = (eventName: string, callback: (data: unknown) => void): (() => void) => {
-    if (!listeners.has(eventName)) {
-      listeners.set(eventName, new Set())
-    }
-    const set = listeners.get(eventName)!
-    set.add(callback)
-
-    return () => {
-      set.delete(callback)
-      if (set.size === 0) {
-        listeners.delete(eventName)
-      }
-    }
-  }
-
-  const emit = (eventName: string, data: unknown): void => {
-    const set = listeners.get(eventName)
-    if (!set) return
-    for (const cb of set) {
-      cb(data)
-    }
-  }
-
+  const subscribe = (): (() => void) => () => {}
+  const emit = (): void => {}
   return { subscribe, emit }
 }
 
