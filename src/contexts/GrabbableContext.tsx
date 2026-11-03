@@ -34,6 +34,11 @@ export interface GrabbableEntry {
   onMove: (transform: GrabResultTransform) => void
   /** 対象の現在姿勢を返す（最新値。掴み始めに参照される） */
   getTransform: () => Required<GrabbableTransform>
+  /**
+   * 掴んで動かした位置をプラットフォームが共有するか（省略時は true）。
+   * false なら掴んでいる様子も離した位置も自分の画面だけになる
+   */
+  sync?: boolean
 }
 
 /**
@@ -47,8 +52,20 @@ export interface GrabbableContextValue {
   unregisterGrabbable: (id: string) => void
   /** 現在掴まれている grabbable ID を返す（なければ null） */
   getGrabbedId: () => string | null
-  /** 掴まれている ID の変化を購読する（useSyncExternalStore 互換） */
+  /** 掴み状態の変化を購読する（useSyncExternalStore 互換） */
   subscribeGrabbedId: (listener: () => void) => () => void
+  /**
+   * 自分かほかの誰かが掴んでいるかを返す。
+   * 未実装のプラットフォームでは getGrabbedId（自分が掴んでいるか）で代用される
+   */
+  isHeld?: (id: string) => boolean
+  /**
+   * プラットフォームが共有している「離した位置」（ワールド座標）を返す。まだ誰も動かしていなければ null。
+   * 同じ位置の間は同じ参照を返すこと（useSyncExternalStore のスナップショットに使う）
+   */
+  getSyncedTransform?: (id: string) => GrabResultTransform | null
+  /** 共有している「離した位置」の変化を購読する（useSyncExternalStore 互換） */
+  subscribeSyncedTransform?: (listener: () => void) => () => void
 }
 
 /**

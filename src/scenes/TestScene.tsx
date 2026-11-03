@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useRef } from "react"
 import { useFrame } from "@react-three/fiber"
 import { CuboidCollider, RigidBody } from "@react-three/rapier"
 import type { IntersectionEnterPayload } from "@react-three/rapier"
@@ -15,16 +15,13 @@ const GRABBABLE_BALL_INITIAL: GrabbableTransform = {
   rotation: { x: 0, y: 0, z: 0 },
 }
 
-/** Grabbable の動作確認用ボール（G で掴む → ホイールで距離 → クリックで置く） */
+/**
+ * Grabbable の動作確認用ボール（G で掴む → ホイールで距離 → クリックで置く）
+ * 離した位置はプラットフォームが持つので、state も onMove も要らない
+ */
 function GrabbableBall() {
-  const [transform, setTransform] = useState(GRABBABLE_BALL_INITIAL)
-
   return (
-    <Grabbable
-      id="test-ball"
-      transform={transform}
-      onMove={(next) => setTransform((prev) => ({ ...prev, ...next }))}
-    >
+    <Grabbable id="test-ball" transform={GRABBABLE_BALL_INITIAL}>
       <mesh>
         <sphereGeometry args={[0.3, 32, 16]} />
         <meshStandardMaterial color="gold" metalness={0.5} roughness={0.3} />

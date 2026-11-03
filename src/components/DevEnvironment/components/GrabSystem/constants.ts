@@ -10,9 +10,6 @@ export const MAX_HOLD_DISTANCE = 10.0
 /** ホイール1ノッチあたりの距離変化[m] */
 export const WHEEL_DISTANCE_STEP = 0.5
 
-/** ゴーストの不透明度 */
-export const GRAB_GHOST_OPACITY = 0.5
-
 /** レイキャストを間引くフレーム間隔（パフォーマンス対策） */
 export const RAYCAST_FRAME_INTERVAL = 5
 

@@ -143,4 +143,56 @@ describe('createDevGrabStore', () => {
     store.grab('box', { x: 0, y: 1, z: 0 })
     expect(listener).toHaveBeenCalledTimes(2)
   })
+
+  describe('離した位置の共有', () => {
+    it('sync の対象を離すと離した位置を持ち、購読者に知らせる', () => {
+      const store = createDevGrabStore()
+      store.contextValue.registerGrabbable('box', createEntry())
+      const listener = vi.fn()
+      store.contextValue.subscribeSyncedTransform?.(listener)
+
+      store.grab('box', { x: 0, y: 1, z: 0 })
+      store.updateHeldPosition({ x: 1, y: 2, z: 3 })
+      store.release()
+
+      expect(listener).toHaveBeenCalledTimes(1)
+      expect(store.contextValue.getSyncedTransform?.('box')).toEqual({
+        position: { x: 1, y: 2, z: 3 },
+        rotation: { x: 0, y: 0.5, z: 0 },
+      })
+    })
+
+    it('sync: false の対象は離した位置を持たず、onMove だけ呼ぶ', () => {
+      const store = createDevGrabStore()
+      const onMove = vi.fn()
+      store.contextValue.registerGrabbable('box', createEntry({ sync: false, onMove }))
+
+      store.grab('box', { x: 0, y: 1, z: 0 })
+      store.release()
+
+      expect(onMove).toHaveBeenCalledTimes(1)
+      expect(store.contextValue.getSyncedTransform?.('box')).toBeNull()
+    })
+
+    it('キャンセルでは離した位置を持たない', () => {
+      const store = createDevGrabStore()
+      store.contextValue.registerGrabbable('box', createEntry())
+
+      store.grab('box', { x: 0, y: 1, z: 0 })
+      store.cancel()
+
+      expect(store.contextValue.getSyncedTransform?.('box')).toBeNull()
+    })
+
+    it('isHeld は掴んでいる対象だけ true', () => {
+      const store = createDevGrabStore()
+      store.contextValue.registerGrabbable('box', createEntry())
+      store.contextValue.registerGrabbable('ball', createEntry())
+
+      store.grab('box', { x: 0, y: 1, z: 0 })
+
+      expect(store.contextValue.isHeld?.('box')).toBe(true)
+      expect(store.contextValue.isHeld?.('ball')).toBe(false)
+    })
+  })
 })
