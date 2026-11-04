@@ -21,6 +21,7 @@ import {
   DEV_AVATAR_HEIGHT,
   DEV_EYE_HEIGHT,
 } from '../constants'
+import { isGameKeyEvent } from '../utils'
 import type { DevSeatStore } from './DevSeat/store'
 import {
   DEV_SEAT_CAMERA_FORWARD_CLEARANCE,
@@ -102,17 +103,7 @@ export function PhysicsPlayer({
   }, [])
 
   useEffect(() => {
-    const shouldHandle = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey) return false
-      if (event.isComposing) return false
-      const target = event.target as HTMLElement
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) return false
-      return true
-    }
+    const shouldHandle = isGameKeyEvent
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!shouldHandle(event)) return
