@@ -9,6 +9,7 @@ import {
   RAYCAST_FRAME_INTERVAL,
   WHEEL_DISTANCE_STEP,
 } from './constants'
+import { isGameKeyEvent } from '../../utils'
 import { prepareHeldDisplay } from './heldDisplay'
 import type { DevGrabStore } from './store'
 import { computeHeldPosition, findFirstGrabbableId } from './utils'
@@ -76,6 +77,8 @@ function GrabInputHandler({ store }: Props) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.repeat) return
       if (e.key !== GRAB_KEY && e.key !== GRAB_KEY.toUpperCase()) return
+      // 入力欄で g を打っている間は掴まない・置かない
+      if (!isGameKeyEvent(e)) return
       e.preventDefault()
       grabOrRelease()
     }
