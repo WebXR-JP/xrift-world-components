@@ -1,6 +1,6 @@
 import { Euler, Matrix4, Quaternion, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { decomposeWorldTransform, worldToLocalTransform } from '../utils'
+import { decomposeWorldTransform, nextPoseSource, poseKey, worldToLocalTransform } from '../utils'
 
 describe('decomposeWorldTransform', () => {
   it('単位行列は原点・無回転・スケール1', () => {
@@ -78,5 +78,42 @@ describe('worldToLocalTransform', () => {
       new Euler(back.rotation.x, back.rotation.y, back.rotation.z),
     )
     expect(Math.abs(backQuat.dot(localQuat))).toBeCloseTo(1)
+  })
+})
+
+describe('nextPoseSource', () => {
+  it('共有している位置が無ければ transform', () => {
+    expect(nextPoseSource('synced', false, true, false)).toBe('transform')
+  })
+
+  it('誰かが離した（共有している位置が変わった）ら共有している位置', () => {
+    expect(nextPoseSource('transform', true, true, false)).toBe('synced')
+  })
+
+  it('ワールドが transform を変えたら transform（初期位置に戻すボタンなど）', () => {
+    expect(nextPoseSource('synced', true, false, true)).toBe('transform')
+  })
+
+  it('両方変わったら共有している位置', () => {
+    expect(nextPoseSource('transform', true, true, true)).toBe('synced')
+  })
+
+  it('どちらも変わらなければ前回のまま', () => {
+    expect(nextPoseSource('transform', true, false, false)).toBe('transform')
+    expect(nextPoseSource('synced', true, false, false)).toBe('synced')
+  })
+})
+
+describe('poseKey', () => {
+  it('値が同じなら別のオブジェクトでも同じキー', () => {
+    const a = { position: { x: 1, y: 2, z: 3 }, rotation: { x: 0, y: 0.5, z: 0 } }
+    const b = { position: { x: 1, y: 2, z: 3 }, rotation: { x: 0, y: 0.5, z: 0 } }
+    expect(poseKey(a)).toBe(poseKey(b))
+  })
+
+  it('値が違えば違うキー', () => {
+    const a = { position: { x: 1, y: 2, z: 3 }, rotation: { x: 0, y: 0, z: 0 } }
+    const b = { position: { x: 1, y: 2, z: 4 }, rotation: { x: 0, y: 0, z: 0 } }
+    expect(poseKey(a)).not.toBe(poseKey(b))
   })
 })

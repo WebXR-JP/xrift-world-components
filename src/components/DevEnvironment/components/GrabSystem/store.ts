@@ -1,4 +1,8 @@
-import type { GrabbableContextValue, GrabbableEntry } from '../../../../contexts/GrabbableContext'
+import type {
+  GrabbableContextValue,
+  GrabbableEntry,
+  GrabResultTransform,
+} from '../../../../contexts/GrabbableContext'
 import type { Position3D, Rotation3D } from '../../../../types/movement'
 import { clampHoldDistance, distanceBetween } from './utils'
 
@@ -36,7 +40,7 @@ export interface DevGrabStore {
   adjustHoldDistance: (delta: number) => void
   /** ゴーストが毎フレーム書き込む（通知なし・getState で読む高頻度パターン） */
   updateHeldPosition: (position: Position3D) => void
-  /** 確定して離す（onMove で新しい姿勢をワールド側へ通知） */
+  /** 確定して離す（sync なら離した位置を持ち、onMove で新しい姿勢をワールド側へ通知） */
   release: () => void
   /** キャンセルして離す（onMove は呼ばない＝元位置のまま） */
   cancel: () => void
@@ -49,6 +53,9 @@ const IDLE_PARTIAL = { phase: 'idle', grabbedId: null, hoveredId: null } as cons
 export function createDevGrabStore(): DevGrabStore {
   const registry = new Map<string, GrabbableEntry>()
   const listeners = new Set<() => void>()
+  // 本番ではプラットフォームがインスタンスの全員に共有する「離した位置」。開発環境は1人なので手元に持つだけ
+  const syncedTransforms = new Map<string, GrabResultTransform>()
+  const syncedListeners = new Set<() => void>()
 
   let state: DevGrabState = {
     phase: 'idle',
@@ -102,7 +109,12 @@ export function createDevGrabStore(): DevGrabStore {
     release: () => {
       if (state.phase !== 'holding' || !state.grabbedId) return
       const entry = registry.get(state.grabbedId)
-      entry?.onMove({ position: state.heldPosition, rotation: state.heldRotation })
+      const released = { position: state.heldPosition, rotation: state.heldRotation }
+      if (entry && entry.sync !== false) {
+        syncedTransforms.set(state.grabbedId, released)
+        for (const listener of syncedListeners) listener()
+      }
+      entry?.onMove(released)
       setState(IDLE_PARTIAL)
     },
     cancel: () => {
@@ -123,6 +135,12 @@ export function createDevGrabStore(): DevGrabStore {
       subscribeGrabbedId: (listener) => {
         listeners.add(listener)
         return () => listeners.delete(listener)
+      },
+      isHeld: (id) => state.grabbedId === id,
+      getSyncedTransform: (id) => syncedTransforms.get(id) ?? null,
+      subscribeSyncedTransform: (listener) => {
+        syncedListeners.add(listener)
+        return () => syncedListeners.delete(listener)
       },
     },
   }

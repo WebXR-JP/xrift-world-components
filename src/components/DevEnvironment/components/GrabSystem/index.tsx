@@ -9,7 +9,7 @@ import {
   RAYCAST_FRAME_INTERVAL,
   WHEEL_DISTANCE_STEP,
 } from './constants'
-import { applyGrabGhostAppearance } from './ghostAppearance'
+import { prepareHeldDisplay } from './heldDisplay'
 import type { DevGrabStore } from './store'
 import { computeHeldPosition, findFirstGrabbableId } from './utils'
 
@@ -123,7 +123,7 @@ function GrabInputHandler({ store }: Props) {
 }
 
 /**
- * 掴んでいる対象を視点前方に浮かせて表示するゴースト（半透明）
+ * 掴んでいる対象を視点前方に浮かせて表示する代わり（物理なし）
  * 掴んだ時点の回転・スケールを維持し、位置だけ毎フレーム更新する
  * 位置は確定用に heldPosition としてストアへ書き込む
  */
@@ -151,7 +151,7 @@ function GrabbedObjectGhost({ store }: Props) {
     group.visible = true
 
     store.updateHeldPosition(position)
-    applyGrabGhostAppearance(group)
+    prepareHeldDisplay(group)
   })
 
   if (!grabbedId || !entry) return null
