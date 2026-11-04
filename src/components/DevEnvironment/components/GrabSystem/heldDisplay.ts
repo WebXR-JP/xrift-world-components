@@ -7,7 +7,7 @@ import { LAYERS } from '../../../../constants/layers'
  * レイキャスト対象にならないようにする（子が遅延マウントされるため毎フレーム）。
  * 本番と同じく半透明にはしない（実体を手に持っているように見せる）
  */
-export function applyGrabGhostAppearance(group: Object3D): void {
+export function prepareHeldDisplay(group: Object3D): void {
   group.traverse((obj) => {
     obj.layers.disable(LAYERS.GRABBABLE)
     obj.layers.disable(LAYERS.INTERACTABLE)

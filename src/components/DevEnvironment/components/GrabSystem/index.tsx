@@ -9,7 +9,7 @@ import {
   RAYCAST_FRAME_INTERVAL,
   WHEEL_DISTANCE_STEP,
 } from './constants'
-import { applyGrabGhostAppearance } from './ghostAppearance'
+import { prepareHeldDisplay } from './heldDisplay'
 import type { DevGrabStore } from './store'
 import { computeHeldPosition, findFirstGrabbableId } from './utils'
 
@@ -151,7 +151,7 @@ function GrabbedObjectGhost({ store }: Props) {
     group.visible = true
 
     store.updateHeldPosition(position)
-    applyGrabGhostAppearance(group)
+    prepareHeldDisplay(group)
   })
 
   if (!grabbedId || !entry) return null

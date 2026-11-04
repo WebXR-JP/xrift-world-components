@@ -56,3 +56,32 @@ export function worldToLocalTransform(
     rotation: { x: localEuler.x, y: localEuler.y, z: localEuler.z },
   }
 }
+
+/** どちらの姿勢を当てるか（ワールドの transform prop か、プラットフォームが共有している位置か） */
+export type PoseSource = 'transform' | 'synced'
+
+/**
+ * 当てる姿勢を、あとから変わったほうに決める。
+ * - 共有している位置が変わった（誰かが離した）→ 共有している位置
+ * - transform prop の値が変わった（ワールドが初期位置に戻した・onMove で丸めた）→ transform
+ * - 両方変わった（初回・onMove で state にも入れているワールドが離した直後）→ 共有している位置
+ * - どちらも変わっていない → 前回のまま
+ * 共有している位置が無ければ常に transform
+ */
+export function nextPoseSource(
+  previous: PoseSource,
+  hasSynced: boolean,
+  syncedChanged: boolean,
+  transformChanged: boolean,
+): PoseSource {
+  if (!hasSynced) return 'transform'
+  if (syncedChanged) return 'synced'
+  if (transformChanged) return 'transform'
+  return previous
+}
+
+/** transform prop の値の比較用キー（毎レンダー新しいオブジェクトで渡されても、値が同じなら同じ） */
+export function poseKey(pose: { position: Position3D; rotation: Rotation3D }): string {
+  const { position: p, rotation: r } = pose
+  return `${p.x},${p.y},${p.z},${r.x},${r.y},${r.z}`
+}

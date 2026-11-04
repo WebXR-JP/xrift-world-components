@@ -4,7 +4,13 @@ import { LAYERS } from '../../constants/layers'
 import { type GrabResultTransform, useGrabbableContext } from '../../contexts/GrabbableContext'
 import { GRABBABLE_USER_DATA_KEY } from './constants'
 import type { Props } from './types'
-import { decomposeWorldTransform, worldToLocalTransform } from './utils'
+import {
+  decomposeWorldTransform,
+  nextPoseSource,
+  type PoseSource,
+  poseKey,
+  worldToLocalTransform,
+} from './utils'
 
 /**
  * 子オブジェクトを「掴める」と宣言するラッパー（<Interactable> と同じ明示オプトイン）
@@ -110,12 +116,30 @@ export const Grabbable: FC<Props> = ({
     }
   }, [id, enabled, sync, registerGrabbable, unregisterGrabbable])
 
-  // 姿勢はここで当てる。共有している位置はワールド座標なので、親から見たローカルに直す
+  // 姿勢はここで当てる。共有している位置と transform prop のうち、あとから変わったほうを使う
+  // （ワールドが初期位置に戻したときなどに transform が効くように）。
+  // 共有している位置はワールド座標なので、親から見たローカルに直す
   // （親の matrixWorld が要るため、描画後のこのタイミングで当てる）
+  const appliedRef = useRef<{
+    source: PoseSource
+    synced: GrabResultTransform | null
+    transformKey: string | null
+  }>({ source: 'transform', synced: null, transformKey: null })
   useLayoutEffect(() => {
     const group = groupRef.current
     if (!group) return
-    const local = syncedTransform ? toParentLocal(group, syncedTransform) : transform
+    const applied = appliedRef.current
+    const transformKey = poseKey(transform)
+    const source = nextPoseSource(
+      applied.source,
+      syncedTransform !== null,
+      syncedTransform !== applied.synced,
+      transformKey !== applied.transformKey,
+    )
+    appliedRef.current = { source, synced: syncedTransform, transformKey }
+
+    const local =
+      source === 'synced' && syncedTransform ? toParentLocal(group, syncedTransform) : transform
     group.position.set(local.position.x, local.position.y, local.position.z)
     group.rotation.set(local.rotation.x, local.rotation.y, local.rotation.z)
   }, [syncedTransform, transform])
