@@ -52,11 +52,11 @@ function GrabRaycaster({ store }: Props) {
 }
 
 /**
- * 掴む/離す/距離調整/キャンセルの入力を処理する
- * - G: 狙っている対象を掴む / 掴み中なら確定して離す
- * - クリック: 掴み中なら確定して離す
+ * 掴む/置く/距離調整の入力を処理する（本番プラットフォームと同じ操作）
+ * - G: 狙っている対象を掴む / 掴み中ならいまの位置に置く
  * - ホイール: 保持距離を増減（上スクロールで遠ざける）
- * - Esc（ポインターロック解除）: キャンセル（元位置）
+ * - Esc・タブの切り替え（ポインターロック解除）: 持ったまま（元の位置へは戻さない）
+ * - クリック: 使わない（ロックの取り直し・インタラクトと取り合うため）
  */
 function GrabInputHandler({ store }: Props) {
   const camera = useThree((s) => s.camera)
@@ -80,42 +80,21 @@ function GrabInputHandler({ store }: Props) {
       grabOrRelease()
     }
 
-    // クリックでの確定（ロック取得のためのクリックを誤検出しないよう mousedown 時のロック状態を見る）
-    let wasLockedOnMouseDown = false
-    const handleMouseDown = () => {
-      wasLockedOnMouseDown = !!document.pointerLockElement
-    }
-    const handleClick = () => {
-      if (store.getState().phase !== 'holding') return
-      if (!wasLockedOnMouseDown) return
-      store.release()
-    }
-
     const handleWheel = (e: WheelEvent) => {
       if (store.getState().phase !== 'holding') return
+      // ロックが外れている間（持ったまま Esc した後など）は画面のスクロールに譲る
+      if (!document.pointerLockElement) return
       e.preventDefault()
       // 上スクロール（deltaY<0）で遠ざける
       const delta = e.deltaY < 0 ? WHEEL_DISTANCE_STEP : -WHEEL_DISTANCE_STEP
       store.adjustHoldDistance(delta)
     }
 
-    // Esc 等でポインターロックが外れたらキャンセル（元位置のまま）
-    const handlePointerLockChange = () => {
-      if (document.pointerLockElement) return
-      store.cancel()
-    }
-
     window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('mousedown', handleMouseDown)
-    window.addEventListener('click', handleClick)
     window.addEventListener('wheel', handleWheel, { passive: false })
-    document.addEventListener('pointerlockchange', handlePointerLockChange)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('mousedown', handleMouseDown)
-      window.removeEventListener('click', handleClick)
       window.removeEventListener('wheel', handleWheel)
-      document.removeEventListener('pointerlockchange', handlePointerLockChange)
     }
   }, [store, camera])
 
