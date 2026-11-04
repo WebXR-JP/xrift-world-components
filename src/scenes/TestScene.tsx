@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useCallback, useRef, useState } from "react"
 import { useFrame } from "@react-three/fiber"
 import { CuboidCollider, RigidBody } from "@react-three/rapier"
 import type { IntersectionEnterPayload } from "@react-three/rapier"
@@ -16,7 +16,7 @@ const GRABBABLE_BALL_INITIAL: GrabbableTransform = {
 }
 
 /**
- * Grabbable の動作確認用ボール（G で掴む → ホイールで距離 → クリックで置く）
+ * Grabbable の動作確認用ボール（G で掴む → ホイールで距離 → G で置く）
  * 離した位置はプラットフォームが持つので、state も onMove も要らない
  */
 function GrabbableBall() {
@@ -25,6 +25,38 @@ function GrabbableBall() {
       <mesh>
         <sphereGeometry args={[0.3, 32, 16]} />
         <meshStandardMaterial color="gold" metalness={0.5} roughness={0.3} />
+      </mesh>
+    </Grabbable>
+  )
+}
+
+const GRABBABLE_GUN_INITIAL: GrabbableTransform = {
+  position: { x: 3, y: 0.5, z: -2 },
+  rotation: { x: 0, y: 0, z: 0 },
+}
+
+/**
+ * 「使う」（onUseStart / onUseEnd）の動作確認用の棒。
+ * 掴んでクリックを押している間だけ赤く光る（押す・離すの両方が届くか）
+ */
+function UsableStick() {
+  const [isUsing, setIsUsing] = useState(false)
+  const handleUseStart = useCallback(() => setIsUsing(true), [])
+  const handleUseEnd = useCallback(() => setIsUsing(false), [])
+  return (
+    <Grabbable
+      id="test-usable-stick"
+      transform={GRABBABLE_GUN_INITIAL}
+      onUseStart={handleUseStart}
+      onUseEnd={handleUseEnd}
+    >
+      <mesh>
+        <boxGeometry args={[0.08, 0.08, 0.5]} />
+        <meshStandardMaterial
+          color={isUsing ? "#ff3b30" : "#8e8e93"}
+          emissive={isUsing ? "#ff3b30" : "#000000"}
+          emissiveIntensity={isUsing ? 0.8 : 0}
+        />
       </mesh>
     </Grabbable>
   )
@@ -168,6 +200,7 @@ export function TestScene() {
 
       {/* 掴めるボール */}
       <GrabbableBall />
+      <UsableStick />
 
       {/* 椅子（座る → Space で降りる） */}
       <Stool />

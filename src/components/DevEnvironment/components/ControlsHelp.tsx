@@ -50,6 +50,9 @@ export function ControlsHelp() {
         <Kbd>G</Kbd> 掴む / 置く（Grabbable）
       </div>
       <div>
+        <Kbd>Click</Kbd> 掴み中は使う（onUseStart / onUseEnd）
+      </div>
+      <div>
         <Kbd>Click</Kbd> 座る（Seat / Vehicle の運転席）
       </div>
       <div>

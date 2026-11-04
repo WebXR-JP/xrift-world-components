@@ -1,5 +1,9 @@
 import type { ReactNode } from 'react'
-import type { GrabbableTransform, GrabResultTransform } from '../../contexts/GrabbableContext'
+import type {
+  GrabbableTransform,
+  GrabResultTransform,
+  GrabUseEvent,
+} from '../../contexts/GrabbableContext'
 
 export interface Props {
   /** 掴める対象の一意なID */
@@ -27,6 +31,17 @@ export interface Props {
    * 子に物理（RigidBody 等）を含む場合は物理なし版を必ず指定すること
    */
   renderGhost?: () => ReactNode
+  /**
+   * 持っている間に「使う」を押したとき（デスクトップはクリック、スマホは「使う」ボタン、VR は持っている手のトリガー）。
+   * 銃を撃つ・殴る・ためる などをここで始める。姿勢は transform・onMove と同じローカル座標。
+   * 呼ばれるのは持っている本人の画面だけなので、ほかの人に見せる動作は useInstanceEvent などで送る
+   */
+  onUseStart?: (event: GrabUseEvent) => void
+  /**
+   * 「使う」を離したとき（連射を止める・ためを放つ など）。
+   * 押している途中で置いたとき・ほかの操作で使えなくなったときにも呼ばれる
+   */
+  onUseEnd?: (event: GrabUseEvent) => void
   /** 掴めるかどうか（false で一時的に掴めなくする） */
   enabled?: boolean
   /** 子要素（3Dオブジェクト・ローカル座標で書く） */
