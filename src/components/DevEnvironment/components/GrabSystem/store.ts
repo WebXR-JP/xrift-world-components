@@ -22,6 +22,8 @@ export interface DevGrabState {
   heldRotation: Rotation3D
   /** 掴んだ時点のスケール */
   heldScale: number
+  /** 「使う」を押している最中か（離す・置くときに onUseEnd を必ず呼ぶため） */
+  isUsing: boolean
 }
 
 /**
@@ -44,11 +46,20 @@ export interface DevGrabStore {
   release: () => void
   /** キャンセルして離す（onMove は呼ばない＝元位置のまま） */
   cancel: () => void
+  /** 持っている物を「使う」を押す（onUseStart。持っていなければ何もしない） */
+  useStart: () => void
+  /** 「使う」を離す（onUseEnd。押していなければ何もしない） */
+  useEnd: () => void
   /** <Grabbable> / GrabbableProvider に渡す実装 */
   contextValue: GrabbableContextValue
 }
 
-const IDLE_PARTIAL = { phase: 'idle', grabbedId: null, hoveredId: null } as const
+const IDLE_PARTIAL = {
+  phase: 'idle',
+  grabbedId: null,
+  hoveredId: null,
+  isUsing: false,
+} as const
 
 export function createDevGrabStore(): DevGrabStore {
   const registry = new Map<string, GrabbableEntry>()
@@ -65,6 +76,20 @@ export function createDevGrabStore(): DevGrabStore {
     heldPosition: { x: 0, y: 0, z: 0 },
     heldRotation: { x: 0, y: 0, z: 0 },
     heldScale: 1,
+    isUsing: false,
+  }
+
+  /** 「使う」のイベント（開発環境は右手で持つ。姿勢はワールド座標） */
+  const useEvent = () => ({
+    hand: 'right' as const,
+    transform: { position: state.heldPosition, rotation: state.heldRotation },
+  })
+
+  /** 押している最中なら onUseEnd を呼んで押していない状態に戻す（離す・置くときに必ず通す） */
+  const endUse = () => {
+    if (!state.isUsing || !state.grabbedId) return
+    registry.get(state.grabbedId)?.onUseEnd?.(useEvent())
+    state = { ...state, isUsing: false }
   }
 
   const setState = (partial: Partial<DevGrabState>) => {
@@ -108,6 +133,7 @@ export function createDevGrabStore(): DevGrabStore {
     },
     release: () => {
       if (state.phase !== 'holding' || !state.grabbedId) return
+      endUse()
       const entry = registry.get(state.grabbedId)
       const released = { position: state.heldPosition, rotation: state.heldRotation }
       if (entry && entry.sync !== false) {
@@ -119,7 +145,17 @@ export function createDevGrabStore(): DevGrabStore {
     },
     cancel: () => {
       if (state.phase !== 'holding') return
+      endUse()
       setState(IDLE_PARTIAL)
+    },
+    useStart: () => {
+      if (state.phase !== 'holding' || !state.grabbedId || state.isUsing) return
+      const entry = registry.get(state.grabbedId)
+      state = { ...state, isUsing: true }
+      entry?.onUseStart?.(useEvent())
+    },
+    useEnd: () => {
+      endUse()
     },
     contextValue: {
       registerGrabbable: (id, entry) => {

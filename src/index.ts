@@ -169,6 +169,8 @@ export {
   type GrabbableEntry,
   type GrabbableTransform,
   type GrabResultTransform,
+  type GrabHand,
+  type GrabUseEvent,
 } from './contexts/GrabbableContext'
 export {
   SeatContext,

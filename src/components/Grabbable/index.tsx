@@ -30,6 +30,8 @@ export const Grabbable: FC<Props> = ({
   transform,
   onMove,
   renderGhost,
+  onUseStart,
+  onUseEnd,
   enabled = true,
   sync = true,
   children,
@@ -63,9 +65,13 @@ export const Grabbable: FC<Props> = ({
   const transformRef = useRef(transform)
   const onMoveRef = useRef(onMove)
   const renderGhostRef = useRef(renderGhost)
+  const onUseStartRef = useRef(onUseStart)
+  const onUseEndRef = useRef(onUseEnd)
   const childrenRef = useRef(children)
   transformRef.current = transform
   onMoveRef.current = onMove
+  onUseStartRef.current = onUseStart
+  onUseEndRef.current = onUseEnd
   renderGhostRef.current = renderGhost
   childrenRef.current = children
 
@@ -86,16 +92,22 @@ export const Grabbable: FC<Props> = ({
       // GrabSystem はワールド座標で確定位置を返すため、ローカル（transform prop と同じ空間）へ
       // 変換してからユーザーの onMove に渡す。変形された親の下に置いてもズレない
       onMove: (world) => {
-        const handleMove = onMoveRef.current
-        if (!handleMove) return
-        const parent = groupRef.current?.parent
-        if (!parent) {
-          handleMove(world)
-          return
-        }
-        parent.updateWorldMatrix(true, false)
-        handleMove(worldToLocalTransform(world.position, world.rotation, parent.matrixWorld))
+        onMoveRef.current?.(toLocalOfParent(groupRef.current, world))
       },
+      // 「使う」もプラットフォームからはワールド座標で届くので、onMove と同じローカルに直して渡す
+      onUseStart: (event) => {
+        onUseStartRef.current?.({
+          hand: event.hand,
+          transform: toLocalOfParent(groupRef.current, event.transform),
+        })
+      },
+      onUseEnd: (event) => {
+        onUseEndRef.current?.({
+          hand: event.hand,
+          transform: toLocalOfParent(groupRef.current, event.transform),
+        })
+      },
+      canUse: () => onUseStartRef.current !== undefined || onUseEndRef.current !== undefined,
       // GrabSystem 向けにはワールド姿勢を返す（掴み距離・ゴーストの初期姿勢に使われる）。
       // group 未マウント時のみ transform prop（ローカル）にフォールバック
       getTransform: () => {
@@ -139,7 +151,7 @@ export const Grabbable: FC<Props> = ({
     appliedRef.current = { source, synced: syncedTransform, transformKey }
 
     const local =
-      source === 'synced' && syncedTransform ? toParentLocal(group, syncedTransform) : transform
+      source === 'synced' && syncedTransform ? toLocalOfParent(group, syncedTransform) : transform
     group.position.set(local.position.x, local.position.y, local.position.z)
     group.rotation.set(local.rotation.x, local.rotation.y, local.rotation.z)
   }, [syncedTransform, transform])
@@ -158,9 +170,12 @@ export const Grabbable: FC<Props> = ({
 
 const noopSubscribe = () => () => {}
 
-/** ワールド座標の姿勢を、group の親から見たローカル姿勢に直す（親が無ければそのまま） */
-function toParentLocal(group: Group, world: GrabResultTransform): GrabResultTransform {
-  const parent = group.parent
+/**
+ * GrabSystem からワールド座標で届く姿勢を、transform prop と同じ空間（group の親のローカル）に直す。
+ * 変形された親の下に置いてもズレない。group が未マウント・親が無ければそのまま
+ */
+function toLocalOfParent(group: Group | null, world: GrabResultTransform): GrabResultTransform {
+  const parent = group?.parent
   if (!parent) return world
   parent.updateWorldMatrix(true, false)
   return worldToLocalTransform(world.position, world.rotation, parent.matrixWorld)

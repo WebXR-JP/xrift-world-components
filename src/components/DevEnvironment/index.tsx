@@ -96,6 +96,8 @@ export function DevEnvironment({
   )
   // ローカル掴みストア（<Grabbable> の登録先 & 開発プレビュー用 GrabSystem の状態）
   const [grabStore] = useState(createDevGrabStore)
+  // 掴んでいる間はクリックが「使う」になるので、インタラクトしない（本番と同じ）
+  const canInteract = useCallback(() => grabStore.getState().phase !== 'holding', [grabStore])
   // ローカル座席ストア（<Seat> / <Vehicle> の登録先 & 着席状態。単独プレイヤー用）
   const [seatStore] = useState(createDevSeatStore)
   const isPointerLocked = useSyncExternalStore(
@@ -193,7 +195,7 @@ export function DevEnvironment({
         gl={glProps}
       >
         <PointerLockControls />
-        <CenterRaycaster onHitChange={handleHitChange} />
+        <CenterRaycaster onHitChange={handleHitChange} canInteract={canInteract} />
         <Physics gravity={[0, -gravity, 0]} timeStep="vary">
           <XRiftContext.Provider value={xriftContextValue}>
             <SpawnPointProvider>

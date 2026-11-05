@@ -22,6 +22,23 @@ export interface GrabResultTransform {
   rotation: Rotation3D
 }
 
+/** 掴んでいる手（デスクトップ・スマホは右手） */
+export type GrabHand = 'left' | 'right'
+
+/**
+ * 掴んでいる物を「使う」（デスクトップはクリック、スマホは「使う」ボタン、VR はトリガー）ときに渡す情報
+ */
+export interface GrabUseEvent {
+  /** 使った手 */
+  hand: GrabHand
+  /**
+   * 使った瞬間の、持っている物の姿勢。
+   * <Grabbable> の onUseStart / onUseEnd では transform・onMove と同じ親から見たローカル座標、
+   * GrabbableEntry（プラットフォーム向け）ではワールド座標
+   */
+  transform: GrabResultTransform
+}
+
 /**
  * <Grabbable> がプラットフォームに登録する情報
  * プラットフォーム側の GrabSystem はこれを使って
@@ -39,6 +56,15 @@ export interface GrabbableEntry {
    * false なら掴んでいる様子も離した位置も自分の画面だけになる
    */
   sync?: boolean
+  /**
+   * 持っている間に「使う」を押したとき（ワールド座標で渡す）。
+   * 呼ぶのは持っている本人の画面だけ。押したら、離す・置く・使えなくなるときに onUseEnd を必ず呼ぶこと
+   */
+  onUseStart?: (event: GrabUseEvent) => void
+  /** 「使う」を離したとき（ワールド座標で渡す） */
+  onUseEnd?: (event: GrabUseEvent) => void
+  /** 「使う」の動作が書かれているか（スマホの「使う」ボタンを薄くするかに使う）。最新の値を返す */
+  canUse?: () => boolean
 }
 
 /**

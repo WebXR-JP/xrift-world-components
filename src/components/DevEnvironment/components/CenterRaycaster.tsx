@@ -6,11 +6,13 @@ import { LAYERS } from '../../../constants/layers'
 
 interface Props {
   onHitChange: (hit: boolean) => void
+  /** false を返す間はクリックしてもインタラクトしない（物を掴んでいる間はクリックが「使う」になる） */
+  canInteract?: () => boolean
 }
 
 const NDC_CENTER = new Vector2(0, 0)
 
-export function CenterRaycaster({ onHitChange }: Props) {
+export function CenterRaycaster({ onHitChange, canInteract }: Props) {
   const { camera, scene } = useThree()
   const raycasterRef = useRef(new Raycaster())
   const currentHitRef = useRef<Object3D | null>(null)
@@ -18,6 +20,7 @@ export function CenterRaycaster({ onHitChange }: Props) {
 
   useEffect(() => {
     const handleClick = () => {
+      if (canInteract && !canInteract()) return
       let node = currentHitRef.current
       while (node) {
         const userData = node.userData as {
@@ -35,7 +38,7 @@ export function CenterRaycaster({ onHitChange }: Props) {
     return () => {
       window.removeEventListener('mousedown', handleClick)
     }
-  }, [])
+  }, [canInteract])
 
   useFrame(() => {
     const raycaster = raycasterRef.current
