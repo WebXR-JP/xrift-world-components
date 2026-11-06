@@ -19,15 +19,16 @@ export type Props = BaseProps &
 export type PortalTarget = { kind: 'instance'; id: string } | { kind: 'world'; id: string }
 
 /** ポータルに表示する行き先の情報（instance と world の差を吸収したもの） */
-export interface PortalInfo {
-  kind: PortalTarget['kind']
-  worldName: string
-  thumbnailUrl: string | null
-  /** 部屋名（instance のときだけ） */
-  instanceName?: string
-  currentUsers?: number
-  maxCapacity?: number
-}
+export type PortalInfo =
+  | {
+      kind: 'instance'
+      worldName: string
+      thumbnailUrl: string | null
+      instanceName: string
+      currentUsers: number
+      maxCapacity: number
+    }
+  | { kind: 'world'; worldName: string; thumbnailUrl: string | null }
 
 export interface PortalUniforms {
   uTime: { value: number }

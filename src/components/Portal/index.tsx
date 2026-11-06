@@ -33,8 +33,8 @@ export const Portal = (props: Props) => {
 
   const target = useMemo(() => resolvePortalTarget({ instanceId, worldId }), [instanceId, worldId])
   const { info, notFound, navigateWithConfirm } = usePortalTarget(target)
-  // 行き先が無い・取れないときはくぐれない（落とさず表示だけ残す）
-  const canEnter = !disabled && !notFound && target !== null
+  // 行き先の指定が無ければくぐれない。取れなかっただけなら、くぐったときに取り直す（一時的な失敗からの復帰）
+  const canEnter = !disabled && target !== null
 
   return (
     <group position={position} rotation={rotation}>
@@ -61,8 +61,8 @@ export const Portal = (props: Props) => {
       />
       <PortalPedestal onEnter={canEnter ? navigateWithConfirm : undefined} />
 
-      {/* 行き先が取れない */}
-      {(notFound || target === null) && (
+      {/* 行き先が取れない（指定が無いときもここ。info とは排他） */}
+      {notFound && (
         <BillboardY>
           <Text
             position={[0, LABEL_BASE_Y + 0.3, 0]}
@@ -78,7 +78,7 @@ export const Portal = (props: Props) => {
       )}
 
       {/* ワールド名・部屋名（部屋行きのときだけ 2 行目） */}
-      {info && (
+      {!notFound && info && (
         <BillboardY>
           <Text
             position={[0, LABEL_BASE_Y + 0.3, 0]}
@@ -90,7 +90,7 @@ export const Portal = (props: Props) => {
           >
             {info.worldName}
           </Text>
-          {info.instanceName !== undefined && (
+          {info.kind === 'instance' && (
             <Text
               position={[0, LABEL_BASE_Y + 0.17, 0]}
               fontSize={0.07}

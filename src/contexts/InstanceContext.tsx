@@ -20,13 +20,14 @@ export interface InstanceInfo {
 export interface InstanceContextValue {
   /** instanceId からインスタンス情報を取得 */
   getInstanceInfo: (instanceId: string) => Promise<InstanceInfo>
-  /** 指定インスタンスへ遷移 */
-  navigateToInstance: (instanceId: string) => void
+  /** 指定インスタンスへ遷移（非同期でもよい。失敗は reject で返す） */
+  navigateToInstance: (instanceId: string) => void | Promise<void>
   /**
    * 指定ワールドへ遷移。入る部屋（公開の部屋に合流／無ければ新しく）はプラットフォームが決める。
-   * 部屋は空になると消えるので、ポータルの行き先は原則こちら（instanceId は常設の部屋専用）
+   * 部屋は空になると消えるので、ポータルの行き先は原則こちら（instanceId は常設の部屋専用）。
+   * 非同期でもよい。失敗（満員・レート制限など）は reject で返す
    */
-  navigateToWorld: (worldId: string) => void
+  navigateToWorld: (worldId: string) => void | Promise<void>
 }
 
 /**

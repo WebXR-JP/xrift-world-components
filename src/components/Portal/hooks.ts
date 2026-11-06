@@ -29,7 +29,8 @@ export const usePortalProps = (props: Props) => {
 
 /**
  * 行き先（部屋 or ワールド）の情報取得と、確認付きの移動。
- * 行き先が取れない（消えた部屋・無いワールド）ときは落とさず notFound にする
+ * 行き先が取れない（消えた部屋・無いワールド）ときは落とさず notFound にする。
+ * notFound でもくぐれば取り直すので、一時的な失敗なら復帰する
  */
 export const usePortalTarget = (target: PortalTarget | null) => {
   const { getInstanceInfo, navigateToInstance, navigateToWorld } = useInstanceContext()
@@ -65,18 +66,28 @@ export const usePortalTarget = (target: PortalTarget | null) => {
     }
   }, [fetchInfo])
 
-  // 確認モーダル付きの移動（最新の人数を出すため取り直す）
+  // 確認モーダル付きの移動。最新の人数を出すため取り直す（マウント時に取れなかった行き先の再試行も兼ねる）
   const navigateWithConfirm = useCallback(async () => {
     if (!targetKind || !targetId) return
+    let latest: PortalInfo
     try {
-      const latest = await fetchInfo()
+      latest = await fetchInfo()
+    } catch (err) {
+      console.warn('[Portal] 行き先の情報を取得できませんでした:', err)
+      setInfo(null)
+      setNotFound(true)
+      return
+    }
+    setInfo(latest)
+    setNotFound(false)
+    try {
       const confirmed = await requestConfirm(buildPortalConfirmOptions(latest))
       if (!confirmed) return
-      if (targetKind === 'instance') navigateToInstance(targetId)
-      else navigateToWorld(targetId)
+      if (targetKind === 'instance') await navigateToInstance(targetId)
+      else await navigateToWorld(targetId)
     } catch (err) {
+      // 移動の失敗（満員・レート制限など）は一時的なことが多いので、行き先不明にはしない
       console.warn('[Portal] 移動できませんでした:', err)
-      setNotFound(true)
     }
   }, [targetKind, targetId, fetchInfo, requestConfirm, navigateToInstance, navigateToWorld])
 
