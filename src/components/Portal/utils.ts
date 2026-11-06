@@ -1,3 +1,8 @@
+import type { ConfirmOptions } from '../../contexts/ConfirmContext'
+import type { InstanceInfo } from '../../contexts/InstanceContext'
+import type { WorldInfo } from '../../contexts/WorldContext'
+import type { PortalInfo, PortalTarget } from './types'
+
 /**
  * パーティクルの初期位置を生成する
  * 渦巻き軌道上にランダムに配置
@@ -34,3 +39,46 @@ export const generateParticleVelocities = (count: number): Float32Array => {
 
   return velocities
 }
+
+/**
+ * Props から行き先を決める。instanceId があればそれを優先し、どちらも無ければ null
+ */
+export const resolvePortalTarget = (props: {
+  instanceId?: string
+  worldId?: string
+}): PortalTarget | null => {
+  if (props.instanceId) return { kind: 'instance', id: props.instanceId }
+  if (props.worldId) return { kind: 'world', id: props.worldId }
+  return null
+}
+
+/** インスタンス情報を表示用にそろえる */
+export const toPortalInfoFromInstance = (info: InstanceInfo): PortalInfo => ({
+  kind: 'instance',
+  worldName: info.world.name,
+  thumbnailUrl: info.world.thumbnailUrl,
+  instanceName: info.name,
+  currentUsers: info.currentUsers,
+  maxCapacity: info.maxCapacity,
+})
+
+/** ワールド情報を表示用にそろえる */
+export const toPortalInfoFromWorld = (info: WorldInfo): PortalInfo => ({
+  kind: 'world',
+  worldName: info.name,
+  thumbnailUrl: info.thumbnailUrl,
+})
+
+/**
+ * くぐる前の確認モーダルの文面。
+ * 部屋行きは部屋名と人数を出す。ワールド行きは入る部屋がその場で決まるので出さない
+ */
+export const buildPortalConfirmOptions = (info: PortalInfo): ConfirmOptions => ({
+  title: info.worldName,
+  message:
+    info.kind === 'instance'
+      ? `「${info.instanceName}」に移動しますか？\n👥 ${info.currentUsers}/${info.maxCapacity}`
+      : 'このワールドに移動しますか？',
+  confirmLabel: '移動する',
+  cancelLabel: 'キャンセル',
+})
