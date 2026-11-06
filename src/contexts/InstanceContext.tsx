@@ -22,6 +22,11 @@ export interface InstanceContextValue {
   getInstanceInfo: (instanceId: string) => Promise<InstanceInfo>
   /** 指定インスタンスへ遷移 */
   navigateToInstance: (instanceId: string) => void
+  /**
+   * 指定ワールドへ遷移。入る部屋（公開の部屋に合流／無ければ新しく）はプラットフォームが決める。
+   * 部屋は空になると消えるので、ポータルの行き先は原則こちら（instanceId は常設の部屋専用）
+   */
+  navigateToWorld: (worldId: string) => void
 }
 
 /**
@@ -54,6 +59,7 @@ export const createDefaultInstanceImplementation = (): InstanceContextValue => (
   },
   navigateToInstance: (instanceId) =>
     console.log('[Instance] navigateToInstance called', instanceId),
+  navigateToWorld: (worldId) => console.log('[Instance] navigateToWorld called', worldId),
 })
 
 /**
