@@ -105,10 +105,10 @@ export interface GrabbableContextValue {
    */
   isHeld?: (id: string) => boolean
   /**
-   * 自分が掴んでいるかを返す（両手で持てるプラットフォーム向け）。
-   * 未実装のプラットフォームでは getGrabbedId で代用される
+   * 自分がどちらかの手で掴んでいるかを返す。
+   * getGrabbedId は1つしか返さないので、両手で持つときの判定にはこちらを使う
    */
-  isHeldByMe?: (id: string) => boolean
+  isHeldByMe: (id: string) => boolean
   /**
    * プラットフォームが共有している「離した位置」（ワールド座標）を返す。まだ誰も動かしていなければ null。
    * 同じ位置の間は同じ参照を返すこと（useSyncExternalStore のスナップショットに使う）
@@ -134,6 +134,7 @@ export const createDefaultGrabbableImplementation = (): GrabbableContextValue =>
     },
     getGrabbedId: () => null,
     subscribeGrabbedId: () => () => {},
+    isHeldByMe: () => false,
   }
 }
 

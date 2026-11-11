@@ -56,6 +56,7 @@
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.4.0",
     "@react-three/rapier": "^2.2.0",
+    "@react-three/test-renderer": "^9.1.1",
     "@react-three/uikit": "^1.0.62",
     "@triplex/api": "^0.1.4",
     "@types/react": "^19.2.18",

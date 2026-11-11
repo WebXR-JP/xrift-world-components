@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, type FC } from 'react'
-import type { Group, Object3D } from 'three'
+import type { Group } from 'three'
 import { LAYERS } from '../../constants/layers'
 import {
   type GrabHoldEvent,
@@ -16,6 +16,9 @@ import {
   nextPoseSource,
   type PoseSource,
   poseKey,
+  restoreHeldLayers,
+  shouldStripLayers,
+  stripHeldLayers,
   worldToLocalTransform,
 } from './utils'
 
@@ -48,7 +51,6 @@ export const Grabbable: FC<Props> = ({
   const {
     registerGrabbable,
     unregisterGrabbable,
-    getGrabbedId,
     subscribeGrabbedId,
     isHeld,
     isHeldByMe,
@@ -56,12 +58,11 @@ export const Grabbable: FC<Props> = ({
     subscribeSyncedTransform,
   } = useGrabbableContext()
 
-  // 持っているのは誰か。isHeld・isHeldByMe が無い古いプラットフォームでは getGrabbedId で代用する
+  // 持っているのは誰か（自分が持っているかは手を問わず isHeldByMe で見る）
   const holder = useSyncExternalStore<Holder>(
     subscribeGrabbedId,
     () => {
-      const isMine = isHeldByMe ? isHeldByMe(id) : getGrabbedId() === id
-      if (isMine) return 'mine'
+      if (isHeldByMe(id)) return 'mine'
       return isHeld?.(id) ? 'other' : 'none'
     },
     () => 'none',
@@ -91,8 +92,10 @@ export const Grabbable: FC<Props> = ({
 
   const groupRef = useRef<Group>(null)
   const userData = useMemo(() => ({ [GRABBABLE_USER_DATA_KEY]: id }), [id])
-  /** 持っている間に INTERACTABLE を外した子（離したら戻す） */
-  const strippedInteractablesRef = useRef(new Set<Object3D>())
+  /** 持ち始めから何フレーム目か（レイヤーを外し直す間隔に使う） */
+  const heldFrameRef = useRef(0)
+  /** 持っている間にレイヤーを外したか（外していなければ戻さない） */
+  const isLayersStrippedRef = useRef(false)
 
   useEffect(() => {
     if (!enabled) return
@@ -104,12 +107,16 @@ export const Grabbable: FC<Props> = ({
 
     registerGrabbable(id, {
       // 持っている間は毎フレーム呼ばれる。本体を手元へ動かし、本体をまた掴んだり押したりしないよう
-      // GRABBABLE・INTERACTABLE を外す（子が遅延マウントされるので毎回なぞる）
+      // GRABBABLE・INTERACTABLE を外す（遅れてマウントされる子のために、ときどき外し直す）
       setHeldPose: (position, quaternion, scale) => {
         const target = groupRef.current
         if (!target) return
         applyWorldPose(target, position, quaternion, scale)
-        stripHeldLayers(target, strippedInteractablesRef.current)
+        if (shouldStripLayers(heldFrameRef.current)) {
+          stripHeldLayers(target)
+          isLayersStrippedRef.current = true
+        }
+        heldFrameRef.current++
       },
       // GrabSystem はワールド座標で確定位置を返すため、ローカル（transform prop と同じ空間）へ
       // 変換してからユーザーの onMove に渡す。変形された親の下に置いてもズレない
@@ -183,12 +190,12 @@ export const Grabbable: FC<Props> = ({
 
   // 手から離れたら、持っている間に外したレイヤーを戻す
   useEffect(() => {
+    if (isGrabbed) return
+    heldFrameRef.current = 0
     const group = groupRef.current
-    if (isGrabbed || !group) return
-    if (enabled) group.traverse((obj) => obj.layers.enable(LAYERS.GRABBABLE))
-    const stripped = strippedInteractablesRef.current
-    for (const obj of stripped) obj.layers.enable(LAYERS.INTERACTABLE)
-    stripped.clear()
+    if (!group || !isLayersStrippedRef.current) return
+    restoreHeldLayers(group, enabled)
+    isLayersStrippedRef.current = false
   }, [isGrabbed, enabled])
 
   // 持ち主が変わったら onGrab / onRelease を呼ぶ
@@ -201,6 +208,18 @@ export const Grabbable: FC<Props> = ({
     }
   }, [holder])
 
+  // 持たれたまま外される（作り直される）ときも onRelease を呼ぶ。
+  // onGrab で切り替えたワールド側の状態（外した当たり判定など）が戻らなくならないように
+  useEffect(
+    () => () => {
+      const previous = previousHolderRef.current
+      if (previous === 'none') return
+      previousHolderRef.current = 'none'
+      callHoldHandler(onReleaseRef.current, { isMine: previous === 'mine' })
+    },
+    [],
+  )
+
   return (
     <group ref={groupRef} userData={userData}>
       {children}
@@ -209,19 +228,6 @@ export const Grabbable: FC<Props> = ({
 }
 
 const noopSubscribe = () => () => {}
-
-/**
- * 持っている間の本体から GRABBABLE・INTERACTABLE を外す。
- * INTERACTABLE は <Interactable> が付けたものなので、外した子を覚えておいて離したら戻す
- */
-function stripHeldLayers(group: Object3D, strippedInteractables: Set<Object3D>): void {
-  group.traverse((obj) => {
-    obj.layers.disable(LAYERS.GRABBABLE)
-    if (!obj.layers.isEnabled(LAYERS.INTERACTABLE)) return
-    obj.layers.disable(LAYERS.INTERACTABLE)
-    strippedInteractables.add(obj)
-  })
-}
 
 /**
  * ワールド作者の onGrab / onRelease を呼ぶ。作者のコードが投げてもエラー境界まで届かせず

@@ -1,12 +1,17 @@
 import { Euler, Matrix4, Quaternion, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { Group } from 'three'
+import { Group, Mesh } from 'three'
+import { LAYERS } from '../../../constants/layers'
 import {
   applyWorldPose,
   decomposeWorldTransform,
   holdTransitions,
   nextPoseSource,
   poseKey,
+  restoreHeldLayers,
+  STRIP_LAYERS_INTERVAL,
+  shouldStripLayers,
+  stripHeldLayers,
   worldToLocalTransform,
 } from '../utils'
 
@@ -179,5 +184,59 @@ describe('holdTransitions', () => {
       { type: 'release', isMine: false },
       { type: 'grab', isMine: true },
     ])
+  })
+})
+
+describe('stripHeldLayers / restoreHeldLayers', () => {
+  const setup = () => {
+    const group = new Group()
+    const button = new Mesh()
+    const body = new Mesh()
+    group.add(button, body)
+    for (const obj of [group, button, body]) obj.layers.enable(LAYERS.GRABBABLE)
+    button.layers.enable(LAYERS.INTERACTABLE)
+    return { group, button, body }
+  }
+
+  it('持っている間は GRABBABLE・INTERACTABLE を外す', () => {
+    const { group, button, body } = setup()
+    stripHeldLayers(group)
+    for (const obj of [group, button, body]) expect(obj.layers.isEnabled(LAYERS.GRABBABLE)).toBe(false)
+    expect(button.layers.isEnabled(LAYERS.INTERACTABLE)).toBe(false)
+  })
+
+  it('離したら、外した INTERACTABLE だけを戻す（もともと無かった子には付けない）', () => {
+    const { group, button, body } = setup()
+    stripHeldLayers(group)
+    restoreHeldLayers(group, true)
+    for (const obj of [group, button, body]) expect(obj.layers.isEnabled(LAYERS.GRABBABLE)).toBe(true)
+    expect(button.layers.isEnabled(LAYERS.INTERACTABLE)).toBe(true)
+    expect(body.layers.isEnabled(LAYERS.INTERACTABLE)).toBe(false)
+  })
+
+  it('掴めなくしてある（enabled=false）なら GRABBABLE は戻さない', () => {
+    const { group, button } = setup()
+    stripHeldLayers(group)
+    restoreHeldLayers(group, false)
+    expect(group.layers.isEnabled(LAYERS.GRABBABLE)).toBe(false)
+    expect(button.layers.isEnabled(LAYERS.INTERACTABLE)).toBe(true)
+  })
+
+  it('戻したら印を消すので、2回目の戻しで INTERACTABLE を付け直さない', () => {
+    const { group, button } = setup()
+    stripHeldLayers(group)
+    restoreHeldLayers(group, true)
+    button.layers.disable(LAYERS.INTERACTABLE)
+    restoreHeldLayers(group, true)
+    expect(button.layers.isEnabled(LAYERS.INTERACTABLE)).toBe(false)
+  })
+})
+
+describe('shouldStripLayers', () => {
+  it('持ち始めは必ず外し、あとは間隔ごとに外し直す', () => {
+    expect(shouldStripLayers(0)).toBe(true)
+    expect(shouldStripLayers(1)).toBe(false)
+    expect(shouldStripLayers(STRIP_LAYERS_INTERVAL - 1)).toBe(false)
+    expect(shouldStripLayers(STRIP_LAYERS_INTERVAL)).toBe(true)
   })
 })
