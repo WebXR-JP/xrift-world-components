@@ -171,6 +171,8 @@ export {
   type GrabResultTransform,
   type GrabHand,
   type GrabUseEvent,
+  type GrabHoldEvent,
+  type GrabQuaternion,
 } from './contexts/GrabbableContext'
 export {
   SeatContext,

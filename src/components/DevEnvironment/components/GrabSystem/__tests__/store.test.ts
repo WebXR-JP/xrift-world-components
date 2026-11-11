@@ -4,7 +4,7 @@ import { MIN_HOLD_DISTANCE } from '../constants'
 import { createDevGrabStore } from '../store'
 
 const createEntry = (overrides: Partial<GrabbableEntry> = {}): GrabbableEntry => ({
-  renderGhost: () => null,
+  setHeldPose: () => {},
   onMove: () => {},
   getTransform: () => ({
     position: { x: 0, y: 1, z: -3 },

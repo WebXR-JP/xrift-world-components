@@ -40,13 +40,32 @@ export interface GrabUseEvent {
 }
 
 /**
+ * 持ち上げた・手から離れたときに渡す情報（onGrab / onRelease）
+ */
+export interface GrabHoldEvent {
+  /** 自分が持っている（持っていた）か。ほかの人なら false */
+  isMine: boolean
+}
+
+/** 回転（クォータニオン）。three の Quaternion もそのまま渡せる */
+export interface GrabQuaternion {
+  x: number
+  y: number
+  z: number
+  w: number
+}
+
+/**
  * <Grabbable> がプラットフォームに登録する情報
  * プラットフォーム側の GrabSystem はこれを使って
- * 掴んでいる間のゴースト描画・初期姿勢の取得・確定を行う
+ * 持っている間の姿勢の反映・初期姿勢の取得・確定を行う
  */
 export interface GrabbableEntry {
-  /** 掴んでいる間に表示するゴースト（半透明・物理なし）をローカル座標で返す */
-  renderGhost: () => ReactNode
+  /**
+   * 持っている間の手元の姿勢（ワールド座標）を当てる。持っている間は毎フレーム呼ぶこと。
+   * 本体そのものが手元へ動く（コピーは描かない）
+   */
+  setHeldPose: (position: Position3D, quaternion: GrabQuaternion, scale: number) => void
   /** 離した（確定）ときに新しい姿勢を受け取る。ワールド側が適用する */
   onMove: (transform: GrabResultTransform) => void
   /** 対象の現在姿勢を返す（最新値。掴み始めに参照される） */
@@ -85,6 +104,11 @@ export interface GrabbableContextValue {
    * 未実装のプラットフォームでは getGrabbedId（自分が掴んでいるか）で代用される
    */
   isHeld?: (id: string) => boolean
+  /**
+   * 自分が掴んでいるかを返す（両手で持てるプラットフォーム向け）。
+   * 未実装のプラットフォームでは getGrabbedId で代用される
+   */
+  isHeldByMe?: (id: string) => boolean
   /**
    * プラットフォームが共有している「離した位置」（ワールド座標）を返す。まだ誰も動かしていなければ null。
    * 同じ位置の間は同じ参照を返すこと（useSyncExternalStore のスナップショットに使う）

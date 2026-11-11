@@ -1,6 +1,14 @@
 import { Euler, Matrix4, Quaternion, Vector3 } from 'three'
 import { describe, expect, it } from 'vitest'
-import { decomposeWorldTransform, nextPoseSource, poseKey, worldToLocalTransform } from '../utils'
+import { Group } from 'three'
+import {
+  applyWorldPose,
+  decomposeWorldTransform,
+  holdTransitions,
+  nextPoseSource,
+  poseKey,
+  worldToLocalTransform,
+} from '../utils'
 
 describe('decomposeWorldTransform', () => {
   it('単位行列は原点・無回転・スケール1', () => {
@@ -115,5 +123,61 @@ describe('poseKey', () => {
     const a = { position: { x: 1, y: 2, z: 3 }, rotation: { x: 0, y: 0, z: 0 } }
     const b = { position: { x: 1, y: 2, z: 4 }, rotation: { x: 0, y: 0, z: 0 } }
     expect(poseKey(a)).not.toBe(poseKey(b))
+  })
+})
+
+describe('applyWorldPose', () => {
+  const quaternion = new Quaternion().setFromEuler(new Euler(0, Math.PI / 2, 0))
+
+  it('親が無ければワールド姿勢をそのまま当てる', () => {
+    const object = new Group()
+    applyWorldPose(object, { x: 1, y: 2, z: 3 }, quaternion, 2)
+    expect(object.position.x).toBeCloseTo(1)
+    expect(object.position.y).toBeCloseTo(2)
+    expect(object.position.z).toBeCloseTo(3)
+    expect(object.quaternion.angleTo(quaternion)).toBeCloseTo(0)
+    expect(object.scale.x).toBeCloseTo(2)
+  })
+
+  it('変形された親の下でも、ワールドで渡した姿勢になる', () => {
+    const parent = new Group()
+    parent.position.set(10, 0, 0)
+    parent.rotation.set(0, Math.PI / 4, 0)
+    parent.scale.setScalar(2)
+    const object = new Group()
+    parent.add(object)
+
+    applyWorldPose(object, { x: 1, y: 2, z: 3 }, quaternion, 1)
+    object.updateWorldMatrix(true, false)
+    const world = decomposeWorldTransform(object.matrixWorld)
+    expect(world.position.x).toBeCloseTo(1)
+    expect(world.position.y).toBeCloseTo(2)
+    expect(world.position.z).toBeCloseTo(3)
+    expect(world.scale).toBeCloseTo(1)
+    expect(object.scale.x).toBeCloseTo(0.5)
+    const worldQuaternion = new Quaternion()
+    object.getWorldQuaternion(worldQuaternion)
+    expect(worldQuaternion.angleTo(quaternion)).toBeCloseTo(0)
+  })
+})
+
+describe('holdTransitions', () => {
+  it('変わらなければ何も呼ばない', () => {
+    expect(holdTransitions('none', 'none')).toEqual([])
+    expect(holdTransitions('mine', 'mine')).toEqual([])
+  })
+
+  it('持ち上げたら grab、離したら release（自分かどうかを付ける）', () => {
+    expect(holdTransitions('none', 'mine')).toEqual([{ type: 'grab', isMine: true }])
+    expect(holdTransitions('none', 'other')).toEqual([{ type: 'grab', isMine: false }])
+    expect(holdTransitions('mine', 'none')).toEqual([{ type: 'release', isMine: true }])
+    expect(holdTransitions('other', 'none')).toEqual([{ type: 'release', isMine: false }])
+  })
+
+  it('持ち主が入れ替わったら、離してから持ち上げたことにする', () => {
+    expect(holdTransitions('other', 'mine')).toEqual([
+      { type: 'release', isMine: false },
+      { type: 'grab', isMine: true },
+    ])
   })
 })

@@ -1,4 +1,4 @@
-import { Euler, Matrix4, Quaternion, Vector3 } from 'three'
+import { Euler, Matrix4, type Object3D, Quaternion, Vector3 } from 'three'
 import type { Position3D, Rotation3D } from '../../types/movement'
 
 /** GrabSystem が扱う姿勢（位置・Euler回転・均一スケール） */
@@ -84,4 +84,51 @@ export function nextPoseSource(
 export function poseKey(pose: { position: Position3D; rotation: Rotation3D }): string {
   const { position: p, rotation: r } = pose
   return `${p.x},${p.y},${p.z},${r.x},${r.y},${r.z}`
+}
+
+const _worldMatrix = new Matrix4()
+const _parentInverse = new Matrix4()
+const _position = new Vector3()
+const _quaternion = new Quaternion()
+const _scale = new Vector3()
+
+/**
+ * ワールド姿勢（位置・クォータニオン・均一スケール）を object に当てる。
+ * 親が変形されていても、親から見たローカルに直して当てるのでワールドでその姿勢になる。
+ * 持っている間に毎フレーム呼ばれるので、作業用の行列は使い回す
+ */
+export function applyWorldPose(
+  object: Object3D,
+  position: Position3D,
+  quaternion: { x: number; y: number; z: number; w: number },
+  scale: number,
+): void {
+  _position.set(position.x, position.y, position.z)
+  _quaternion.set(quaternion.x, quaternion.y, quaternion.z, quaternion.w)
+  _scale.setScalar(scale)
+  _worldMatrix.compose(_position, _quaternion, _scale)
+  const parent = object.parent
+  if (parent) {
+    parent.updateWorldMatrix(true, false)
+    _worldMatrix.premultiply(_parentInverse.copy(parent.matrixWorld).invert())
+  }
+  _worldMatrix.decompose(object.position, object.quaternion, object.scale)
+}
+
+/** 持っているのは誰か（持ち上げた・離したの判定に使う） */
+export type Holder = 'none' | 'mine' | 'other'
+
+/**
+ * 持ち主の変化から、呼ぶハンドラーを順に返す。
+ * 持ち主が自分⇄ほかの人に入れ替わったときは、離してから持ち上げたことにする
+ */
+export function holdTransitions(
+  previous: Holder,
+  next: Holder,
+): Array<{ type: 'grab' | 'release'; isMine: boolean }> {
+  if (previous === next) return []
+  const events: Array<{ type: 'grab' | 'release'; isMine: boolean }> = []
+  if (previous !== 'none') events.push({ type: 'release', isMine: previous === 'mine' })
+  if (next !== 'none') events.push({ type: 'grab', isMine: next === 'mine' })
+  return events
 }

@@ -1,11 +1,18 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, type FC } from 'react'
-import type { Group } from 'three'
+import type { Group, Object3D } from 'three'
 import { LAYERS } from '../../constants/layers'
-import { type GrabResultTransform, useGrabbableContext } from '../../contexts/GrabbableContext'
+import {
+  type GrabHoldEvent,
+  type GrabResultTransform,
+  useGrabbableContext,
+} from '../../contexts/GrabbableContext'
 import { GRABBABLE_USER_DATA_KEY } from './constants'
 import type { Props } from './types'
 import {
+  applyWorldPose,
   decomposeWorldTransform,
+  type Holder,
+  holdTransitions,
   nextPoseSource,
   type PoseSource,
   poseKey,
@@ -18,7 +25,8 @@ import {
  * - 配下メッシュを GRABBABLE レイヤーに載せ、ルート group に grabbable ID を付ける
  *   → GrabSystem のレイキャストが掴める対象と判別できる
  * - transform をルート group に適用する（子はローカル座標で書く）
- * - 誰かが掴んでいる間は実体を隠す（GrabSystem が掴んでいる人の手元に代わりを表示する）
+ * - 誰かが掴んでいる間は、GrabSystem が渡す手元の姿勢へ本体を動かす（コピーは描かない）
+ * - 持ち上げた・手から離れたときに onGrab / onRelease を呼ぶ（全員の画面で）
  * - sync（既定 true）なら、離した位置はプラットフォームが共有し、その位置で描く
  * - 離した（確定）ときは onMove で新しい姿勢が返る。sync={false} ならワールド側で state に反映する
  *
@@ -29,7 +37,8 @@ export const Grabbable: FC<Props> = ({
   id,
   transform,
   onMove,
-  renderGhost,
+  onGrab,
+  onRelease,
   onUseStart,
   onUseEnd,
   enabled = true,
@@ -42,17 +51,22 @@ export const Grabbable: FC<Props> = ({
     getGrabbedId,
     subscribeGrabbedId,
     isHeld,
+    isHeldByMe,
     getSyncedTransform,
     subscribeSyncedTransform,
   } = useGrabbableContext()
 
-  // 誰かが掴んでいる間は実体を隠す（GrabSystem が代わりを表示する）。
-  // isHeld が無い古いプラットフォームでは自分が掴んでいるかだけで判定する
-  const isGrabbed = useSyncExternalStore(
+  // 持っているのは誰か。isHeld・isHeldByMe が無い古いプラットフォームでは getGrabbedId で代用する
+  const holder = useSyncExternalStore<Holder>(
     subscribeGrabbedId,
-    () => (isHeld ? isHeld(id) : getGrabbedId() === id),
-    () => false,
+    () => {
+      const isMine = isHeldByMe ? isHeldByMe(id) : getGrabbedId() === id
+      if (isMine) return 'mine'
+      return isHeld?.(id) ? 'other' : 'none'
+    },
+    () => 'none',
   )
+  const isGrabbed = holder !== 'none'
 
   // プラットフォームが共有している「離した位置」（ワールド座標）
   const syncedTransform = useSyncExternalStore(
@@ -64,19 +78,21 @@ export const Grabbable: FC<Props> = ({
   // 毎レンダーで参照が変わっても登録し直さないよう、最新値は ref で保持
   const transformRef = useRef(transform)
   const onMoveRef = useRef(onMove)
-  const renderGhostRef = useRef(renderGhost)
+  const onGrabRef = useRef(onGrab)
+  const onReleaseRef = useRef(onRelease)
   const onUseStartRef = useRef(onUseStart)
   const onUseEndRef = useRef(onUseEnd)
-  const childrenRef = useRef(children)
   transformRef.current = transform
   onMoveRef.current = onMove
+  onGrabRef.current = onGrab
+  onReleaseRef.current = onRelease
   onUseStartRef.current = onUseStart
   onUseEndRef.current = onUseEnd
-  renderGhostRef.current = renderGhost
-  childrenRef.current = children
 
   const groupRef = useRef<Group>(null)
   const userData = useMemo(() => ({ [GRABBABLE_USER_DATA_KEY]: id }), [id])
+  /** 持っている間に INTERACTABLE を外した子（離したら戻す） */
+  const strippedInteractablesRef = useRef(new Set<Object3D>())
 
   useEffect(() => {
     if (!enabled) return
@@ -87,8 +103,14 @@ export const Grabbable: FC<Props> = ({
     group.traverse((obj) => obj.layers.enable(LAYERS.GRABBABLE))
 
     registerGrabbable(id, {
-      // ゴースト未指定時は children をそのまま流用する
-      renderGhost: () => renderGhostRef.current?.() ?? childrenRef.current,
+      // 持っている間は毎フレーム呼ばれる。本体を手元へ動かし、本体をまた掴んだり押したりしないよう
+      // GRABBABLE・INTERACTABLE を外す（子が遅延マウントされるので毎回なぞる）
+      setHeldPose: (position, quaternion, scale) => {
+        const target = groupRef.current
+        if (!target) return
+        applyWorldPose(target, position, quaternion, scale)
+        stripHeldLayers(target, strippedInteractablesRef.current)
+      },
       // GrabSystem はワールド座標で確定位置を返すため、ローカル（transform prop と同じ空間）へ
       // 変換してからユーザーの onMove に渡す。変形された親の下に置いてもズレない
       onMove: (world) => {
@@ -108,7 +130,7 @@ export const Grabbable: FC<Props> = ({
         })
       },
       canUse: () => onUseStartRef.current !== undefined || onUseEndRef.current !== undefined,
-      // GrabSystem 向けにはワールド姿勢を返す（掴み距離・ゴーストの初期姿勢に使われる）。
+      // GrabSystem 向けにはワールド姿勢を返す（掴み距離・持ち始めの姿勢に使われる）。
       // group 未マウント時のみ transform prop（ローカル）にフォールバック
       getTransform: () => {
         const group = groupRef.current
@@ -137,9 +159,11 @@ export const Grabbable: FC<Props> = ({
     synced: GrabResultTransform | null
     transformKey: string | null
   }>({ source: 'transform', synced: null, transformKey: null })
+  // 持っている間は GrabSystem が手元の姿勢を当てるので触らない。
+  // 手から離れたら当て直す（置いたら共有位置・onMove の結果へ、やめたら元の場所へ戻る）
   useLayoutEffect(() => {
     const group = groupRef.current
-    if (!group) return
+    if (!group || isGrabbed) return
     const applied = appliedRef.current
     const transformKey = poseKey(transform)
     const source = nextPoseSource(
@@ -154,21 +178,66 @@ export const Grabbable: FC<Props> = ({
       source === 'synced' && syncedTransform ? toLocalOfParent(group, syncedTransform) : transform
     group.position.set(local.position.x, local.position.y, local.position.z)
     group.rotation.set(local.rotation.x, local.rotation.y, local.rotation.z)
-  }, [syncedTransform, transform])
+    group.scale.setScalar(transform.scale ?? 1)
+  }, [syncedTransform, transform, isGrabbed])
+
+  // 手から離れたら、持っている間に外したレイヤーを戻す
+  useEffect(() => {
+    const group = groupRef.current
+    if (isGrabbed || !group) return
+    if (enabled) group.traverse((obj) => obj.layers.enable(LAYERS.GRABBABLE))
+    const stripped = strippedInteractablesRef.current
+    for (const obj of stripped) obj.layers.enable(LAYERS.INTERACTABLE)
+    stripped.clear()
+  }, [isGrabbed, enabled])
+
+  // 持ち主が変わったら onGrab / onRelease を呼ぶ
+  const previousHolderRef = useRef<Holder>('none')
+  useEffect(() => {
+    const events = holdTransitions(previousHolderRef.current, holder)
+    previousHolderRef.current = holder
+    for (const { type, isMine } of events) {
+      callHoldHandler(type === 'grab' ? onGrabRef.current : onReleaseRef.current, { isMine })
+    }
+  }, [holder])
 
   return (
-    <group
-      ref={groupRef}
-      scale={transform.scale ?? 1}
-      userData={userData}
-      visible={!isGrabbed}
-    >
+    <group ref={groupRef} userData={userData}>
       {children}
     </group>
   )
 }
 
 const noopSubscribe = () => () => {}
+
+/**
+ * 持っている間の本体から GRABBABLE・INTERACTABLE を外す。
+ * INTERACTABLE は <Interactable> が付けたものなので、外した子を覚えておいて離したら戻す
+ */
+function stripHeldLayers(group: Object3D, strippedInteractables: Set<Object3D>): void {
+  group.traverse((obj) => {
+    obj.layers.disable(LAYERS.GRABBABLE)
+    if (!obj.layers.isEnabled(LAYERS.INTERACTABLE)) return
+    obj.layers.disable(LAYERS.INTERACTABLE)
+    strippedInteractables.add(obj)
+  })
+}
+
+/**
+ * ワールド作者の onGrab / onRelease を呼ぶ。作者のコードが投げてもエラー境界まで届かせず
+ * （インスタンスから追い出さないよう）ここで受け止めてログに残す
+ */
+function callHoldHandler(
+  handler: ((event: GrabHoldEvent) => void) | undefined,
+  event: GrabHoldEvent,
+): void {
+  if (!handler) return
+  try {
+    handler(event)
+  } catch (error) {
+    console.error('[Grabbable] onGrab / onRelease で例外が発生しました', error)
+  }
+}
 
 /**
  * GrabSystem からワールド座標で届く姿勢を、transform prop と同じ空間（group の親のローカル）に直す。
