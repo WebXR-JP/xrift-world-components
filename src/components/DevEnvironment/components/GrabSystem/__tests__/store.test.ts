@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { GrabbableEntry } from '../../../../../contexts/GrabbableContext'
-import { MAX_HOLD_DISTANCE, MIN_HOLD_DISTANCE } from '../constants'
+import { MIN_HOLD_DISTANCE } from '../constants'
 import { createDevGrabStore } from '../store'
 
 const createEntry = (overrides: Partial<GrabbableEntry> = {}): GrabbableEntry => ({
@@ -49,20 +49,6 @@ describe('createDevGrabStore', () => {
     )
 
     store.grab('near', { x: 0, y: 0, z: 0 })
-    expect(store.getState().holdDistance).toBe(MIN_HOLD_DISTANCE)
-  })
-
-  it('adjustHoldDistance は holding 中のみ動作し clamp される', () => {
-    const store = createDevGrabStore()
-    store.contextValue.registerGrabbable('box', createEntry())
-
-    store.adjustHoldDistance(1)
-    expect(store.getState().holdDistance).toBe(0)
-
-    store.grab('box', { x: 0, y: 1, z: 0 })
-    store.adjustHoldDistance(100)
-    expect(store.getState().holdDistance).toBe(MAX_HOLD_DISTANCE)
-    store.adjustHoldDistance(-100)
     expect(store.getState().holdDistance).toBe(MIN_HOLD_DISTANCE)
   })
 

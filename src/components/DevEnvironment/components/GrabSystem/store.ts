@@ -39,7 +39,6 @@ export interface DevGrabStore {
   setHovered: (id: string | null) => void
   /** 狙っている対象を掴む（保持距離はカメラ→対象の距離から算出） */
   grab: (id: string, cameraPosition: Position3D) => void
-  adjustHoldDistance: (delta: number) => void
   /** ゴーストが毎フレーム書き込む（通知なし・getState で読む高頻度パターン） */
   updateHeldPosition: (position: Position3D) => void
   /** 確定して離す（sync なら離した位置を持ち、onMove で新しい姿勢をワールド側へ通知） */
@@ -123,10 +122,6 @@ export function createDevGrabStore(): DevGrabStore {
         heldRotation: transform.rotation,
         heldScale: transform.scale,
       })
-    },
-    adjustHoldDistance: (delta) => {
-      if (state.phase !== 'holding') return
-      setState({ holdDistance: clampHoldDistance(state.holdDistance + delta) })
     },
     updateHeldPosition: (position) => {
       state = { ...state, heldPosition: position }
