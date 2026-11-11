@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type {
   GrabbableTransform,
+  GrabHoldEvent,
   GrabResultTransform,
   GrabUseEvent,
 } from '../../contexts/GrabbableContext'
@@ -26,9 +27,18 @@ export interface Props {
    */
   sync?: boolean
   /**
-   * 掴んでいる間に手元へ表示する代わり（物理なし）をローカル座標で返す
-   * 省略時は children をそのまま流用する
-   * 子に物理（RigidBody 等）を含む場合は物理なし版を必ず指定すること
+   * 誰かが持ち上げたとき（自分・ほかの人のどちらでも、全員の画面で呼ばれる）。
+   * 持っている間は本体が手元へ動くので、物理（RigidBody 等）を含む物はここで物理を切る
+   */
+  onGrab?: (event: GrabHoldEvent) => void
+  /**
+   * 手から離れたとき（置いた・やめた・持っていた人が退室した。全員の画面で呼ばれる）。
+   * onGrab で切った物理はここで戻す。置いたときは onMove の後に呼ばれる
+   */
+  onRelease?: (event: GrabHoldEvent) => void
+  /**
+   * @deprecated 持っている間は本体が手元へ動くようになったので使われない。
+   * 物理を含む物は onGrab / onRelease で物理を切り替える
    */
   renderGhost?: () => ReactNode
   /**

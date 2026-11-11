@@ -62,6 +62,40 @@ function UsableStick() {
   )
 }
 
+const GRABBABLE_CRATE_INITIAL: GrabbableTransform = {
+  position: { x: 4, y: 0.25, z: -2 },
+  rotation: { x: 0, y: 0, z: 0 },
+}
+
+/**
+ * 当たり判定のある箱（onGrab / onRelease の動作確認用）。
+ * 持っている間は本体が手元へ動くので、当たり判定は持ち上げたら外し、置いたら戻す。
+ * 見た目（mesh）は外さないので、持ち上げても作り直されない
+ */
+function GrabbableCrate() {
+  const [isHeld, setIsHeld] = useState(false)
+  const handleGrab = useCallback(() => setIsHeld(true), [])
+  const handleRelease = useCallback(() => setIsHeld(false), [])
+  return (
+    <Grabbable
+      id="test-crate"
+      transform={GRABBABLE_CRATE_INITIAL}
+      onGrab={handleGrab}
+      onRelease={handleRelease}
+    >
+      <mesh>
+        <boxGeometry args={[0.5, 0.5, 0.5]} />
+        <meshStandardMaterial color="#a2845e" />
+      </mesh>
+      {!isHeld && (
+        <RigidBody type="fixed" colliders={false}>
+          <CuboidCollider args={[0.25, 0.25, 0.25]} />
+        </RigidBody>
+      )}
+    </Grabbable>
+  )
+}
+
 const CART_SPEED = 3
 const CART_TURN_RATE = 1.8
 
@@ -201,6 +235,7 @@ export function TestScene() {
       {/* 掴めるボール */}
       <GrabbableBall />
       <UsableStick />
+      <GrabbableCrate />
 
       {/* 椅子（座る → Space で降りる） */}
       <Stool />

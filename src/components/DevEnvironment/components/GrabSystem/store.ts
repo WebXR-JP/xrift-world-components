@@ -16,7 +16,7 @@ export interface DevGrabState {
   grabbedId: string | null
   /** カメラ→対象の保持距離[m] */
   holdDistance: number
-  /** ゴーストの現在位置（確定時に使う。毎フレーム更新） */
+  /** 持っている物の現在位置（確定時に使う。毎フレーム更新） */
   heldPosition: Position3D
   /** 掴んだ時点の回転（掴み中は維持） */
   heldRotation: Rotation3D
@@ -39,7 +39,7 @@ export interface DevGrabStore {
   setHovered: (id: string | null) => void
   /** 狙っている対象を掴む（保持距離はカメラ→対象の距離から算出） */
   grab: (id: string, cameraPosition: Position3D) => void
-  /** ゴーストが毎フレーム書き込む（通知なし・getState で読む高頻度パターン） */
+  /** 持っている物を動かすたびに書き込む（通知なし・getState で読む高頻度パターン） */
   updateHeldPosition: (position: Position3D) => void
   /** 確定して離す（sync なら離した位置を持ち、onMove で新しい姿勢をワールド側へ通知） */
   release: () => void
@@ -163,6 +163,7 @@ export function createDevGrabStore(): DevGrabStore {
         else if (state.hoveredId === id) setState({ hoveredId: null })
       },
       getGrabbedId: () => state.grabbedId,
+      isHeldByMe: (id) => state.grabbedId === id,
       subscribeGrabbedId: (listener) => {
         listeners.add(listener)
         return () => listeners.delete(listener)

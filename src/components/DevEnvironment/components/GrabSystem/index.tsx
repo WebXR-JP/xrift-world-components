@@ -1,7 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { Suspense, useEffect, useRef, useSyncExternalStore } from 'react'
-import { Raycaster, Vector2 } from 'three'
-import type { Group } from 'three'
+import { useEffect, useRef } from 'react'
+import { Euler, Quaternion, Raycaster, Vector2 } from 'three'
 import { LAYERS } from '../../../../constants/layers'
 import {
   GRAB_KEY,
@@ -9,7 +8,6 @@ import {
   RAYCAST_FRAME_INTERVAL,
 } from './constants'
 import { isGameKeyEvent } from '../../utils'
-import { prepareHeldDisplay } from './heldDisplay'
 import type { DevGrabStore } from './store'
 import { computeHeldPosition, findFirstGrabbableId } from './utils'
 
@@ -107,45 +105,30 @@ function GrabInputHandler({ store }: Props) {
   return null
 }
 
+const _heldEuler = new Euler()
+const _heldQuaternion = new Quaternion()
+
 /**
- * 掴んでいる対象を視点前方に浮かせて表示する代わり（物理なし）
+ * 掴んでいる対象の本体を視点前方へ動かす（コピーは描かない）
  * 掴んだ時点の回転・スケールを維持し、位置だけ毎フレーム更新する
  * 位置は確定用に heldPosition としてストアへ書き込む
  */
-function GrabbedObjectGhost({ store }: Props) {
-  const groupRef = useRef<Group>(null)
+function HeldObjectDriver({ store }: Props) {
   const camera = useThree((s) => s.camera)
-  const grabbedId = useSyncExternalStore(store.subscribe, () => store.getState().grabbedId)
-
-  const entry = grabbedId ? store.getEntry(grabbedId) : undefined
 
   useFrame(() => {
-    const group = groupRef.current
-    if (!group) return
-
-    const { phase, holdDistance, heldRotation, heldScale } = store.getState()
-    if (phase !== 'holding') {
-      group.visible = false
-      return
-    }
+    const { phase, grabbedId, holdDistance, heldRotation, heldScale } = store.getState()
+    if (phase !== 'holding' || !grabbedId) return
+    const entry = store.getEntry(grabbedId)
+    if (!entry) return
 
     const position = computeHeldPosition(camera.position, camera.quaternion, holdDistance)
-    group.position.set(position.x, position.y, position.z)
-    group.rotation.set(heldRotation.x, heldRotation.y, heldRotation.z)
-    group.scale.setScalar(heldScale)
-    group.visible = true
-
+    _heldQuaternion.setFromEuler(_heldEuler.set(heldRotation.x, heldRotation.y, heldRotation.z))
+    entry.setHeldPose(position, _heldQuaternion, heldScale)
     store.updateHeldPosition(position)
-    prepareHeldDisplay(group)
   })
 
-  if (!grabbedId || !entry) return null
-
-  return (
-    <group ref={groupRef} visible={false}>
-      <Suspense fallback={null}>{entry.renderGhost()}</Suspense>
-    </group>
-  )
+  return null
 }
 
 /**
@@ -157,7 +140,7 @@ export function GrabSystem({ store }: Props) {
   return (
     <>
       <GrabRaycaster store={store} />
-      <GrabbedObjectGhost store={store} />
+      <HeldObjectDriver store={store} />
       <GrabInputHandler store={store} />
     </>
   )

@@ -1,6 +1,6 @@
 {
   "name": "@xrift/world-components",
-  "version": "0.63.1",
+  "version": "0.64.0",
   "description": "Shared components and utilities for Xrift worlds",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -56,6 +56,7 @@
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.4.0",
     "@react-three/rapier": "^2.2.0",
+    "@react-three/test-renderer": "^9.1.1",
     "@react-three/uikit": "^1.0.62",
     "@triplex/api": "^0.1.4",
     "@types/react": "^19.2.18",
