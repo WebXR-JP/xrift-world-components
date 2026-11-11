@@ -16,7 +16,7 @@ const GRABBABLE_BALL_INITIAL: GrabbableTransform = {
 }
 
 /**
- * Grabbable の動作確認用ボール（G で掴む → ホイールで距離 → G で置く）
+ * Grabbable の動作確認用ボール（G で掴む → G で置く）
  * 離した位置はプラットフォームが持つので、state も onMove も要らない
  */
 function GrabbableBall() {

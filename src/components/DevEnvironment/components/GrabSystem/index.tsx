@@ -7,7 +7,6 @@ import {
   GRAB_KEY,
   MAX_HOLD_DISTANCE,
   RAYCAST_FRAME_INTERVAL,
-  WHEEL_DISTANCE_STEP,
 } from './constants'
 import { isGameKeyEvent } from '../../utils'
 import { prepareHeldDisplay } from './heldDisplay'
@@ -53,9 +52,9 @@ function GrabRaycaster({ store }: Props) {
 }
 
 /**
- * 掴む/置く/距離調整/使うの入力を処理する（本番プラットフォームと同じ操作）
+ * 掴む/置く/使うの入力を処理する（本番プラットフォームと同じ操作）
  * - G: 狙っている対象を掴む / 掴み中ならいまの位置に置く
- * - ホイール: 保持距離を増減（上スクロールで遠ざける）
+ * - ホイール: 使わない（本番では持っている間も視点の切り替えに使う。距離は掴んだときのまま）
  * - Esc・タブの切り替え（ポインターロック解除）: 持ったまま（元の位置へは戻さない）
  * - クリック（掴み中・ロック中）: 押すと onUseStart、離すと onUseEnd（掴み中はインタラクトしない）
  */
@@ -83,16 +82,6 @@ function GrabInputHandler({ store }: Props) {
       grabOrRelease()
     }
 
-    const handleWheel = (e: WheelEvent) => {
-      if (store.getState().phase !== 'holding') return
-      // ロックが外れている間（持ったまま Esc した後など）は画面のスクロールに譲る
-      if (!document.pointerLockElement) return
-      e.preventDefault()
-      // 上スクロール（deltaY<0）で遠ざける
-      const delta = e.deltaY < 0 ? WHEEL_DISTANCE_STEP : -WHEEL_DISTANCE_STEP
-      store.adjustHoldDistance(delta)
-    }
-
     // 掴み中のクリックは「使う」。ロックを取り直すためのクリック（ロックしていない間）は使わない
     const handleMouseDown = (e: MouseEvent) => {
       if (e.button !== 0) return
@@ -106,12 +95,10 @@ function GrabInputHandler({ store }: Props) {
     }
 
     window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('wheel', handleWheel, { passive: false })
     window.addEventListener('mousedown', handleMouseDown)
     window.addEventListener('mouseup', handleMouseUp)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('wheel', handleWheel)
       window.removeEventListener('mousedown', handleMouseDown)
       window.removeEventListener('mouseup', handleMouseUp)
     }
