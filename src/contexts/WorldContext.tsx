@@ -20,6 +20,12 @@ export interface WorldInfo {
 export interface WorldContextValue {
   /** worldId からワールド情報を取得 */
   getWorldInfo: (worldId: string) => Promise<WorldInfo>
+  /**
+   * ワールドの詳細をプラットフォームの画面で開く（オプション）。
+   * ワールド行きのポータルにインタラクトしたときに呼ばれる。
+   * 渡されない（開ける画面が無い・ゲストなど）ときは、ポータルにインタラクトできない
+   */
+  openWorldDetail?: (worldId: string) => void
 }
 
 /**
@@ -40,6 +46,9 @@ export const createDefaultWorldImplementation = (): WorldContextValue => ({
       uniqueVisitorCount: 0,
       favoriteCount: 0,
     }
+  },
+  openWorldDetail: (worldId) => {
+    console.log('[World] openWorldDetail called', worldId)
   },
 })
 

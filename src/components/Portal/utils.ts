@@ -82,3 +82,7 @@ export const buildPortalConfirmOptions = (info: PortalInfo): ConfirmOptions => (
   confirmLabel: '移動する',
   cancelLabel: 'キャンセル',
 })
+
+/** ワールド行きのポータルにインタラクトしたときの案内。名前が取れるまでは名前を省く */
+export const buildPortalDetailText = (info: PortalInfo | null): string =>
+  info ? `${info.worldName}の詳細を表示` : 'ワールドの詳細を表示'

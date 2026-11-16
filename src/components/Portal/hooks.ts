@@ -93,3 +93,19 @@ export const usePortalTarget = (target: PortalTarget | null) => {
 
   return { info, notFound, navigateWithConfirm }
 }
+
+/**
+ * ワールド行きのポータルにインタラクトしたら、プラットフォームでワールドの詳細を開く。
+ * 部屋行き・プラットフォームが開く手段を渡さないときは null（インタラクトできない）
+ */
+export const usePortalDetail = (target: PortalTarget | null): (() => void) | null => {
+  const { openWorldDetail } = useWorldContext()
+  const worldId = target?.kind === 'world' ? target.id : null
+
+  const open = useCallback(() => {
+    if (worldId) openWorldDetail?.(worldId)
+  }, [worldId, openWorldDetail])
+
+  if (!worldId || !openWorldDetail) return null
+  return open
+}

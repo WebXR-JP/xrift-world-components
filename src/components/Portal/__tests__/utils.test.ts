@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildPortalConfirmOptions,
+  buildPortalDetailText,
   generateParticlePositions,
   generateParticleVelocities,
   resolvePortalTarget,
@@ -153,5 +154,17 @@ describe('buildPortalConfirmOptions', () => {
     const options = buildPortalConfirmOptions({ kind: 'world', worldName: 'Lobby', thumbnailUrl: null })
     expect(options.title).toBe('Lobby')
     expect(options.message).toBe('このワールドに移動しますか？')
+  })
+})
+
+describe('buildPortalDetailText', () => {
+  it('ワールド名を入れる', () => {
+    expect(buildPortalDetailText({ kind: 'world', worldName: 'ロビー', thumbnailUrl: null })).toBe(
+      'ロビーの詳細を表示',
+    )
+  })
+
+  it('情報が取れるまでは名前を省く', () => {
+    expect(buildPortalDetailText(null)).toBe('ワールドの詳細を表示')
   })
 })

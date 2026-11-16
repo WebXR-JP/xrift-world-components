@@ -1,15 +1,16 @@
 import { Text } from '@react-three/drei'
 import { useMemo } from 'react'
 import { BillboardY } from '../BillboardY'
+import { PortalDetailHitArea } from './components/PortalDetailHitArea'
 import { PortalGlow } from './components/PortalGlow'
 import { PortalParticles } from './components/PortalParticles'
 import { PortalPedestal } from './components/PortalPedestal'
 import { PortalThumbnail } from './components/PortalThumbnail'
 import { PortalVortex } from './components/PortalVortex'
 import { PORTAL_DEFAULTS } from './constants'
-import { usePortalProps, usePortalTarget } from './hooks'
+import { usePortalDetail, usePortalProps, usePortalTarget } from './hooks'
 import type { Props } from './types'
-import { resolvePortalTarget } from './utils'
+import { buildPortalDetailText, resolvePortalTarget } from './utils'
 
 export type { Props as PortalProps } from './types'
 
@@ -35,6 +36,7 @@ export const Portal = (props: Props) => {
   const { info, notFound, navigateWithConfirm } = usePortalTarget(target)
   // 行き先の指定が無ければくぐれない。取れなかっただけなら、くぐったときに取り直す（一時的な失敗からの復帰）
   const canEnter = !disabled && target !== null
+  const openDetail = usePortalDetail(target)
 
   return (
     <group position={position} rotation={rotation}>
@@ -60,6 +62,12 @@ export const Portal = (props: Props) => {
         rotationSpeed={PORTAL_DEFAULTS.rotationSpeed}
       />
       <PortalPedestal onEnter={canEnter ? navigateWithConfirm : undefined} />
+      {openDetail && (
+        <PortalDetailHitArea
+          interactionText={buildPortalDetailText(info)}
+          onInteract={openDetail}
+        />
+      )}
 
       {/* 行き先が取れない（指定が無いときもここ。info とは排他） */}
       {notFound && (
