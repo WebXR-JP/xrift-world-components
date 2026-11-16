@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildPortalConfirmOptions,
   buildPortalDetailText,
+  resolveDetailWorldId,
   generateParticlePositions,
   generateParticleVelocities,
   resolvePortalTarget,
@@ -118,6 +119,7 @@ describe('toPortalInfoFromInstance / toPortalInfoFromWorld', () => {
     })
     expect(info).toEqual({
       kind: 'instance',
+      worldId: 'w1',
       worldName: 'Lobby',
       thumbnailUrl: 'https://example.com/t.png',
       instanceName: 'Room A',
@@ -129,6 +131,7 @@ describe('toPortalInfoFromInstance / toPortalInfoFromWorld', () => {
   it('ワールドは部屋名・人数を持たない', () => {
     expect(toPortalInfoFromWorld(WORLD)).toEqual({
       kind: 'world',
+      worldId: 'w1',
       worldName: 'Lobby',
       thumbnailUrl: 'https://example.com/t.png',
     })
@@ -139,6 +142,7 @@ describe('buildPortalConfirmOptions', () => {
   it('部屋行きは部屋名と人数を出す', () => {
     const options = buildPortalConfirmOptions({
       kind: 'instance',
+      worldId: 'w1',
       worldName: 'Lobby',
       thumbnailUrl: null,
       instanceName: 'Room A',
@@ -151,7 +155,7 @@ describe('buildPortalConfirmOptions', () => {
   })
 
   it('ワールド行きは部屋名・人数を出さない', () => {
-    const options = buildPortalConfirmOptions({ kind: 'world', worldName: 'Lobby', thumbnailUrl: null })
+    const options = buildPortalConfirmOptions({ kind: 'world', worldId: 'w1', worldName: 'Lobby', thumbnailUrl: null })
     expect(options.title).toBe('Lobby')
     expect(options.message).toBe('このワールドに移動しますか？')
   })
@@ -159,12 +163,40 @@ describe('buildPortalConfirmOptions', () => {
 
 describe('buildPortalDetailText', () => {
   it('ワールド名を入れる', () => {
-    expect(buildPortalDetailText({ kind: 'world', worldName: 'ロビー', thumbnailUrl: null })).toBe(
+    expect(buildPortalDetailText({ kind: 'world', worldId: 'w1', worldName: 'ロビー', thumbnailUrl: null })).toBe(
       'ロビーの詳細を表示',
     )
   })
 
   it('情報が取れるまでは名前を省く', () => {
     expect(buildPortalDetailText(null)).toBe('ワールドの詳細を表示')
+  })
+})
+
+describe('resolveDetailWorldId', () => {
+  const INSTANCE_INFO = {
+    kind: 'instance' as const,
+    worldId: 'w1',
+    worldName: 'Lobby',
+    thumbnailUrl: null,
+    instanceName: 'Room A',
+    currentUsers: 1,
+    maxCapacity: 20,
+  }
+
+  it('ワールド行きは指定の worldId（情報が取れる前でも）', () => {
+    expect(resolveDetailWorldId({ kind: 'world', id: 'w2' }, null)).toBe('w2')
+  })
+
+  it('部屋行きは部屋のワールド', () => {
+    expect(resolveDetailWorldId({ kind: 'instance', id: 'i1' }, INSTANCE_INFO)).toBe('w1')
+  })
+
+  it('部屋行きで情報が取れていなければ null', () => {
+    expect(resolveDetailWorldId({ kind: 'instance', id: 'i1' }, null)).toBeNull()
+  })
+
+  it('行き先が無ければ null', () => {
+    expect(resolveDetailWorldId(null, null)).toBeNull()
   })
 })

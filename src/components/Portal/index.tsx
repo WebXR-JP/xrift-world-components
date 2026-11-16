@@ -36,7 +36,7 @@ export const Portal = (props: Props) => {
   const { info, notFound, navigateWithConfirm } = usePortalTarget(target)
   // 行き先の指定が無ければくぐれない。取れなかっただけなら、くぐったときに取り直す（一時的な失敗からの復帰）
   const canEnter = !disabled && target !== null
-  const openDetail = usePortalDetail(target)
+  const openDetail = usePortalDetail(target, info)
 
   return (
     <group position={position} rotation={rotation}>
