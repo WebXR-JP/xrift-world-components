@@ -22,13 +22,15 @@ export type PortalTarget = { kind: 'instance'; id: string } | { kind: 'world'; i
 export type PortalInfo =
   | {
       kind: 'instance'
+      /** 部屋のワールド（インタラクトで詳細を開くのに使う） */
+      worldId: string
       worldName: string
       thumbnailUrl: string | null
       instanceName: string
       currentUsers: number
       maxCapacity: number
     }
-  | { kind: 'world'; worldName: string; thumbnailUrl: string | null }
+  | { kind: 'world'; worldId: string; worldName: string; thumbnailUrl: string | null }
 
 export interface PortalUniforms {
   uTime: { value: number }

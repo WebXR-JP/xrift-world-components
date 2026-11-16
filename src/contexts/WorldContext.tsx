@@ -22,7 +22,7 @@ export interface WorldContextValue {
   getWorldInfo: (worldId: string) => Promise<WorldInfo>
   /**
    * ワールドの詳細をプラットフォームの画面で開く（オプション）。
-   * ワールド行きのポータルにインタラクトしたときに呼ばれる。
+   * ポータルにインタラクトしたときに、行き先のワールド（部屋行きは部屋のワールド）で呼ばれる。
    * 渡されない（開ける画面が無い・ゲストなど）ときは、ポータルにインタラクトできない
    */
   openWorldDetail?: (worldId: string) => void

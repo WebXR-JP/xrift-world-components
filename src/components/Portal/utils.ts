@@ -55,6 +55,7 @@ export const resolvePortalTarget = (props: {
 /** インスタンス情報を表示用にそろえる */
 export const toPortalInfoFromInstance = (info: InstanceInfo): PortalInfo => ({
   kind: 'instance',
+  worldId: info.world.id,
   worldName: info.world.name,
   thumbnailUrl: info.world.thumbnailUrl,
   instanceName: info.name,
@@ -65,6 +66,7 @@ export const toPortalInfoFromInstance = (info: InstanceInfo): PortalInfo => ({
 /** ワールド情報を表示用にそろえる */
 export const toPortalInfoFromWorld = (info: WorldInfo): PortalInfo => ({
   kind: 'world',
+  worldId: info.id,
   worldName: info.name,
   thumbnailUrl: info.thumbnailUrl,
 })
@@ -83,6 +85,19 @@ export const buildPortalConfirmOptions = (info: PortalInfo): ConfirmOptions => (
   cancelLabel: 'キャンセル',
 })
 
-/** ワールド行きのポータルにインタラクトしたときの案内。名前が取れるまでは名前を省く */
+/** ポータルにインタラクトしたときの案内。名前が取れるまでは名前を省く */
 export const buildPortalDetailText = (info: PortalInfo | null): string =>
   info ? `${info.worldName}の詳細を表示` : 'ワールドの詳細を表示'
+
+/**
+ * インタラクトで詳細を開くワールド。ワールド行きは指定の worldId、
+ * 部屋行きは部屋のワールド（情報を取れるまでは分からないので null）
+ */
+export const resolveDetailWorldId = (
+  target: PortalTarget | null,
+  info: PortalInfo | null,
+): string | null => {
+  if (!target) return null
+  if (target.kind === 'world') return target.id
+  return info?.worldId ?? null
+}

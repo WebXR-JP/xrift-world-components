@@ -4,7 +4,12 @@ import { useInstanceContext } from '../../contexts/InstanceContext'
 import { useWorldContext } from '../../contexts/WorldContext'
 import { PORTAL_DEFAULTS } from './constants'
 import type { PortalInfo, PortalTarget, Props } from './types'
-import { buildPortalConfirmOptions, toPortalInfoFromInstance, toPortalInfoFromWorld } from './utils'
+import {
+  buildPortalConfirmOptions,
+  resolveDetailWorldId,
+  toPortalInfoFromInstance,
+  toPortalInfoFromWorld,
+} from './utils'
 
 /**
  * Propsにデフォルト値を適用して返す
@@ -95,12 +100,16 @@ export const usePortalTarget = (target: PortalTarget | null) => {
 }
 
 /**
- * ワールド行きのポータルにインタラクトしたら、プラットフォームでワールドの詳細を開く。
- * 部屋行き・プラットフォームが開く手段を渡さないときは null（インタラクトできない）
+ * ポータルにインタラクトしたら、プラットフォームで行き先のワールドの詳細を開く（部屋行きは部屋のワールド）。
+ * 開くワールドが分からない（部屋の情報を取れていない）・プラットフォームが開く手段を渡さないときは
+ * null（インタラクトできない）
  */
-export const usePortalDetail = (target: PortalTarget | null): (() => void) | null => {
+export const usePortalDetail = (
+  target: PortalTarget | null,
+  info: PortalInfo | null,
+): (() => void) | null => {
   const { openWorldDetail } = useWorldContext()
-  const worldId = target?.kind === 'world' ? target.id : null
+  const worldId = resolveDetailWorldId(target, info)
 
   const open = useCallback(() => {
     if (worldId) openWorldDetail?.(worldId)
