@@ -6,6 +6,7 @@ import { GrabbableProvider } from '../../contexts/GrabbableContext'
 import { ItemLoaderProvider } from '../../contexts/ItemLoaderContext'
 import { SeatProvider } from '../../contexts/SeatContext'
 import { SpawnPointProvider } from '../../contexts/SpawnPointContext'
+import { TeleportProvider } from '../../contexts/TeleportContext'
 import { UsersProvider, type UsersContextValue, type User } from '../../contexts/UsersContext'
 import { XRiftContext, type XRiftContextValue } from '../../contexts/XRiftContext'
 import type { PlayerMovement } from '../../types/movement'
@@ -30,6 +31,7 @@ import { PhysicsPlayer } from './components/PhysicsPlayer'
 import { GrabSystem } from './components/GrabSystem'
 import { createDevGrabStore } from './components/GrabSystem/store'
 import { createDevSeatStore } from './components/DevSeat/store'
+import { createDevTeleportStore } from './components/DevTeleport/store'
 import { CenterRaycaster } from './components/CenterRaycaster'
 import { Crosshair } from './components/Crosshair'
 import { PointerLockStatus } from './components/PointerLockStatus'
@@ -100,6 +102,10 @@ export function DevEnvironment({
   const canInteract = useCallback(() => grabStore.getState().phase !== 'holding', [grabStore])
   // ローカル座席ストア（<Seat> / <Vehicle> の登録先 & 着席状態。単独プレイヤー用）
   const [seatStore] = useState(createDevSeatStore)
+  // ローカルのテレポート（useTeleport() の行き先を PhysicsPlayer が次のフレームで消化する）。
+  // 外側の XRiftProvider に teleportImplementation を渡していても、DevEnvironment の中ではこちらが効く
+  // （XRiftProvider は渡されなければ console.log だけの既定を入れるので、区別できない）
+  const [teleportStore] = useState(createDevTeleportStore)
   const isPointerLocked = useSyncExternalStore(
     subscribePointerLock,
     getPointerLockSnapshot,
@@ -203,16 +209,19 @@ export function DevEnvironment({
                 <GrabbableProvider implementation={grabStore.contextValue}>
                   <SeatProvider implementation={seatStore.contextValue}>
                     <ItemLoaderProvider value={itemLoader}>
-                      <PhysicsPlayer
-                        moveSpeed={moveSpeed}
-                        spawnPosition={spawnPosition}
-                        respawnThreshold={respawnThreshold}
-                        allowInfiniteJump={allowInfiniteJump}
-                        movementRef={localMovementRef}
-                        seatStore={seatStore}
-                      />
-                      <GrabSystem store={grabStore} />
-                      {children}
+                      <TeleportProvider value={teleportStore.contextValue}>
+                        <PhysicsPlayer
+                          moveSpeed={moveSpeed}
+                          spawnPosition={spawnPosition}
+                          respawnThreshold={respawnThreshold}
+                          allowInfiniteJump={allowInfiniteJump}
+                          movementRef={localMovementRef}
+                          seatStore={seatStore}
+                          teleportStore={teleportStore}
+                        />
+                        <GrabSystem store={grabStore} />
+                        {children}
+                      </TeleportProvider>
                     </ItemLoaderProvider>
                   </SeatProvider>
                 </GrabbableProvider>
