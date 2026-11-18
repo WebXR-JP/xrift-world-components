@@ -8,6 +8,8 @@ import { ScreenShareProvider, type ScreenShareContextValue } from '../src/contex
 import { TextInputProvider, createDefaultTextInputImplementation } from '../src/contexts/TextInputContext'
 import { TestScene } from '../src/scenes/TestScene'
 import { useUsers } from '../src/contexts/UsersContext'
+import { Interactable } from '../src/components/Interactable'
+import { useTeleport } from '../src/hooks/useTeleport'
 
 const textInput = createDefaultTextInputImplementation()
 
@@ -57,6 +59,22 @@ function MovementDebugReader({
     ].join('\n')
   })
   return null
+}
+
+/** useTeleport の確認用（スポーン地点の正面の柱）。インタラクトすると反対側の床へ、向きを変えて飛ぶ */
+function TeleportButton() {
+  const { teleport } = useTeleport()
+  const handleInteract = useCallback(() => {
+    teleport({ position: [-8, 0, -8], yaw: 45 })
+  }, [teleport])
+  return (
+    <Interactable id="dev-teleport" onInteract={handleInteract} interactionText="テレポート">
+      <mesh position={[5, 1, 8]}>
+        <boxGeometry args={[0.6, 2, 0.6]} />
+        <meshStandardMaterial color="#7c5cff" />
+      </mesh>
+    </Interactable>
+  )
 }
 
 /** dev 用の画面共有モック（getDisplayMedia で実際に画面共有できる） */
@@ -111,6 +129,7 @@ function App() {
             <Floor />
             <SpawnPoint position={[5, 0, 5]} yaw={180} />
             <TestScene />
+            <TeleportButton />
             <MovementDebugReader targetRef={debugRef} />
           </DevScreenShareProvider>
         </TextInputProvider>

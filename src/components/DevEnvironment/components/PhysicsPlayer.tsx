@@ -23,6 +23,8 @@ import {
 } from '../constants'
 import { isGameKeyEvent } from '../utils'
 import type { DevSeatStore } from './DevSeat/store'
+import type { DevTeleportStore } from './DevTeleport/store'
+import { toDevPlacementPose, type DevPlacementPose } from './DevTeleport/utils'
 import {
   DEV_SEAT_CAMERA_FORWARD_CLEARANCE,
   DEV_MAX_FRAME_DELTA,
@@ -41,10 +43,13 @@ interface Props {
   allowInfiniteJump: boolean
   movementRef?: MutableRefObject<PlayerMovement>
   seatStore: DevSeatStore
+  teleportStore: DevTeleportStore
 }
 
 /** RigidBody 原点（カプセル中心）から足元までの高さ */
 const FEET_OFFSET_Y = PLAYER_HALF_HEIGHT + PLAYER_RADIUS
+const IDENTITY_ROTATION = { x: 0, y: 0, z: 0, w: 1 }
+const ZERO_VELOCITY = { x: 0, y: 0, z: 0 }
 
 export function PhysicsPlayer({
   moveSpeed,
@@ -53,6 +58,7 @@ export function PhysicsPlayer({
   allowInfiniteJump,
   movementRef,
   seatStore,
+  teleportStore,
 }: Props) {
   const rigidBodyRef = useRef<RapierRigidBody>(null)
   const avatarGroupRef = useRef<Group>(null)
@@ -73,27 +79,53 @@ export function PhysicsPlayer({
   const seatedOffsetsRef = useRef<DevSeatOffsets | null>(null)
   const feetPosRef = useRef({ x: 0, y: 0, z: 0 })
   const eyePosRef = useRef({ x: 0, y: 0, z: 0 })
+  // 体を置き直した（スポーン・リスポーン・テレポート）直後のフレームは跳ばせない。
+  // 接地センサーの「離れた」は次の物理ステップまで届かないので、空中へ置いても接地したままに見える
+  const justPlacedRef = useRef(false)
 
   const { camera } = useThree()
   const spawnPoint = useSpawnPoint()
 
-  // SpawnPoint が登録されたらテレポート
-  // SpawnPoint.position は地面の座標なので、カプセルの高さ分だけ浮かせる
+  // カメラの向きを整える。ロール（座席の傾き）は必ず消す。
+  // yaw を省略したらいまの方角のまま、resetPitch なら見上げ・見下ろしを水平に戻す
+  const levelCamera = useCallback((cam: Camera, yaw?: number, resetPitch = false) => {
+    const euler = eulerRef.current.setFromQuaternion(cam.quaternion, 'YXZ')
+    cam.quaternion.setFromEuler(euler.set(resetPitch ? 0 : euler.x, yaw ?? euler.y, 0))
+  }, [])
+
+  // 体を置き直す（スポーン・リスポーン・テレポートの共通処理）。
+  // 本番と同じく、スポーン・リスポーンは視線を水平に戻し（resetPitch）、テレポートは保つ
+  const placeBody = useCallback(
+    (rb: RapierRigidBody, cam: Camera, pose: DevPlacementPose, resetPitch: boolean) => {
+      rb.setTranslation(pose.bodyPosition, true)
+      rb.setLinvel(ZERO_VELOCITY, true)
+      justPlacedRef.current = true
+      if (pose.yaw === undefined && !resetPitch) return
+      levelCamera(cam, pose.yaw, resetPitch)
+    },
+    [levelCamera],
+  )
+
+  // 立ち上がる（降車・座席が消えた・テレポートの共通処理。本番の useRigidBodyMovement.leaveSeat に相当）。
+  // 着席中は体とカメラを座席の姿勢に合わせて傾けているので、ここで必ずまっすぐに戻す
+  const leaveSeat = useCallback(
+    (rb: RapierRigidBody, cam: Camera) => {
+      seatStore.standUp()
+      prevSeatIdRef.current = null
+      seatedOffsetsRef.current = null
+      rb.setRotation(IDENTITY_ROTATION, true)
+      levelCamera(cam)
+    },
+    [seatStore, levelCamera],
+  )
+
+  // SpawnPoint が登録されたらそこへ置く（SpawnPoint.position は足元の座標）
   useEffect(() => {
     if (!spawnPoint) return
     const rb = rigidBodyRef.current
     if (!rb) return
-
-    const offsetY = PLAYER_HALF_HEIGHT + PLAYER_RADIUS
-    rb.setTranslation(
-      { x: spawnPoint.position[0], y: spawnPoint.position[1] + offsetY, z: spawnPoint.position[2] },
-      true,
-    )
-    rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
-
-    const yawRad = (spawnPoint.yaw * Math.PI) / 180
-    camera.rotation.set(0, yawRad, 0)
-  }, [spawnPoint, camera])
+    placeBody(rb, camera, toDevPlacementPose(spawnPoint.position, spawnPoint.yaw, FEET_OFFSET_Y), true)
+  }, [spawnPoint, camera, placeBody])
 
   // アバターを三人称レイヤーに設定（一人称カメラには映らない）
   useEffect(() => {
@@ -155,9 +187,7 @@ export function PhysicsPlayer({
       const entry = seatStore.getSeat(seatId)
       if (!entry) {
         // 座席が消えた（アンマウント等）→ その場で立たせて通常移動に戻す
-        seatStore.standUp()
-        prevSeatIdRef.current = null
-        seatedOffsetsRef.current = null
+        leaveSeat(rb, cam)
         return false
       }
 
@@ -191,10 +221,8 @@ export function PhysicsPlayer({
           { x: exit.x, y: exit.y + FEET_OFFSET_Y, z: exit.z },
           true,
         )
-        rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
-        seatStore.standUp()
-        prevSeatIdRef.current = null
-        seatedOffsetsRef.current = null
+        rb.setLinvel(ZERO_VELOCITY, true)
+        leaveSeat(rb, cam)
         prevSpaceRef.current = spacePressed
         return true
       }
@@ -273,12 +301,28 @@ export function PhysicsPlayer({
       }
       return true
     },
-    [seatStore, movementRef],
+    [seatStore, movementRef, leaveSeat],
+  )
+
+  // useTeleport() で預かった行き先へ体を動かす。
+  // 本番（xrift-frontend の useRigidBodyMovement.handleTeleportRequest）と同じく、着席中なら立たせてから動かす
+  // （座席追従がテレポート先を上書きしないように）。yaw は指定されたときだけ向きを変え、見上げ・見下ろしは保つ
+  const handleTeleport = useCallback(
+    (rb: RapierRigidBody, cam: Camera) => {
+      const destination = teleportStore.take()
+      if (!destination) return
+      if (seatStore.getSeatId()) leaveSeat(rb, cam)
+      placeBody(rb, cam, toDevPlacementPose(destination.position, destination.yaw, FEET_OFFSET_Y), false)
+    },
+    [teleportStore, seatStore, leaveSeat, placeBody],
   )
 
   useFrame(({ camera: frameCamera }, delta) => {
     const rb = rigidBodyRef.current
     if (!rb) return
+
+    // テレポートを最優先で消化する（体を動かしたあと、このフレームの通常の処理を続ける）
+    handleTeleport(rb, frameCamera)
 
     // 着席中は座席へ追従（WASD は歩行ではなく操縦入力になる）
     if (handleSeatedFrame(rb, frameCamera, delta)) return
@@ -318,11 +362,12 @@ export function PhysicsPlayer({
       }
     } else {
       const spaceEdge = spacePressed && !prevSpaceRef.current
-      if (spaceEdge && isGroundedRef.current) {
+      if (spaceEdge && isGroundedRef.current && !justPlacedRef.current) {
         vy = JUMP_VELOCITY
       }
     }
     prevSpaceRef.current = spacePressed
+    justPlacedRef.current = false
 
     rb.setLinvel({ x: moveX, y: vy, z: moveZ }, true)
 
@@ -371,20 +416,12 @@ export function PhysicsPlayer({
     // --- リスポーン ---
     if (pos.y < respawnThreshold) {
       if (spawnPoint) {
-        const offsetY = PLAYER_HALF_HEIGHT + PLAYER_RADIUS
-        rb.setTranslation(
-          { x: spawnPoint.position[0], y: spawnPoint.position[1] + offsetY, z: spawnPoint.position[2] },
-          true,
-        )
-        const yawRad = (spawnPoint.yaw * Math.PI) / 180
-        camera.rotation.set(0, yawRad, 0)
+        placeBody(rb, camera, toDevPlacementPose(spawnPoint.position, spawnPoint.yaw, FEET_OFFSET_Y), true)
       } else {
-        rb.setTranslation(
-          { x: spawnPosition[0], y: spawnPosition[1], z: spawnPosition[2] },
-          true,
-        )
+        // spawnPosition は RigidBody の初期位置（カプセル中心）なので、そのまま置く。向きは変えない
+        const [x, y, z] = spawnPosition
+        placeBody(rb, camera, { bodyPosition: { x, y, z }, yaw: undefined }, false)
       }
-      rb.setLinvel({ x: 0, y: 0, z: 0 }, true)
     }
   })
 
