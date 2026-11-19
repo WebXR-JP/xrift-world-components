@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
-import type { MutableRefObject } from 'react'
+import type { MutableRefObject, RefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
+import { useXRStore } from '@react-three/xr'
 import {
   CapsuleCollider,
   CuboidCollider,
@@ -25,6 +26,8 @@ import { isGameKeyEvent } from '../utils'
 import type { DevSeatStore } from './DevSeat/store'
 import type { DevTeleportStore } from './DevTeleport/store'
 import { toDevPlacementPose, type DevPlacementPose } from './DevTeleport/utils'
+import type { DevVRInput } from './DevXR/types'
+import { combineMoveIntent, normalizeAngle } from './DevXR/utils'
 import {
   DEV_SEAT_CAMERA_FORWARD_CLEARANCE,
   DEV_MAX_FRAME_DELTA,
@@ -44,6 +47,10 @@ interface Props {
   movementRef?: MutableRefObject<PlayerMovement>
   seatStore: DevSeatStore
   teleportStore: DevTeleportStore
+  /** VR のコントローラーの入力（DevXRInput が毎フレーム書き込む） */
+  vrInputRef: MutableRefObject<DevVRInput>
+  /** VR 中に足元へ置く XROrigin（体の位置に合わせて毎フレーム動かす） */
+  xrOriginRef: RefObject<Group | null>
 }
 
 /** RigidBody 原点（カプセル中心）から足元までの高さ */
@@ -59,6 +66,8 @@ export function PhysicsPlayer({
   movementRef,
   seatStore,
   teleportStore,
+  vrInputRef,
+  xrOriginRef,
 }: Props) {
   const rigidBodyRef = useRef<RapierRigidBody>(null)
   const avatarGroupRef = useRef<Group>(null)
@@ -85,13 +94,28 @@ export function PhysicsPlayer({
 
   const { camera } = useThree()
   const spawnPoint = useSpawnPoint()
+  const xrStore = useXRStore()
 
   // カメラの向きを整える。ロール（座席の傾き）は必ず消す。
   // yaw を省略したらいまの方角のまま、resetPitch なら見上げ・見下ろしを水平に戻す
-  const levelCamera = useCallback((cam: Camera, yaw?: number, resetPitch = false) => {
-    const euler = eulerRef.current.setFromQuaternion(cam.quaternion, 'YXZ')
-    cam.quaternion.setFromEuler(euler.set(resetPitch ? 0 : euler.x, yaw ?? euler.y, 0))
-  }, [])
+  // VR 中は頭の向きをヘッドセットが決めるので、向けたい方角へは XROrigin を回して合わせる
+  const levelCamera = useCallback(
+    (cam: Camera, yaw?: number, resetPitch = false) => {
+      const origin = xrOriginRef.current
+      if (xrStore.getState().session && origin) {
+        if (yaw === undefined) return
+        const headYaw = eulerRef.current.setFromQuaternion(
+          cam.getWorldQuaternion(lookQuatRef.current),
+          'YXZ',
+        ).y
+        origin.rotation.y = normalizeAngle(origin.rotation.y + yaw - headYaw)
+        return
+      }
+      const euler = eulerRef.current.setFromQuaternion(cam.quaternion, 'YXZ')
+      cam.quaternion.setFromEuler(euler.set(resetPitch ? 0 : euler.x, yaw ?? euler.y, 0))
+    },
+    [xrStore, xrOriginRef],
+  )
 
   // 体を置き直す（スポーン・リスポーン・テレポートの共通処理）。
   // 本番と同じく、スポーン・リスポーンは視線を水平に戻し（resetPitch）、テレポートは保つ
@@ -119,13 +143,16 @@ export function PhysicsPlayer({
     [seatStore, levelCamera],
   )
 
-  // SpawnPoint が登録されたらそこへ置く（SpawnPoint.position は足元の座標）
+  // SpawnPoint が登録されたらそこへ置く（SpawnPoint.position は足元の座標）。
+  // カメラは依存に入れない。VR の出入りでカメラが差し替わるたびにスポーン地点へ戻されてしまう
+  const getThree = useThree((state) => state.get)
   useEffect(() => {
     if (!spawnPoint) return
     const rb = rigidBodyRef.current
     if (!rb) return
-    placeBody(rb, camera, toDevPlacementPose(spawnPoint.position, spawnPoint.yaw, FEET_OFFSET_Y), true)
-  }, [spawnPoint, camera, placeBody])
+    const pose = toDevPlacementPose(spawnPoint.position, spawnPoint.yaw, FEET_OFFSET_Y)
+    placeBody(rb, getThree().camera, pose, true)
+  }, [spawnPoint, getThree, placeBody])
 
   // アバターを三人称レイヤーに設定（一人称カメラには映らない）
   useEffect(() => {
@@ -328,32 +355,34 @@ export function PhysicsPlayer({
     if (handleSeatedFrame(rb, frameCamera, delta)) return
 
     const keys = pressedKeysRef.current
+    const vr = vrInputRef.current
 
-    // --- 移動ベクトル算出 ---
-    const fwd =
+    // --- 移動ベクトル算出（キーと VR の左スティックを足す） ---
+    const intent = combineMoveIntent(
       (keys.has('KeyW') || keys.has('w') || keys.has('ArrowUp') ? 1 : 0) +
-      (keys.has('KeyS') || keys.has('s') || keys.has('ArrowDown') ? -1 : 0)
-    const strafe =
+        (keys.has('KeyS') || keys.has('s') || keys.has('ArrowDown') ? -1 : 0) -
+        vr.moveY,
       (keys.has('KeyD') || keys.has('d') || keys.has('ArrowRight') ? 1 : 0) +
-      (keys.has('KeyA') || keys.has('a') || keys.has('ArrowLeft') ? -1 : 0)
+        (keys.has('KeyA') || keys.has('a') || keys.has('ArrowLeft') ? -1 : 0) +
+        vr.moveX,
+    )
+    const fwd = intent.forward
+    const strafe = intent.strafe
 
     camera.getWorldDirection(forwardRef.current)
     forwardRef.current.y = 0
     forwardRef.current.normalize()
     rightRef.current.crossVectors(forwardRef.current, camera.up).normalize()
 
-    let moveX = forwardRef.current.x * fwd + rightRef.current.x * strafe
-    let moveZ = forwardRef.current.z * fwd + rightRef.current.z * strafe
+    // 入力の長さは combineMoveIntent で 1 以下にしてある（スティックを浅く倒せば遅く歩く）
+    const moveX = (forwardRef.current.x * fwd + rightRef.current.x * strafe) * moveSpeed
+    const moveZ = (forwardRef.current.z * fwd + rightRef.current.z * strafe) * moveSpeed
     const len = Math.sqrt(moveX * moveX + moveZ * moveZ)
-    if (len > 0) {
-      moveX = (moveX / len) * moveSpeed
-      moveZ = (moveZ / len) * moveSpeed
-    }
 
     // --- ジャンプ ---
     const currentVel = rb.linvel()
     const spacePressed =
-      keys.has('Space') || keys.has(' ') || keys.has('KeyE') || keys.has('e')
+      keys.has('Space') || keys.has(' ') || keys.has('KeyE') || keys.has('e') || vr.jump
     let vy = currentVel.y
 
     if (allowInfiniteJump) {
@@ -372,8 +401,14 @@ export function PhysicsPlayer({
     rb.setLinvel({ x: moveX, y: vy, z: moveZ }, true)
 
     // --- カメラ位置同期 ---
+    // VR 中はヘッドセットが頭の位置を決めるので、XROrigin（足元）を体に合わせる
     const pos = rb.translation()
-    camera.position.set(pos.x, pos.y + CAMERA_Y_OFFSET, pos.z)
+    const origin = xrOriginRef.current
+    if (xrStore.getState().session && origin) {
+      origin.position.set(pos.x, pos.y - FEET_OFFSET_Y, pos.z)
+    } else {
+      camera.position.set(pos.x, pos.y + CAMERA_Y_OFFSET, pos.z)
+    }
 
     // --- DummyAvatar 位置同期 ---
     camera.getWorldDirection(forwardRef.current)
@@ -398,9 +433,9 @@ export function PhysicsPlayer({
       m.position.y = pos.y - (PLAYER_HALF_HEIGHT + PLAYER_RADIUS)
       m.position.z = pos.z
       if (len > 0) {
-        m.direction.x = moveX / moveSpeed
-        m.direction.z = moveZ / moveSpeed
-        m.horizontalSpeed = moveSpeed
+        m.direction.x = moveX / len
+        m.direction.z = moveZ / len
+        m.horizontalSpeed = len
       } else {
         m.direction.x = 0
         m.direction.z = 0

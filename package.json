@@ -1,6 +1,6 @@
 {
   "name": "@xrift/world-components",
-  "version": "0.66.1",
+  "version": "0.67.0",
   "description": "Shared components and utilities for Xrift worlds",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -68,5 +68,10 @@
     "three": "^0.185.0",
     "typescript": "^5.6.3",
     "vitest": "^4.0.17"
+  },
+  "dependencies": {
+    "@iwer/devui": "^2.8.0",
+    "@react-three/xr": "^6.6.31",
+    "iwer": "^2.8.0"
   }
 }

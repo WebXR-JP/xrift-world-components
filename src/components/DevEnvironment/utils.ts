@@ -1,4 +1,5 @@
 import {
+  type Object3D,
   FloatType,
   HalfFloatType,
   type TextureDataType,
@@ -32,4 +33,21 @@ export function isGameKeyEvent(event: {
   if (!target) return true
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return false
   return target.isContentEditable !== true
+}
+
+/**
+ * 当たった物から親をたどり、Interactable の onInteract を呼ぶ。呼べたら true。
+ * 画面中央のクロスヘア（クリック）と VR のコントローラー（トリガー）で共通
+ */
+export function invokeInteract(hit: Object3D | null): boolean {
+  let node = hit
+  while (node) {
+    const userData = node.userData as { onInteract?: (id: string) => void; id?: string }
+    if (typeof userData.onInteract === 'function') {
+      userData.onInteract(userData.id ?? '')
+      return true
+    }
+    node = node.parent
+  }
+  return false
 }

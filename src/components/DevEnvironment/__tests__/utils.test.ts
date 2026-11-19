@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { FloatType, HalfFloatType, UnsignedByteType } from 'three'
-import { isGameKeyEvent, toThreeOutputBufferType } from '../utils'
+import { FloatType, HalfFloatType, Object3D, UnsignedByteType } from 'three'
+import { invokeInteract, isGameKeyEvent, toThreeOutputBufferType } from '../utils'
 
 describe('toThreeOutputBufferType', () => {
   it('HalfFloatType 文字列を Three.js の HalfFloatType に変換する', () => {
@@ -50,5 +50,22 @@ describe('isGameKeyEvent', () => {
     expect(isGameKeyEvent({ ...base, isComposing: true })).toBe(false)
     expect(isGameKeyEvent({ ...base, metaKey: true })).toBe(false)
     expect(isGameKeyEvent({ ...base, ctrlKey: true })).toBe(false)
+  })
+})
+
+describe('invokeInteract', () => {
+  it('当たった物から親をたどって onInteract を呼ぶ', () => {
+    const calls: string[] = []
+    const parent = new Object3D()
+    parent.userData = { id: 'button-1', onInteract: (id: string) => calls.push(id) }
+    const child = new Object3D()
+    parent.add(child)
+    expect(invokeInteract(child)).toBe(true)
+    expect(calls).toEqual(['button-1'])
+  })
+
+  it('onInteract を持つ物が無ければ何もしない', () => {
+    expect(invokeInteract(new Object3D())).toBe(false)
+    expect(invokeInteract(null)).toBe(false)
   })
 })

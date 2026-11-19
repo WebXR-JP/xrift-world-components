@@ -3,6 +3,8 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Raycaster, Vector2 } from 'three'
 import type { Object3D } from 'three'
 import { LAYERS } from '../../../constants/layers'
+import { INTERACT_DISTANCE } from '../constants'
+import { invokeInteract } from '../utils'
 
 interface Props {
   onHitChange: (hit: boolean) => void
@@ -21,18 +23,7 @@ export function CenterRaycaster({ onHitChange, canInteract }: Props) {
   useEffect(() => {
     const handleClick = () => {
       if (canInteract && !canInteract()) return
-      let node = currentHitRef.current
-      while (node) {
-        const userData = node.userData as {
-          onInteract?: (id: string) => void
-          id?: string
-        }
-        if (typeof userData.onInteract === 'function') {
-          userData.onInteract(userData.id ?? '')
-          return
-        }
-        node = node.parent
-      }
+      invokeInteract(currentHitRef.current)
     }
     window.addEventListener('mousedown', handleClick)
     return () => {
@@ -42,7 +33,7 @@ export function CenterRaycaster({ onHitChange, canInteract }: Props) {
 
   useFrame(() => {
     const raycaster = raycasterRef.current
-    raycaster.far = 3.5
+    raycaster.far = INTERACT_DISTANCE
     raycaster.layers.set(LAYERS.INTERACTABLE)
     raycaster.setFromCamera(NDC_CENTER, camera)
     const hits = raycaster.intersectObjects(scene.children, true)

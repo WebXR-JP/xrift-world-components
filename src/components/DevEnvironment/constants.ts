@@ -13,6 +13,8 @@ export const DEFAULT_GRAVITY = 9.81
 export const DEFAULT_ALLOW_INFINITE_JUMP = true
 export const DEFAULT_CAMERA_NEAR = 0.01
 export const DEFAULT_CAMERA_FAR = 1000
+/** インタラクトできる距離（本番の MAX_INTERACTION_DISTANCE と同じ） */
+export const INTERACT_DISTANCE = 3.5
 
 /**
  * クロスヘアスタイル定数
