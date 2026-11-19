@@ -8,11 +8,15 @@
 
 const EMULATOR_HOSTNAMES = ['localhost', '127.0.0.1']
 
+/** このページでエミュレーターを入れられるか（ヘッドセットが無いときに使う） */
+export function canUseDevXREmulator(): boolean {
+  return typeof window !== 'undefined' && EMULATOR_HOSTNAMES.includes(window.location.hostname)
+}
+
 let injecting: Promise<boolean> | null = null
 
 async function inject(): Promise<boolean> {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
-  if (!EMULATOR_HOSTNAMES.includes(window.location.hostname)) return false
+  if (!canUseDevXREmulator() || typeof navigator === 'undefined') return false
   const supported = await navigator.xr?.isSessionSupported('immersive-vr').catch(() => false)
   if (supported) return false
   const [{ XRDevice, metaQuest3 }, { DevUI }] = await Promise.all([
@@ -25,7 +29,10 @@ async function inject(): Promise<boolean> {
   return true
 }
 
-/** エミュレーターを入れる（ページで1回だけ）。入れたら true */
+/**
+ * エミュレーターを入れる（ページで1回だけ）。入れたら true。
+ * ページを開いただけで navigator.xr を差し替えないよう、「VR に入る」を押したときに呼ぶ
+ */
 export function injectDevXREmulator(): Promise<boolean> {
   injecting ??= inject().catch((error: unknown) => {
     console.error('[DevEnvironment] VR のエミュレーターを入れられませんでした', error)

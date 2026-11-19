@@ -27,7 +27,13 @@ import type { DevSeatStore } from './DevSeat/store'
 import type { DevTeleportStore } from './DevTeleport/store'
 import { toDevPlacementPose, type DevPlacementPose } from './DevTeleport/utils'
 import type { DevVRInput } from './DevXR/types'
-import { combineMoveIntent, normalizeAngle } from './DevXR/utils'
+import {
+  MAX_ROOM_SCALE_STEP,
+  combineMoveIntent,
+  horizontalBasisFromYaw,
+  normalizeAngle,
+  rotateYOffset,
+} from './DevXR/utils'
 import {
   DEV_SEAT_CAMERA_FORWARD_CLEARANCE,
   DEV_MAX_FRAME_DELTA,
@@ -76,7 +82,6 @@ export function PhysicsPlayer({
   const isGroundedRef = useRef(false)
   const prevSpaceRef = useRef(false)
   const forwardRef = useRef(new Vector3())
-  const rightRef = useRef(new Vector3())
   // 着席中の座席姿勢まわり（GC回避のため使い回す）
   const seatQuatRef = useRef(new Quaternion())
   const prevSeatQuatRef = useRef(new Quaternion())
@@ -91,6 +96,8 @@ export function PhysicsPlayer({
   // 体を置き直した（スポーン・リスポーン・テレポート）直後のフレームは跳ばせない。
   // 接地センサーの「離れた」は次の物理ステップまで届かないので、空中へ置いても接地したままに見える
   const justPlacedRef = useRef(false)
+  // VR で前のフレームの頭の位置（XROrigin から見た水平位置）。実際に歩いた分だけ体を動かすのに使う
+  const prevHeadLocalRef = useRef<{ x: number; z: number } | null>(null)
 
   const { camera } = useThree()
   const spawnPoint = useSpawnPoint()
@@ -115,6 +122,23 @@ export function PhysicsPlayer({
       cam.quaternion.setFromEuler(euler.set(resetPitch ? 0 : euler.x, yaw ?? euler.y, 0))
     },
     [xrStore, xrOriginRef],
+  )
+
+  // VR 中か（XROrigin が使える状態か）
+  const getVROrigin = useCallback(
+    (): Group | null => (xrStore.getState().session ? xrOriginRef.current : null),
+    [xrStore, xrOriginRef],
+  )
+
+  // VR 中は、頭がちょうど体（足元）の真上に来るよう XROrigin を置く。
+  // 頭は XROrigin の中でずれている（部屋の中を歩く）ので、そのずれを差し引く。
+  // こうしておくと、スナップ回転やテレポートの向き合わせも頭を中心に回る
+  const syncVROrigin = useCallback(
+    (origin: Group, cam: Camera, feet: { x: number; y: number; z: number }) => {
+      const offset = rotateYOffset(cam.position.x, cam.position.z, origin.rotation.y)
+      origin.position.set(feet.x - offset.x, feet.y, feet.z - offset.z)
+    },
+    [],
   )
 
   // 体を置き直す（スポーン・リスポーン・テレポートの共通処理）。
@@ -219,8 +243,10 @@ export function PhysicsPlayer({
       }
 
       const keys = pressedKeysRef.current
+      const vr = vrInputRef.current
+      const vrOrigin = getVROrigin()
       const spacePressed =
-        keys.has('Space') || keys.has(' ') || keys.has('KeyE') || keys.has('e')
+        keys.has('Space') || keys.has(' ') || keys.has('KeyE') || keys.has('e') || vr.jump
 
       // 着席した瞬間は押しっぱなしの Space を降車エッジとして拾わない
       if (prevSeatIdRef.current !== seatId) {
@@ -236,10 +262,17 @@ export function PhysicsPlayer({
           surface.quaternion.z,
           surface.quaternion.w,
         )
-        eulerRef.current.setFromQuaternion(cam.quaternion, 'YXZ')
-        cam.quaternion
-          .copy(seatQuatRef.current)
-          .multiply(lookQuatRef.current.setFromEuler(eulerRef.current.set(eulerRef.current.x, 0, 0)))
+        if (vrOrigin) {
+          // VR は頭の向きをヘッドセットが決めるので、XROrigin を回して座席の正面を向かせる
+          const seatYaw = eulerRef.current.setFromQuaternion(seatQuatRef.current, 'YXZ').y
+          const headYaw = eulerRef.current.setFromQuaternion(cam.quaternion, 'YXZ').y
+          vrOrigin.rotation.y = normalizeAngle(seatYaw - headYaw)
+        } else {
+          eulerRef.current.setFromQuaternion(cam.quaternion, 'YXZ')
+          cam.quaternion
+            .copy(seatQuatRef.current)
+            .multiply(lookQuatRef.current.setFromEuler(eulerRef.current.set(eulerRef.current.x, 0, 0)))
+        }
         prevSeatQuatRef.current.copy(seatQuatRef.current)
       } else if (spacePressed && !prevSpaceRef.current) {
         // 降車（Space のエッジ）。足元を降車位置に置き、重力を復帰させる
@@ -263,7 +296,9 @@ export function PhysicsPlayer({
       // 1 コマ分だけ座面から遅れて座って見える。
       // delta は上限で丸める（タブ切り替え復帰時の大きな delta で乗り物が跳ばないように）
       const dt = Math.min(Math.max(delta, 0), DEV_MAX_FRAME_DELTA)
-      entry.onControlInput?.(toSeatControlInput(moveIntentFromKeys(keys)), dt)
+      const keyIntent = moveIntentFromKeys(keys)
+      const driveIntent = combineMoveIntent(-(keyIntent.z + vr.moveY), keyIntent.x + vr.moveX)
+      entry.onControlInput?.(toSeatControlInput({ x: driveIntent.strafe, z: -driveIntent.forward }), dt)
 
       // 座面の姿勢はこのフレームで1回だけ引く
       const surface = entry.getSeatSurface()
@@ -278,7 +313,14 @@ export function PhysicsPlayer({
       // 座席の回転差分だけカメラに足す（ユーザーの見回しと喧嘩しない）
       invQuatRef.current.copy(prevSeatQuatRef.current).invert()
       deltaQuatRef.current.copy(seatQuatRef.current).multiply(invQuatRef.current)
-      cam.quaternion.premultiply(deltaQuatRef.current)
+      if (vrOrigin) {
+        // VR は座席の向きの変わった分（水平の回転）だけ XROrigin を回す
+        vrOrigin.rotation.y = normalizeAngle(
+          vrOrigin.rotation.y + eulerRef.current.setFromQuaternion(deltaQuatRef.current, 'YXZ').y,
+        )
+      } else {
+        cam.quaternion.premultiply(deltaQuatRef.current)
+      }
       prevSeatQuatRef.current.copy(seatQuatRef.current)
 
       // 腰を座面に載せる。傾いた座席では「座席の下方向」に足元を下げる
@@ -302,7 +344,13 @@ export function PhysicsPlayer({
         DEV_SEAT_CAMERA_FORWARD_CLEARANCE,
         eyePosRef.current,
       )
-      cam.position.set(eye.x, eye.y, eye.z)
+      if (vrOrigin) {
+        // VR は座面（足元）に XROrigin を置き、目の高さはヘッドセットに任せる
+        syncVROrigin(vrOrigin, cam, feet)
+        prevHeadLocalRef.current = null
+      } else {
+        cam.position.set(eye.x, eye.y, eye.z)
+      }
 
       // DummyAvatar も座席の姿勢そのまま（傾きも含む）
       if (avatarGroupRef.current) {
@@ -328,7 +376,7 @@ export function PhysicsPlayer({
       }
       return true
     },
-    [seatStore, movementRef, leaveSeat],
+    [seatStore, movementRef, leaveSeat, vrInputRef, getVROrigin, syncVROrigin],
   )
 
   // useTeleport() で預かった行き先へ体を動かす。
@@ -369,14 +417,36 @@ export function PhysicsPlayer({
     const fwd = intent.forward
     const strafe = intent.strafe
 
-    camera.getWorldDirection(forwardRef.current)
-    forwardRef.current.y = 0
-    forwardRef.current.normalize()
-    rightRef.current.crossVectors(forwardRef.current, camera.up).normalize()
+    // 前と右は頭の向き（yaw）から作る（足元を見ていても向きが乱れない）
+    const headYaw = eulerRef.current.setFromQuaternion(
+      camera.getWorldQuaternion(lookQuatRef.current),
+      'YXZ',
+    ).y
+    const basis = horizontalBasisFromYaw(headYaw)
 
     // 入力の長さは combineMoveIntent で 1 以下にしてある（スティックを浅く倒せば遅く歩く）
-    const moveX = (forwardRef.current.x * fwd + rightRef.current.x * strafe) * moveSpeed
-    const moveZ = (forwardRef.current.z * fwd + rightRef.current.z * strafe) * moveSpeed
+    let moveX = (basis.forward.x * fwd + basis.right.x * strafe) * moveSpeed
+    let moveZ = (basis.forward.z * fwd + basis.right.z * strafe) * moveSpeed
+
+    // VR で部屋の中を実際に歩いた分だけ、体も動かす（壁は物理で止まり、頭は体の上へ戻される）
+    const vrOrigin = getVROrigin()
+    if (vrOrigin) {
+      const head = { x: camera.position.x, z: camera.position.z }
+      const prev = prevHeadLocalRef.current
+      prevHeadLocalRef.current = head
+      if (prev) {
+        const dx = head.x - prev.x
+        const dz = head.z - prev.z
+        if (Math.sqrt(dx * dx + dz * dz) <= MAX_ROOM_SCALE_STEP) {
+          const step = rotateYOffset(dx, dz, vrOrigin.rotation.y)
+          const dt = Math.max(delta, 1 / 240)
+          moveX += step.x / dt
+          moveZ += step.z / dt
+        }
+      }
+    } else {
+      prevHeadLocalRef.current = null
+    }
     const len = Math.sqrt(moveX * moveX + moveZ * moveZ)
 
     // --- ジャンプ ---
@@ -403,9 +473,8 @@ export function PhysicsPlayer({
     // --- カメラ位置同期 ---
     // VR 中はヘッドセットが頭の位置を決めるので、XROrigin（足元）を体に合わせる
     const pos = rb.translation()
-    const origin = xrOriginRef.current
-    if (xrStore.getState().session && origin) {
-      origin.position.set(pos.x, pos.y - FEET_OFFSET_Y, pos.z)
+    if (vrOrigin) {
+      syncVROrigin(vrOrigin, camera, { x: pos.x, y: pos.y - FEET_OFFSET_Y, z: pos.z })
     } else {
       camera.position.set(pos.x, pos.y + CAMERA_Y_OFFSET, pos.z)
     }

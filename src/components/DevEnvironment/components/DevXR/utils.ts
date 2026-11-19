@@ -78,3 +78,26 @@ export function rayFromPose(
 export function normalizeAngle(angle: number): number {
   return Math.atan2(Math.sin(angle), Math.cos(angle))
 }
+
+/** Y 軸まわりに yaw だけ回した水平のずれ（three の rotation.y と同じ向き） */
+export function rotateYOffset(x: number, z: number, yaw: number): { x: number; z: number } {
+  const cos = Math.cos(yaw)
+  const sin = Math.sin(yaw)
+  return { x: x * cos + z * sin, z: -x * sin + z * cos }
+}
+
+/**
+ * 向き（yaw）から、水平の前と右の向きを作る。
+ * 視線の水平成分から作ると、真下を見たときに長さがほぼ 0 になって向きが乱れるので yaw から作る
+ */
+export function horizontalBasisFromYaw(yaw: number): {
+  forward: { x: number; z: number }
+  right: { x: number; z: number }
+} {
+  const sin = Math.sin(yaw)
+  const cos = Math.cos(yaw)
+  return { forward: { x: -sin, z: -cos }, right: { x: cos, z: -sin } }
+}
+
+/** 一度にこれ以上動いたら、実際に歩いたのではなくトラッキングが飛んだとみなす（m） */
+export const MAX_ROOM_SCALE_STEP = 0.5

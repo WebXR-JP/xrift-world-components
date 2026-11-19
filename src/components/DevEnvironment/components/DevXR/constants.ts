@@ -4,7 +4,6 @@
 
 /** xr-standard の gamepad のボタン番号（左右とも同じ並び） */
 export const XR_BUTTON = {
-  TRIGGER: 0,
   /** 右の A・左の X */
   PRIMARY: 4,
 } as const

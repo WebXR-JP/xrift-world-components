@@ -3,10 +3,12 @@ import { Matrix4, Quaternion, Vector3 } from 'three'
 import {
   applyDeadzone,
   combineMoveIntent,
+  horizontalBasisFromYaw,
   nextSnapTurn,
   normalizeAngle,
   rayFromPose,
   readStick,
+  rotateYOffset,
 } from '../utils'
 
 describe('applyDeadzone', () => {
@@ -82,5 +84,34 @@ describe('normalizeAngle', () => {
   it('-π〜π に収める', () => {
     expect(normalizeAngle(Math.PI * 3)).toBeCloseTo(Math.PI)
     expect(normalizeAngle(-Math.PI * 1.5)).toBeCloseTo(Math.PI / 2)
+  })
+})
+
+describe('rotateYOffset', () => {
+  it('90° 回すと前（-Z）が左（-X）になる', () => {
+    const r = rotateYOffset(0, -1, Math.PI / 2)
+    expect(r.x).toBeCloseTo(-1)
+    expect(r.z).toBeCloseTo(0)
+  })
+  it('three の rotation.y と同じ向きに回す', () => {
+    const v = new Vector3(0.3, 0, -0.7).applyAxisAngle(new Vector3(0, 1, 0), 1.2)
+    const r = rotateYOffset(0.3, -0.7, 1.2)
+    expect(r.x).toBeCloseTo(v.x)
+    expect(r.z).toBeCloseTo(v.z)
+  })
+})
+
+describe('horizontalBasisFromYaw', () => {
+  it('yaw 0 は前が -Z・右が +X', () => {
+    const b = horizontalBasisFromYaw(0)
+    expect(b.forward.x).toBeCloseTo(0)
+    expect(b.forward.z).toBeCloseTo(-1)
+    expect(b.right.x).toBeCloseTo(1)
+    expect(b.right.z).toBeCloseTo(0)
+  })
+  it('yaw π は前が +Z・右が -X', () => {
+    const b = horizontalBasisFromYaw(Math.PI)
+    expect(b.forward.z).toBeCloseTo(1)
+    expect(b.right.x).toBeCloseTo(-1)
   })
 })

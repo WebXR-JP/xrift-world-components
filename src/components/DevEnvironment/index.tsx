@@ -110,8 +110,9 @@ export function DevEnvironment({
   // 外側の XRiftProvider に teleportImplementation を渡していても、DevEnvironment の中ではこちらが効く
   // （XRiftProvider は渡されなければ console.log だけの既定を入れるので、区別できない）
   const [teleportStore] = useState(createDevTeleportStore)
-  // VR（@react-three/xr）。エミュレーターは EnterVRButton が入れる（components/DevXR/emulator.ts）
-  const [xrStore] = useState(() => createXRStore({ emulate: false }))
+  // VR（@react-three/xr）。エミュレーターは「VR に入る」を押したときに EnterVRButton が入れる
+  // （components/DevXR/emulator.ts）。offerSession を切って、エミュレーターの「Enter XR」を出さない
+  const [xrStore] = useState(() => createXRStore({ emulate: false, offerSession: false }))
   const xrOriginRef = useRef<Group>(null)
   const vrInputRef = useRef<DevVRInput>({ moveX: 0, moveY: 0, jump: false })
   const isPointerLocked = useSyncExternalStore(
@@ -220,6 +221,12 @@ export function DevEnvironment({
                     <SeatProvider implementation={seatStore.contextValue}>
                       <ItemLoaderProvider value={itemLoader}>
                         <TeleportProvider value={teleportStore.contextValue}>
+                          {/* 入力（スナップ回転を含む）を先に読むため、PhysicsPlayer より前に置く */}
+                          <DevXRInput
+                            inputRef={vrInputRef}
+                            originRef={xrOriginRef}
+                            canInteract={canInteract}
+                          />
                           <PhysicsPlayer
                             moveSpeed={moveSpeed}
                             spawnPosition={spawnPosition}
@@ -230,11 +237,6 @@ export function DevEnvironment({
                             teleportStore={teleportStore}
                             vrInputRef={vrInputRef}
                             xrOriginRef={xrOriginRef}
-                          />
-                          <DevXRInput
-                            inputRef={vrInputRef}
-                            originRef={xrOriginRef}
-                            canInteract={canInteract}
                           />
                           <GrabSystem store={grabStore} />
                           {children}
