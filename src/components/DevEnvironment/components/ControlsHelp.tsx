@@ -64,6 +64,9 @@ export function ControlsHelp() {
       <div>
         <Kbd>Space</Kbd> 着席中は降りる
       </div>
+      <div>
+        <Kbd>VR</Kbd> 左スティック 移動・右スティック 回転・<Kbd>A</Kbd> ジャンプ・トリガー インタラクト
+      </div>
     </div>
   )
 }

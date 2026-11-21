@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PointerLockControls } from '@react-three/drei'
+import { XR, XROrigin, createXRStore } from '@react-three/xr'
 import { Physics } from '@react-three/rapier'
 import { GrabbableProvider } from '../../contexts/GrabbableContext'
 import { ItemLoaderProvider } from '../../contexts/ItemLoaderContext'
@@ -11,7 +12,7 @@ import { UsersProvider, type UsersContextValue, type User } from '../../contexts
 import { XRiftContext, type XRiftContextValue } from '../../contexts/XRiftContext'
 import type { PlayerMovement } from '../../types/movement'
 import type { AvatarHeight } from '../../types/avatar'
-import { PCFShadowMap, type Object3D } from 'three'
+import { PCFShadowMap, type Group, type Object3D } from 'three'
 import type { Props } from './types'
 import { toThreeOutputBufferType } from './utils'
 import {
@@ -37,6 +38,9 @@ import { Crosshair } from './components/Crosshair'
 import { PointerLockStatus } from './components/PointerLockStatus'
 import { ControlsHelp } from './components/ControlsHelp'
 import { createDevItemLoader } from './itemLoader'
+import { DevXRInput } from './components/DevXR/DevXRInput'
+import { EnterVRButton } from './components/DevXR/EnterVRButton'
+import type { DevVRInput } from './components/DevXR/types'
 
 const DEV_LOCAL_USER: User = {
   id: DEV_LOCAL_USER_ID,
@@ -106,6 +110,11 @@ export function DevEnvironment({
   // 外側の XRiftProvider に teleportImplementation を渡していても、DevEnvironment の中ではこちらが効く
   // （XRiftProvider は渡されなければ console.log だけの既定を入れるので、区別できない）
   const [teleportStore] = useState(createDevTeleportStore)
+  // VR（@react-three/xr）。エミュレーターは「VR に入る」を押したときに EnterVRButton が入れる
+  // （components/DevXR/emulator.ts）。offerSession を切って、エミュレーターの「Enter XR」を出さない
+  const [xrStore] = useState(() => createXRStore({ emulate: false, offerSession: false }))
+  const xrOriginRef = useRef<Group>(null)
+  const vrInputRef = useRef<DevVRInput>({ moveX: 0, moveY: 0, jump: false })
   const isPointerLocked = useSyncExternalStore(
     subscribePointerLock,
     getPointerLockSnapshot,
@@ -200,39 +209,51 @@ export function DevEnvironment({
         }}
         gl={glProps}
       >
-        <PointerLockControls />
-        <CenterRaycaster onHitChange={handleHitChange} canInteract={canInteract} />
-        <Physics gravity={[0, -gravity, 0]} timeStep="vary">
-          <XRiftContext.Provider value={xriftContextValue}>
-            <SpawnPointProvider>
-              <UsersProvider implementation={usersImplementation}>
-                <GrabbableProvider implementation={grabStore.contextValue}>
-                  <SeatProvider implementation={seatStore.contextValue}>
-                    <ItemLoaderProvider value={itemLoader}>
-                      <TeleportProvider value={teleportStore.contextValue}>
-                        <PhysicsPlayer
-                          moveSpeed={moveSpeed}
-                          spawnPosition={spawnPosition}
-                          respawnThreshold={respawnThreshold}
-                          allowInfiniteJump={allowInfiniteJump}
-                          movementRef={localMovementRef}
-                          seatStore={seatStore}
-                          teleportStore={teleportStore}
-                        />
-                        <GrabSystem store={grabStore} />
-                        {children}
-                      </TeleportProvider>
-                    </ItemLoaderProvider>
-                  </SeatProvider>
-                </GrabbableProvider>
-              </UsersProvider>
-            </SpawnPointProvider>
-          </XRiftContext.Provider>
-        </Physics>
+        <XR store={xrStore}>
+          <XROrigin ref={xrOriginRef} />
+          <PointerLockControls />
+          <CenterRaycaster onHitChange={handleHitChange} canInteract={canInteract} />
+          <Physics gravity={[0, -gravity, 0]} timeStep="vary">
+            <XRiftContext.Provider value={xriftContextValue}>
+              <SpawnPointProvider>
+                <UsersProvider implementation={usersImplementation}>
+                  <GrabbableProvider implementation={grabStore.contextValue}>
+                    <SeatProvider implementation={seatStore.contextValue}>
+                      <ItemLoaderProvider value={itemLoader}>
+                        <TeleportProvider value={teleportStore.contextValue}>
+                          {/* 入力（スナップ回転を含む）を先に読むため、PhysicsPlayer より前に置く */}
+                          <DevXRInput
+                            inputRef={vrInputRef}
+                            originRef={xrOriginRef}
+                            canInteract={canInteract}
+                          />
+                          <PhysicsPlayer
+                            moveSpeed={moveSpeed}
+                            spawnPosition={spawnPosition}
+                            respawnThreshold={respawnThreshold}
+                            allowInfiniteJump={allowInfiniteJump}
+                            movementRef={localMovementRef}
+                            seatStore={seatStore}
+                            teleportStore={teleportStore}
+                            vrInputRef={vrInputRef}
+                            xrOriginRef={xrOriginRef}
+                          />
+                          <GrabSystem store={grabStore} />
+                          {children}
+                        </TeleportProvider>
+                      </ItemLoaderProvider>
+                    </SeatProvider>
+                  </GrabbableProvider>
+                </UsersProvider>
+              </SpawnPointProvider>
+            </XRiftContext.Provider>
+          </Physics>
+        </XR>
       </Canvas>
       <Crosshair active={isHit} />
       <PointerLockStatus isLocked={isPointerLocked} />
       <ControlsHelp />
+      <EnterVRButton store={xrStore} />
     </div>
   )
 }
