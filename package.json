@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "prepublishOnly": "npm run build",
     "changeset": "changeset",
-    "changeset:version": "changeset version",
+    "changeset:version": "changeset version && npm install --package-lock-only",
     "changeset:publish": "changeset publish"
   },
   "keywords": [
