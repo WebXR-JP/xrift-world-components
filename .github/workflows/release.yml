@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+
+      # Trusted Publishers (OIDC) での publish には npm >= 11.5.1 が必要。
+      # npm 12 は `npm info --json` の出力形式を変えたので、avatar-optimizer に合わせて 11 系に固定する
+      - name: Setup npm for publish
+        run: npm install -g npm@^11.5.1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # changeset が残っていれば「chore: release packages」PR を作る（更新する）。
+      # 残っていなければ（= リリース PR がマージされた直後）npm に公開する。
+      # GITHUB_TOKEN で作った PR では CI が走らないので、PAT の GH_TOKEN を使う
+      - name: Create Release Pull Request or Publish
+        uses: changesets/action@v2.1.1
+        with:
+          version-script: npm run changeset:version
+          publish-script: npm run changeset:publish
+          commit-message: 'chore: release packages'
+          pr-title: 'chore: release packages'
+          github-token: ${{ secrets.GH_TOKEN }}
+        env:
+          NPM_CONFIG_PROVENANCE: true
