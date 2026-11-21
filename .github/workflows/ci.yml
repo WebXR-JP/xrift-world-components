@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # changeset の書き間違い（パッケージ名の誤りなど）を PR の時点で見つける。
+      # main にマージしてからリリースが落ちるのを防ぐため。
+      #
+      # status は main との差分を取るので shallow clone では動かない。
+      # version は .changeset を読むだけなので、空打ちして生成物は捨てる。
+      # changeset が 0 件だと version は exit 1 になる（リリース PR はこの状態）ので、
+      # 先に数えてスキップする。
+      - name: Validate changesets
+        run: |
+          count=$(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "changeset なし。検証をスキップする"
+            exit 0
+          fi
+          npm run changeset:version
+          git checkout -- . && git clean -fd
+
+      - name: Build
+        run: npm run build

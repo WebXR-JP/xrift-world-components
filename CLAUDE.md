@@ -31,6 +31,23 @@
 - テストファイルは同階層の `__tests__` ディレクトリに `[filename].test.ts` として配置
 - 浮動小数点計算を含む場合は `toBeCloseTo()` を使用して精度問題を回避
 
+### リリース（Changesets）
+- **`package.json` の `version` は手で上げない**。リリース PR が自動で上げる
+- 利用者に影響する変更を入れる PR には changeset を足す: `npx changeset`（または `.changeset/<任意の名前>.md` を直接書く）
+
+```md
+---
+"@xrift/world-components": minor
+---
+
+ワールド行きのポータルにインタラクトしたら、ワールドの詳細を開けるようにする
+```
+
+- 種類の目安（0.x の間）: 機能追加・破壊的変更は `minor`、バグ修正などは `patch`
+- 本文は CHANGELOG とリリース PR にそのまま載るので、利用者向けに書く
+- ドキュメントや CI だけの変更など、公開物に影響しない PR には changeset は不要
+- 流れ: PR を main にマージ → `chore: release packages` PR が自動で作られる（更新される）→ それをマージすると GitHub Actions が npm に公開する
+
 ### コーディング規約
 
 #### 早期return（Early Return）の活用
