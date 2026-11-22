@@ -4,9 +4,24 @@ import type {
   GrabResultTransform,
 } from '../../../../contexts/GrabbableContext'
 import type { Position3D, Rotation3D } from '../../../../types/movement'
-import { clampHoldDistance, distanceBetween } from './utils'
+import { clampHoldDistance, distanceBetween, type QuaternionLike } from './utils'
 
 export type DevGrabPhase = 'idle' | 'holding'
+export type DevGrabHand = 'left' | 'right'
+
+/**
+ * VR のコントローラーで持っているときの持ち方（本番の VRGrabInputHandler と同じ）
+ * - attached: 手で触れて掴んだ。手から見た位置・向きのまま手にくっつく
+ * - ray: レイの先の物を掴んだ。手の先 distance[m] に浮く（右スティック上下で変えられる）
+ */
+export interface DevVRHold {
+  mode: 'attached' | 'ray'
+  distance: number
+  /** 手（グリップ）から見た物の位置 */
+  offsetPosition: Position3D
+  /** 手から見た物の向き */
+  offsetQuaternion: QuaternionLike
+}
 
 export interface DevGrabState {
   phase: DevGrabPhase
@@ -24,6 +39,10 @@ export interface DevGrabState {
   heldScale: number
   /** 「使う」を押している最中か（離す・置くときに onUseEnd を必ず呼ぶため） */
   isUsing: boolean
+  /** 持っている手（PC は右手扱い） */
+  hand: DevGrabHand
+  /** VR のコントローラーで持っているときの持ち方（PC の視点の前で持っているときは null） */
+  vrHold: DevVRHold | null
 }
 
 /**
@@ -39,8 +58,14 @@ export interface DevGrabStore {
   setHovered: (id: string | null) => void
   /** 狙っている対象を掴む（保持距離はカメラ→対象の距離から算出） */
   grab: (id: string, cameraPosition: Position3D) => void
+  /** VR のコントローラーで掴む */
+  grabVR: (id: string, hand: DevGrabHand, hold: DevVRHold) => void
+  /** VR でレイの先に浮かせている物の距離を変える */
+  setVRHoldDistance: (distance: number) => void
   /** 持っている物を動かすたびに書き込む（通知なし・getState で読む高頻度パターン） */
   updateHeldPosition: (position: Position3D) => void
+  /** VR で持っている物の位置と向きを書き込む（手の向きに合わせて回るので回転も更新する） */
+  updateHeldPose: (position: Position3D, rotation: Rotation3D) => void
   /** 確定して離す（sync なら離した位置を持ち、onMove で新しい姿勢をワールド側へ通知） */
   release: () => void
   /** キャンセルして離す（onMove は呼ばない＝元位置のまま） */
@@ -58,6 +83,7 @@ const IDLE_PARTIAL = {
   grabbedId: null,
   hoveredId: null,
   isUsing: false,
+  vrHold: null,
 } as const
 
 export function createDevGrabStore(): DevGrabStore {
@@ -76,11 +102,13 @@ export function createDevGrabStore(): DevGrabStore {
     heldRotation: { x: 0, y: 0, z: 0 },
     heldScale: 1,
     isUsing: false,
+    hand: 'right',
+    vrHold: null,
   }
 
-  /** 「使う」のイベント（開発環境は右手で持つ。姿勢はワールド座標） */
+  /** 「使う」のイベント（姿勢はワールド座標） */
   const useEvent = () => ({
-    hand: 'right' as const,
+    hand: state.hand,
     transform: { position: state.heldPosition, rotation: state.heldRotation },
   })
 
@@ -121,10 +149,37 @@ export function createDevGrabStore(): DevGrabStore {
         heldPosition: transform.position,
         heldRotation: transform.rotation,
         heldScale: transform.scale,
+        hand: 'right',
+        vrHold: null,
       })
+    },
+    grabVR: (id, hand, hold) => {
+      if (state.phase !== 'idle') return
+      const entry = registry.get(id)
+      if (!entry) return
+
+      const transform = entry.getTransform()
+      setState({
+        phase: 'holding',
+        grabbedId: id,
+        hoveredId: null,
+        holdDistance: hold.distance,
+        heldPosition: transform.position,
+        heldRotation: transform.rotation,
+        heldScale: transform.scale,
+        hand,
+        vrHold: hold,
+      })
+    },
+    setVRHoldDistance: (distance) => {
+      if (!state.vrHold) return
+      state = { ...state, vrHold: { ...state.vrHold, distance } }
     },
     updateHeldPosition: (position) => {
       state = { ...state, heldPosition: position }
+    },
+    updateHeldPose: (position, rotation) => {
+      state = { ...state, heldPosition: position, heldRotation: rotation }
     },
     release: () => {
       if (state.phase !== 'holding' || !state.grabbedId) return

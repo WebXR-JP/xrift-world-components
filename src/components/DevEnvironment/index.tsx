@@ -38,6 +38,7 @@ import { Crosshair } from './components/Crosshair'
 import { PointerLockStatus } from './components/PointerLockStatus'
 import { ControlsHelp } from './components/ControlsHelp'
 import { createDevItemLoader } from './itemLoader'
+import { DevXRGrab } from './components/DevXR/DevXRGrab'
 import { DevXRInput } from './components/DevXR/DevXRInput'
 import { EnterVRButton } from './components/DevXR/EnterVRButton'
 import type { DevVRInput } from './components/DevXR/types'
@@ -114,6 +115,11 @@ export function DevEnvironment({
   // （components/DevXR/emulator.ts）。offerSession を切って、エミュレーターの「Enter XR」を出さない
   const [xrStore] = useState(() => createXRStore({ emulate: false, offerSession: false }))
   const xrOriginRef = useRef<Group>(null)
+  const isInVR = useSyncExternalStore(
+    xrStore.subscribe,
+    () => xrStore.getState().session != null,
+    () => false,
+  )
   const vrInputRef = useRef<DevVRInput>({ moveX: 0, moveY: 0, jump: false })
   const isPointerLocked = useSyncExternalStore(
     subscribePointerLock,
@@ -239,6 +245,7 @@ export function DevEnvironment({
                             xrOriginRef={xrOriginRef}
                           />
                           <GrabSystem store={grabStore} />
+                          <DevXRGrab store={grabStore} />
                           {children}
                         </TeleportProvider>
                       </ItemLoaderProvider>
@@ -250,8 +257,9 @@ export function DevEnvironment({
           </Physics>
         </XR>
       </Canvas>
-      <Crosshair active={isHit} />
-      <PointerLockStatus isLocked={isPointerLocked} />
+      {/* VR 中は画面のクロスヘアとマウスロックの案内を出さない（エミュレーターの操作パネルと重なる） */}
+      {!isInVR && <Crosshair active={isHit} />}
+      {!isInVR && <PointerLockStatus isLocked={isPointerLocked} />}
       <ControlsHelp />
       <EnterVRButton store={xrStore} />
     </div>

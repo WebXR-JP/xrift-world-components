@@ -238,3 +238,60 @@ describe('使う（onUseStart / onUseEnd）', () => {
     expect(store.getState().isUsing).toBe(false)
   })
 })
+
+describe('VR で掴む（grabVR）', () => {
+  const hold = {
+    mode: 'ray' as const,
+    distance: 2,
+    offsetPosition: { x: 0, y: 0, z: -2 },
+    offsetQuaternion: { x: 0, y: 0, z: 0, w: 1 },
+  }
+
+  it('持った手と持ち方を覚え、使うのイベントはその手で届く', () => {
+    const onUseStart = vi.fn()
+    const store = createDevGrabStore()
+    store.contextValue.registerGrabbable('box', createEntry({ onUseStart }))
+
+    store.grabVR('box', 'left', hold)
+    store.useStart()
+
+    expect(store.getState().hand).toBe('left')
+    expect(store.getState().vrHold).toEqual(hold)
+    expect(onUseStart.mock.calls[0][0].hand).toBe('left')
+  })
+
+  it('離すと手の向きに合わせて回った姿勢で onMove が呼ばれ、持ち方が消える', () => {
+    const onMove = vi.fn()
+    const store = createDevGrabStore()
+    store.contextValue.registerGrabbable('box', createEntry({ onMove }))
+
+    store.grabVR('box', 'right', hold)
+    store.updateHeldPose({ x: 1, y: 2, z: 3 }, { x: 0, y: 1.2, z: 0 })
+    store.release()
+
+    expect(onMove).toHaveBeenCalledWith({
+      position: { x: 1, y: 2, z: 3 },
+      rotation: { x: 0, y: 1.2, z: 0 },
+    })
+    expect(store.getState().vrHold).toBeNull()
+  })
+
+  it('レイの先の距離を変えられる（持っていなければ何もしない）', () => {
+    const store = createDevGrabStore()
+    store.setVRHoldDistance(5)
+    expect(store.getState().vrHold).toBeNull()
+
+    store.contextValue.registerGrabbable('box', createEntry())
+    store.grabVR('box', 'right', hold)
+    store.setVRHoldDistance(4)
+    expect(store.getState().vrHold?.distance).toBe(4)
+  })
+
+  it('PC の G で掴んだときは右手・VR の持ち方なし', () => {
+    const store = createDevGrabStore()
+    store.contextValue.registerGrabbable('box', createEntry())
+    store.grab('box', { x: 0, y: 1, z: 0 })
+    expect(store.getState().hand).toBe('right')
+    expect(store.getState().vrHold).toBeNull()
+  })
+})
