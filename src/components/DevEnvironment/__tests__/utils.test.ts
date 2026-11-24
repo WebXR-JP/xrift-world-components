@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FloatType, HalfFloatType, Object3D, UnsignedByteType } from 'three'
-import { invokeInteract, isGameKeyEvent, toThreeOutputBufferType } from '../utils'
+import { DEV_OVERLAY_ATTRIBUTE, invokeInteract, isGameKeyEvent, toThreeOutputBufferType } from '../utils'
 
 describe('toThreeOutputBufferType', () => {
   it('HalfFloatType 文字列を Three.js の HalfFloatType に変換する', () => {
@@ -67,5 +67,16 @@ describe('invokeInteract', () => {
   it('onInteract を持つ物が無ければ何もしない', () => {
     expect(invokeInteract(new Object3D())).toBe(false)
     expect(invokeInteract(null)).toBe(false)
+  })
+})
+
+describe('isGameKeyEvent（確認・文字入力の画面）', () => {
+  it('画面の中で押したキーは操作にしない', () => {
+    const target = { tagName: 'P', closest: (selector: string) => (selector === `[${DEV_OVERLAY_ATTRIBUTE}]` ? {} : null) }
+    expect(isGameKeyEvent({ metaKey: false, ctrlKey: false, isComposing: false, target: target as unknown as EventTarget })).toBe(false)
+  })
+  it('画面の外なら操作にする', () => {
+    const target = { tagName: 'BODY', closest: () => null }
+    expect(isGameKeyEvent({ metaKey: false, ctrlKey: false, isComposing: false, target: target as unknown as EventTarget })).toBe(true)
   })
 })

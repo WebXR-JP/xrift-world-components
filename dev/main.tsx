@@ -5,13 +5,13 @@ import { RigidBody } from '@react-three/rapier'
 import { DevEnvironment } from '../src/components/DevEnvironment'
 import { SpawnPoint } from '../src/components/SpawnPoint'
 import { ScreenShareProvider, type ScreenShareContextValue } from '../src/contexts/ScreenShareContext'
-import { TextInputProvider, createDefaultTextInputImplementation } from '../src/contexts/TextInputContext'
+import { TextInput } from '../src/components/TextInput'
+import { useConfirm } from '../src/hooks/useConfirm'
+import { Text } from '@react-three/drei'
 import { TestScene } from '../src/scenes/TestScene'
 import { useUsers } from '../src/contexts/UsersContext'
 import { Interactable } from '../src/components/Interactable'
 import { useTeleport } from '../src/hooks/useTeleport'
-
-const textInput = createDefaultTextInputImplementation()
 
 function Floor() {
   return (
@@ -77,6 +77,48 @@ function TeleportButton() {
   )
 }
 
+/** useConfirm の確認用（テレポートの柱の右の柱）。インタラクトすると確認画面を出し、答えを上に出す */
+function ConfirmButton() {
+  const { requestConfirm } = useConfirm()
+  const [answer, setAnswer] = useState('未回答')
+  const handleInteract = useCallback(() => {
+    void requestConfirm({ title: '確認', message: 'テストの確認です。続けますか？' }).then((ok) => {
+      setAnswer(ok ? 'OK' : 'キャンセル')
+    })
+  }, [requestConfirm])
+  return (
+    <group position={[6.2, 0, 8]}>
+      <Interactable id="dev-confirm" onInteract={handleInteract} interactionText="確認">
+        <mesh position={[0, 1, 0]}>
+          <boxGeometry args={[0.6, 2, 0.6]} />
+          <meshStandardMaterial color="#e0a030" />
+        </mesh>
+      </Interactable>
+      <Text position={[0, 2.3, 0]} rotation={[0, Math.PI, 0]} fontSize={0.2} color="white">
+        {answer}
+      </Text>
+    </group>
+  )
+}
+
+/** TextInput の確認用（テレポートの柱の左の板） */
+function TextInputBoard() {
+  const [value, setValue] = useState('')
+  return (
+    <group position={[3.8, 1.4, 8]} rotation={[0, Math.PI, 0]}>
+      <TextInput id="dev-text" value={value} onSubmit={setValue} placeholder="名前を入力">
+        <mesh>
+          <boxGeometry args={[1, 0.5, 0.1]} />
+          <meshStandardMaterial color="#333" />
+        </mesh>
+      </TextInput>
+      <Text position={[0, 0, 0.06]} fontSize={0.12} color="white">
+        {value || '（クリックして入力）'}
+      </Text>
+    </group>
+  )
+}
+
 /** dev 用の画面共有モック（getDisplayMedia で実際に画面共有できる） */
 function DevScreenShareProvider({ children }: { children: ReactNode }) {
   const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null)
@@ -124,15 +166,15 @@ function App() {
       <DevEnvironment>
         <ambientLight intensity={1} />
         <directionalLight position={[5, 10, 5]} intensity={1} castShadow />
-        <TextInputProvider value={textInput}>
           <DevScreenShareProvider>
             <Floor />
             <SpawnPoint position={[5, 0, 5]} yaw={180} />
             <TestScene />
             <TeleportButton />
+            <ConfirmButton />
+            <TextInputBoard />
             <MovementDebugReader targetRef={debugRef} />
           </DevScreenShareProvider>
-        </TextInputProvider>
       </DevEnvironment>
       <pre ref={debugRef} style={debugOverlayStyle} />
     </>
