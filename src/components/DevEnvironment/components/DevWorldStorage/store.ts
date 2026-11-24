@@ -39,19 +39,23 @@ const assertValidKey = (key: string): void => {
  * 開発環境はひとりなので、ユーザー別KVは自分（DEV_LOCAL_USER_ID）のぶんだけ持つ
  */
 export function createDevWorldStorage(backend: DevWorldStorageBackend): WorldStorageContextValue {
+  // 中身は Map で持つ（普通のオブジェクトだと、キー __proto__ への代入がプロトタイプの差し替えになる）
   const loaded = backend.load()
-  const snapshot: DevWorldStorageSnapshot = {
-    shared: { ...(loaded?.shared ?? {}) },
-    player: { ...(loaded?.player ?? {}) },
-  }
+  const sharedArea = new Map(Object.entries(loaded?.shared ?? {}))
+  const playerArea = new Map(Object.entries(loaded?.player ?? {}))
+  const save = () =>
+    backend.save({
+      shared: Object.fromEntries(sharedArea),
+      player: Object.fromEntries(playerArea),
+    })
   // 合計容量は書き込みのたびに全部を数え直さず、足し引きで持つ
-  let totalSize = [...Object.values(snapshot.shared), ...Object.values(snapshot.player)].reduce<number>(
+  let totalSize = [...sharedArea.values(), ...playerArea.values()].reduce<number>(
     (sum, value) => sum + getWorldStorageEntrySize(value),
     0,
   )
 
   const write = (
-    area: Record<string, unknown>,
+    area: Map<string, unknown>,
     keyLimit: number,
     key: string,
     value: unknown,
@@ -63,50 +67,50 @@ export function createDevWorldStorage(backend: DevWorldStorageBackend): WorldSto
         `Entry exceeds max size of ${WORLD_STORAGE_LIMITS.entrySize} bytes`,
       )
     }
-    const exists = Object.prototype.hasOwnProperty.call(area, key)
-    if (!exists && Object.keys(area).length >= keyLimit) {
+    const exists = area.has(key)
+    if (!exists && area.size >= keyLimit) {
       throw new WorldStorageError('LIMIT_EXCEEDED', `Key count exceeds limit of ${keyLimit}`)
     }
-    const previousSize = exists ? getWorldStorageEntrySize(area[key]) : 0
+    const previousSize = exists ? getWorldStorageEntrySize(area.get(key)) : 0
     if (totalSize - previousSize + entrySize > WORLD_STORAGE_LIMITS.totalSize) {
       throw new WorldStorageError(
         'QUOTA_EXCEEDED',
         `World storage exceeds ${WORLD_STORAGE_LIMITS.totalSize} bytes`,
       )
     }
-    area[key] = toJsonValue(value)
+    area.set(key, toJsonValue(value))
     totalSize += entrySize - previousSize
-    backend.save(snapshot)
+    save()
   }
 
-  const createArea = (area: Record<string, unknown>, keyLimit: number) => ({
+  const createArea = (area: Map<string, unknown>, keyLimit: number) => ({
     get: async (key: string) => {
       assertValidKey(key)
-      return toJsonValue(area[key])
+      return toJsonValue(area.get(key))
     },
     list: async (): Promise<WorldStorageEntry[]> =>
-      Object.entries(area).map(([key, value]) => ({ key, value: toJsonValue(value) })),
+      Array.from(area, ([key, value]) => ({ key, value: toJsonValue(value) })),
     set: async (key: string, value: unknown) => {
       assertValidKey(key)
       write(area, keyLimit, key, value)
     },
     increment: async (key: string, delta: number) => {
       assertValidKey(key)
-      const next = incrementWorldStorageValue(area[key], delta)
+      const next = incrementWorldStorageValue(area.get(key), delta)
       write(area, keyLimit, key, next)
       return next
     },
     delete: async (key: string) => {
       assertValidKey(key)
-      if (!Object.prototype.hasOwnProperty.call(area, key)) return
-      totalSize -= getWorldStorageEntrySize(area[key])
-      delete area[key]
-      backend.save(snapshot)
+      if (!area.has(key)) return
+      totalSize -= getWorldStorageEntrySize(area.get(key))
+      area.delete(key)
+      save()
     },
   })
 
-  const shared = createArea(snapshot.shared, WORLD_STORAGE_LIMITS.sharedKeys)
-  const mine = createArea(snapshot.player, WORLD_STORAGE_LIMITS.playerKeysPerUser)
+  const shared = createArea(sharedArea, WORLD_STORAGE_LIMITS.sharedKeys)
+  const mine = createArea(playerArea, WORLD_STORAGE_LIMITS.playerKeysPerUser)
   // 開発環境にほかのユーザーはいないので、自分以外の値は空
   const isOther = (userId?: string) => userId !== undefined && userId !== DEV_LOCAL_USER_ID
 
@@ -128,18 +132,26 @@ export function createDevWorldStorage(backend: DevWorldStorageBackend): WorldSto
   }
 }
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+/** 保存されていた片方の KV。形が違う（文字列・配列など）ときは空として扱う */
+const toArea = (value: unknown): Record<string, unknown> => (isPlainObject(value) ? value : {})
+
 /**
  * localStorage に保存する backend。使えない（プライベートブラウズ・容量切れなど）ときは
  * 黙ってメモリだけで動く（そのときはリロードで消える）
  */
 export function createLocalStorageBackend(storageKey: string): DevWorldStorageBackend {
+  let warned = false
   return {
     load: () => {
       try {
         const raw = window.localStorage.getItem(storageKey)
         if (!raw) return null
-        const parsed = JSON.parse(raw) as Partial<DevWorldStorageSnapshot>
-        return { shared: parsed.shared ?? {}, player: parsed.player ?? {} }
+        const parsed: unknown = JSON.parse(raw)
+        if (!isPlainObject(parsed)) return null
+        return { shared: toArea(parsed.shared), player: toArea(parsed.player) }
       } catch {
         return null
       }
@@ -148,7 +160,13 @@ export function createLocalStorageBackend(storageKey: string): DevWorldStorageBa
       try {
         window.localStorage.setItem(storageKey, JSON.stringify(snapshot))
       } catch (error) {
-        console.warn('[DevEnvironment] World Storage を localStorage に保存できませんでした', error)
+        // 書き込みのたびに出さない。本番の上限（合計 10MB）より、ブラウザの localStorage（約 5MB）が先に埋まることがある
+        if (warned) return
+        warned = true
+        console.warn(
+          '[DevEnvironment] World Storage を localStorage に保存できませんでした。値は使えますが、リロードすると消えます（ブラウザの localStorage は約 5MB まで）',
+          error,
+        )
       }
     },
   }

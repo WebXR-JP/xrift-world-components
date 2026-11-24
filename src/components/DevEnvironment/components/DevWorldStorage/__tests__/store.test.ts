@@ -1,7 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { WORLD_STORAGE_LIMITS, WorldStorageError } from '../../../../../contexts/WorldStorageContext'
 import { DEV_LOCAL_USER_ID } from '../../../constants'
-import { createDevWorldStorage, type DevWorldStorageBackend, type DevWorldStorageSnapshot } from '../store'
+import {
+  createDevWorldStorage,
+  createLocalStorageBackend,
+  type DevWorldStorageBackend,
+  type DevWorldStorageSnapshot,
+} from '../store'
 
 const createMemoryBackend = (initial: DevWorldStorageSnapshot | null = null) => {
   let saved: DevWorldStorageSnapshot | null = initial
@@ -93,5 +98,45 @@ describe('createDevWorldStorage', () => {
     expect(await storage.player.get('name', { userId: 'someone-else' })).toBeUndefined()
     expect(await storage.player.list({ userId: 'someone-else' })).toEqual([])
     expect(await storage.player.get('name', { userId: DEV_LOCAL_USER_ID })).toBe('Alice')
+  })
+})
+
+describe('createDevWorldStorage のキーと保存データ', () => {
+  it('キー __proto__ も普通のキーとして保存・読み出しでき、作り直しても残る', async () => {
+    const { backend } = createMemoryBackend()
+    const storage = createDevWorldStorage(backend)
+    await storage.shared.set('__proto__', 1)
+    expect(await storage.shared.get('__proto__')).toBe(1)
+    expect(await storage.shared.list()).toEqual([{ key: '__proto__', value: 1 }])
+    expect(await createDevWorldStorage(backend).shared.get('__proto__')).toBe(1)
+  })
+})
+
+describe('createLocalStorageBackend', () => {
+  it('形の違う保存データは空として扱う', () => {
+    const store = new Map<string, string>([['k', JSON.stringify({ shared: 'abc', player: [1, 2] })]])
+    vi.stubGlobal('window', {
+      localStorage: { getItem: (key: string) => store.get(key) ?? null, setItem: () => {} },
+    })
+    expect(createLocalStorageBackend('k').load()).toEqual({ shared: {}, player: {} })
+    vi.unstubAllGlobals()
+  })
+
+  it('保存に失敗しても警告は一度だけ', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: () => null,
+        setItem: () => {
+          throw new Error('QuotaExceededError')
+        },
+      },
+    })
+    const backend = createLocalStorageBackend('k')
+    backend.save({ shared: {}, player: {} })
+    backend.save({ shared: {}, player: {} })
+    expect(warn).toHaveBeenCalledTimes(1)
+    vi.unstubAllGlobals()
+    warn.mockRestore()
   })
 })
