@@ -54,12 +54,15 @@ export function DevXRGrab({ store }: Props) {
   const triggerRef = useRef<Record<DevGrabHand, boolean>>({ left: false, right: false })
   const raycasterRef = useRef(new Raycaster())
 
-  // VR を抜けたら、VR で持っていた物を離す（本番と同じ。画面に戻ると手が無いので持ち続けられない）
+  // VR の出入りで持ち方が合わなくなる物は、いまの位置で離す（本番と同じ）
+  // - 抜けたら: VR で持っていた物（画面に戻ると手が無いので持ち続けられない）
+  // - 入ったら: PC の視点の前で持っていた物（VR 中のカメラは XROrigin の子で、視点の前に置き続けられない）
   useEffect(() => {
-    if (session) return
     gripRef.current = { left: false, right: false }
     triggerRef.current = { left: false, right: false }
-    if (store.getState().vrHold) store.release()
+    const { phase, vrHold } = store.getState()
+    if (phase !== 'holding') return
+    if (session ? !vrHold : vrHold) store.release()
   }, [session, store])
 
   const tryGrab = (hand: DevGrabHand, controller: Object3D) => {
