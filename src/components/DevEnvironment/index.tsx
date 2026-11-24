@@ -8,6 +8,7 @@ import { ItemLoaderProvider } from '../../contexts/ItemLoaderContext'
 import { SeatProvider } from '../../contexts/SeatContext'
 import { SpawnPointProvider } from '../../contexts/SpawnPointContext'
 import { TeleportProvider } from '../../contexts/TeleportContext'
+import { WorldStorageProvider } from '../../contexts/WorldStorageContext'
 import { ConfirmProvider } from '../../contexts/ConfirmContext'
 import { TextInputProvider, type TextInputContextValue } from '../../contexts/TextInputContext'
 import { UsersProvider, type UsersContextValue, type User } from '../../contexts/UsersContext'
@@ -29,6 +30,7 @@ import {
   DEV_LOCAL_USER_DISPLAY_NAME,
   DEV_AVATAR_HEIGHT,
   DEV_EYE_HEIGHT,
+  DEFAULT_WORLD_STORAGE_KEY,
 } from './constants'
 import { PhysicsPlayer } from './components/PhysicsPlayer'
 import { GrabSystem } from './components/GrabSystem'
@@ -42,6 +44,7 @@ import { ControlsHelp } from './components/ControlsHelp'
 import { createDevItemLoader } from './itemLoader'
 import { DevXRGrab } from './components/DevXR/DevXRGrab'
 import { createDevDialogStore } from './components/DevDialogs/store'
+import { createDevWorldStorage, createLocalStorageBackend } from './components/DevWorldStorage/store'
 import { ConfirmModal } from './components/DevDialogs/ConfirmModal'
 import { TextInputOverlay } from './components/DevDialogs/TextInputOverlay'
 import { VRConfirmPanel } from './components/DevDialogs/VRConfirmPanel'
@@ -92,6 +95,7 @@ export function DevEnvironment({
   physicsConfig,
   outputBufferType: outputBufferTypeStr,
   items,
+  worldStorageKey = DEFAULT_WORLD_STORAGE_KEY,
 }: Props) {
   const [isHit, setIsHit] = useState(false)
   // <Item itemId> の読み込み（差し込まれたローカルのソース → 開発サーバーの中継）。
@@ -139,6 +143,11 @@ export function DevEnvironment({
   // 外側の XRiftProvider に teleportImplementation を渡していても、DevEnvironment の中ではこちらが効く
   // （XRiftProvider は渡されなければ console.log だけの既定を入れるので、区別できない）
   const [teleportStore] = useState(createDevTeleportStore)
+  // World Storage は localStorage に保存する（本番と同じくリロードしても残る。制限も本番と同じ）
+  const worldStorage = useMemo(
+    () => createDevWorldStorage(createLocalStorageBackend(worldStorageKey)),
+    [worldStorageKey],
+  )
   const xrOriginRef = useRef<Group>(null)
   const isTextInputActive = useSyncExternalStore(
     dialogStore.subscribe,
@@ -269,31 +278,33 @@ export function DevEnvironment({
                     <SeatProvider implementation={seatStore.contextValue}>
                       <ItemLoaderProvider value={itemLoader}>
                         <TeleportProvider value={teleportStore.contextValue}>
-                          <ConfirmProvider value={dialogStore.confirmContextValue}>
-                            <TextInputProvider value={textInputValue}>
-                              <VRConfirmPanel store={dialogStore} />
-                              {/* 入力（スナップ回転を含む）を先に読むため、PhysicsPlayer より前に置く */}
-                              <DevXRInput
-                                inputRef={vrInputRef}
-                                originRef={xrOriginRef}
-                                canInteract={canInteract}
-                              />
-                              <PhysicsPlayer
-                                moveSpeed={moveSpeed}
-                                spawnPosition={spawnPosition}
-                                respawnThreshold={respawnThreshold}
-                                allowInfiniteJump={allowInfiniteJump}
-                                movementRef={localMovementRef}
-                                seatStore={seatStore}
-                                teleportStore={teleportStore}
-                                vrInputRef={vrInputRef}
-                                xrOriginRef={xrOriginRef}
-                              />
-                              <GrabSystem store={grabStore} />
-                              <DevXRGrab store={grabStore} canGrab={canGrabByVR} />
-                              {children}
-                            </TextInputProvider>
-                          </ConfirmProvider>
+                          <WorldStorageProvider value={worldStorage}>
+                            <ConfirmProvider value={dialogStore.confirmContextValue}>
+                              <TextInputProvider value={textInputValue}>
+                                <VRConfirmPanel store={dialogStore} />
+                                {/* 入力（スナップ回転を含む）を先に読むため、PhysicsPlayer より前に置く */}
+                                <DevXRInput
+                                  inputRef={vrInputRef}
+                                  originRef={xrOriginRef}
+                                  canInteract={canInteract}
+                                />
+                                <PhysicsPlayer
+                                  moveSpeed={moveSpeed}
+                                  spawnPosition={spawnPosition}
+                                  respawnThreshold={respawnThreshold}
+                                  allowInfiniteJump={allowInfiniteJump}
+                                  movementRef={localMovementRef}
+                                  seatStore={seatStore}
+                                  teleportStore={teleportStore}
+                                  vrInputRef={vrInputRef}
+                                  xrOriginRef={xrOriginRef}
+                                />
+                                <GrabSystem store={grabStore} />
+                                <DevXRGrab store={grabStore} canGrab={canGrabByVR} />
+                                {children}
+                              </TextInputProvider>
+                            </ConfirmProvider>
+                          </WorldStorageProvider>
                         </TeleportProvider>
                       </ItemLoaderProvider>
                     </SeatProvider>

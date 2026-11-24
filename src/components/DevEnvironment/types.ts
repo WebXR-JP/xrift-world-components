@@ -27,6 +27,11 @@ export interface Props {
    * バンドルを読む
    */
   items?: Record<string, ComponentType<ItemComponentProps>>
+  /**
+   * World Storage（useWorldStorage）を保存する localStorage のキー（既定: xrift-dev-world-storage）。
+   * 同じ localhost で別のワールドを開発していて、保存した値を分けたいときに変える
+   */
+  worldStorageKey?: string
   /** カメラ設定 */
   camera?: { position?: [number, number, number]; fov?: number; near?: number; far?: number }
   /** 移動速度（デフォルト: 5.0） */

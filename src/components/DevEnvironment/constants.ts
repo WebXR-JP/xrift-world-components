@@ -15,6 +15,8 @@ export const DEFAULT_CAMERA_NEAR = 0.01
 export const DEFAULT_CAMERA_FAR = 1000
 /** インタラクトできる距離（本番の MAX_INTERACTION_DISTANCE と同じ） */
 export const INTERACT_DISTANCE = 3.5
+/** World Storage を保存する localStorage の既定のキー */
+export const DEFAULT_WORLD_STORAGE_KEY = 'xrift-dev-world-storage'
 
 /**
  * クロスヘアスタイル定数
