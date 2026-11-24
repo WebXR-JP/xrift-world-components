@@ -1,13 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { Object3D, Quaternion, Vector3 } from 'three'
+import { BoxGeometry, Mesh, MeshBasicMaterial, Object3D, Quaternion, Vector3 } from 'three'
+import { LAYERS } from '../../../../../constants/layers'
 import { GRABBABLE_USER_DATA_KEY } from '../../../../Grabbable/constants'
-import { MAX_ANCESTOR_DEPTH, MAX_HOLD_DISTANCE, MIN_HOLD_DISTANCE } from '../constants'
+import {
+  MAX_ANCESTOR_DEPTH,
+  MAX_HOLD_DISTANCE,
+  MIN_HOLD_DISTANCE,
+  VR_MIN_HOLD_DISTANCE,
+} from '../constants'
 import {
   clampHoldDistance,
+  clampVRHoldDistance,
   computeHeldPosition,
   distanceBetween,
   findFirstGrabbableId,
   findGrabbableId,
+  findTouchedGrabbableId,
+  nextGripPressed,
 } from '../utils'
 
 describe('clampHoldDistance', () => {
@@ -119,5 +128,63 @@ describe('findFirstGrabbableId', () => {
   it('掴める対象が無ければ null を返す', () => {
     expect(findFirstGrabbableId([{ object: new Object3D() }])).toBeNull()
     expect(findFirstGrabbableId([])).toBeNull()
+  })
+})
+
+describe('clampVRHoldDistance', () => {
+  it('VR は PC より手元まで寄せられる', () => {
+    expect(clampVRHoldDistance(0.1)).toBe(VR_MIN_HOLD_DISTANCE)
+    expect(clampVRHoldDistance(0.5)).toBe(0.5)
+    expect(clampVRHoldDistance(50)).toBe(MAX_HOLD_DISTANCE)
+  })
+})
+
+describe('nextGripPressed', () => {
+  it('握り込みがしきい値を超えたら掴む', () => {
+    expect(nextGripPressed(false, 0.7, 0.6, 0.3)).toBe(true)
+    expect(nextGripPressed(false, 0.5, 0.6, 0.3)).toBe(false)
+  })
+  it('掴んだあとは、離すしきい値まで緩めるまで持ったまま', () => {
+    expect(nextGripPressed(true, 0.4, 0.6, 0.3)).toBe(true)
+    expect(nextGripPressed(true, 0.2, 0.6, 0.3)).toBe(false)
+  })
+})
+
+describe('findTouchedGrabbableId', () => {
+  const makeGrabbable = (id: string, x: number) => {
+    const group = new Object3D()
+    group.userData[GRABBABLE_USER_DATA_KEY] = id
+    const mesh = new Mesh(new BoxGeometry(0.2, 0.2, 0.2), new MeshBasicMaterial())
+    mesh.layers.enable(LAYERS.GRABBABLE)
+    group.add(mesh)
+    group.position.set(x, 0, 0)
+    return group
+  }
+
+  it('手が外形に触れている物を返す', () => {
+    const root = new Object3D()
+    root.add(makeGrabbable('ball', 0))
+    expect(findTouchedGrabbableId(root, new Vector3(0.13, 0, 0), 0.06)).toBe('ball')
+  })
+
+  it('離れていれば null', () => {
+    const root = new Object3D()
+    root.add(makeGrabbable('ball', 0))
+    expect(findTouchedGrabbableId(root, new Vector3(0.5, 0, 0), 0.06)).toBeNull()
+  })
+
+  it('いくつも触れていたら、いちばん近い物', () => {
+    const root = new Object3D()
+    root.add(makeGrabbable('near', 0))
+    root.add(makeGrabbable('far', 0.25))
+    expect(findTouchedGrabbableId(root, new Vector3(0.12, 0, 0), 0.06)).toBe('near')
+  })
+
+  it('GRABBABLE レイヤーに載っていないメッシュは無視する', () => {
+    const root = new Object3D()
+    const item = makeGrabbable('ball', 0)
+    item.children[0].layers.disable(LAYERS.GRABBABLE)
+    root.add(item)
+    expect(findTouchedGrabbableId(root, new Vector3(0.1, 0, 0), 0.06)).toBeNull()
   })
 })

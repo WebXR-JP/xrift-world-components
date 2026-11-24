@@ -38,6 +38,7 @@ import { Crosshair } from './components/Crosshair'
 import { PointerLockStatus } from './components/PointerLockStatus'
 import { ControlsHelp } from './components/ControlsHelp'
 import { createDevItemLoader } from './itemLoader'
+import { DevXRGrab } from './components/DevXR/DevXRGrab'
 import { DevXRInput } from './components/DevXR/DevXRInput'
 import { EnterVRButton } from './components/DevXR/EnterVRButton'
 import type { DevVRInput } from './components/DevXR/types'
@@ -103,7 +104,15 @@ export function DevEnvironment({
   // ローカル掴みストア（<Grabbable> の登録先 & 開発プレビュー用 GrabSystem の状態）
   const [grabStore] = useState(createDevGrabStore)
   // 掴んでいる間はクリックが「使う」になるので、インタラクトしない（本番と同じ）
-  const canInteract = useCallback(() => grabStore.getState().phase !== 'holding', [grabStore])
+  // VR では持っている手のトリガーだけが「使う」で、もう片方の手ではインタラクトできる（本番と同じ）
+  const canInteract = useCallback(
+    (hand?: XRHandedness) => {
+      const { phase, vrHold, hand: heldHand } = grabStore.getState()
+      if (phase !== 'holding') return true
+      return vrHold != null && hand !== heldHand
+    },
+    [grabStore],
+  )
   // ローカル座席ストア（<Seat> / <Vehicle> の登録先 & 着席状態。単独プレイヤー用）
   const [seatStore] = useState(createDevSeatStore)
   // ローカルのテレポート（useTeleport() の行き先を PhysicsPlayer が次のフレームで消化する）。
@@ -114,6 +123,16 @@ export function DevEnvironment({
   // （components/DevXR/emulator.ts）。offerSession を切って、エミュレーターの「Enter XR」を出さない
   const [xrStore] = useState(() => createXRStore({ emulate: false, offerSession: false }))
   const xrOriginRef = useRef<Group>(null)
+  const isInVR = useSyncExternalStore(
+    xrStore.subscribe,
+    () => xrStore.getState().session != null,
+    () => false,
+  )
+  // 画面中央のクロスヘアのクリックは、VR 中は使わない（エミュレーターの操作パネルのクリックで物を押さない）
+  const canInteractByCrosshair = useCallback(
+    () => xrStore.getState().session == null && canInteract(),
+    [xrStore, canInteract],
+  )
   const vrInputRef = useRef<DevVRInput>({ moveX: 0, moveY: 0, jump: false })
   const isPointerLocked = useSyncExternalStore(
     subscribePointerLock,
@@ -211,8 +230,9 @@ export function DevEnvironment({
       >
         <XR store={xrStore}>
           <XROrigin ref={xrOriginRef} />
-          <PointerLockControls />
-          <CenterRaycaster onHitChange={handleHitChange} canInteract={canInteract} />
+          {/* VR 中はマウスで視点を回さない（エミュレーターの操作パネルのクリックでロックを取りに行かない） */}
+        <PointerLockControls enabled={!isInVR} />
+          <CenterRaycaster onHitChange={handleHitChange} canInteract={canInteractByCrosshair} />
           <Physics gravity={[0, -gravity, 0]} timeStep="vary">
             <XRiftContext.Provider value={xriftContextValue}>
               <SpawnPointProvider>
@@ -239,6 +259,7 @@ export function DevEnvironment({
                             xrOriginRef={xrOriginRef}
                           />
                           <GrabSystem store={grabStore} />
+                          <DevXRGrab store={grabStore} />
                           {children}
                         </TeleportProvider>
                       </ItemLoaderProvider>
@@ -250,8 +271,9 @@ export function DevEnvironment({
           </Physics>
         </XR>
       </Canvas>
-      <Crosshair active={isHit} />
-      <PointerLockStatus isLocked={isPointerLocked} />
+      {/* VR 中は画面のクロスヘアとマウスロックの案内を出さない（エミュレーターの操作パネルと重なる） */}
+      {!isInVR && <Crosshair active={isHit} />}
+      {!isInVR && <PointerLockStatus isLocked={isPointerLocked} />}
       <ControlsHelp />
       <EnterVRButton store={xrStore} />
     </div>

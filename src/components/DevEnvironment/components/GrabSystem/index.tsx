@@ -117,8 +117,9 @@ function HeldObjectDriver({ store }: Props) {
   const camera = useThree((s) => s.camera)
 
   useFrame(() => {
-    const { phase, grabbedId, holdDistance, heldRotation, heldScale } = store.getState()
-    if (phase !== 'holding' || !grabbedId) return
+    const { phase, grabbedId, holdDistance, heldRotation, heldScale, vrHold } = store.getState()
+    // VR のコントローラーで持っている物は DevXRGrab が手元へ動かす
+    if (phase !== 'holding' || !grabbedId || vrHold) return
     const entry = store.getEntry(grabbedId)
     if (!entry) return
 

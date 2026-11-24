@@ -17,8 +17,8 @@ interface Props {
   inputRef: MutableRefObject<DevVRInput>
   /** スナップ回転で回す XROrigin */
   originRef: RefObject<Group | null>
-  /** false を返す間はインタラクトしない（物を掴んでいる間） */
-  canInteract: () => boolean
+  /** false を返す間はインタラクトしない（その手で物を持っている間） */
+  canInteract: (hand: XRHandedness) => boolean
 }
 
 const SNAP_ANGLE_RAD = (SNAP_ANGLE_DEG * Math.PI) / 180
@@ -60,7 +60,7 @@ export function DevXRInput({ inputRef, originRef, canInteract }: Props) {
     const handleSelectStart = (event: XRInputSourceEvent) => {
       const origin = originRef.current
       const referenceSpace = gl.xr.getReferenceSpace()
-      if (!origin || !referenceSpace || !canInteract()) return
+      if (!origin || !referenceSpace || !canInteract(event.inputSource.handedness)) return
       let pose: XRPose | undefined
       try {
         pose = event.frame.getPose(event.inputSource.targetRaySpace, referenceSpace)

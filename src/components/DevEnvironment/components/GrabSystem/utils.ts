@@ -1,7 +1,13 @@
-import type { Object3D } from 'three'
+import { Box3, type Mesh, type Object3D, type Vector3 } from 'three'
+import { LAYERS } from '../../../../constants/layers'
 import type { Position3D } from '../../../../types/movement'
 import { GRABBABLE_USER_DATA_KEY } from '../../../Grabbable/constants'
-import { MAX_ANCESTOR_DEPTH, MAX_HOLD_DISTANCE, MIN_HOLD_DISTANCE } from './constants'
+import {
+  MAX_ANCESTOR_DEPTH,
+  MAX_HOLD_DISTANCE,
+  MIN_HOLD_DISTANCE,
+  VR_MIN_HOLD_DISTANCE,
+} from './constants'
 
 /** クォータニオン（three に依存しない形） */
 export interface QuaternionLike {
@@ -68,4 +74,48 @@ export function findFirstGrabbableId(intersects: readonly { object: Object3D }[]
     if (id) return id
   }
   return null
+}
+
+/** VR でレイの先に浮かせる距離を [VR_MIN, MAX] に収める（手元まで寄せられるよう PC より短くできる） */
+export function clampVRHoldDistance(distance: number): number {
+  return Math.min(MAX_HOLD_DISTANCE, Math.max(VR_MIN_HOLD_DISTANCE, distance))
+}
+
+/** グリップの押し込み量から、掴む・離すの切り替わりを判定する（ヒステリシス付き。本番と同じ） */
+export function nextGripPressed(
+  wasPressed: boolean,
+  value: number,
+  pressThreshold: number,
+  releaseThreshold: number,
+): boolean {
+  if (wasPressed) return value > releaseThreshold
+  return value >= pressThreshold
+}
+
+const _box = new Box3()
+const isMesh = (object: Object3D): object is Mesh => (object as Mesh).isMesh === true
+
+/**
+ * 手（point）が触れている掴める物を探す。手から外形（各メッシュの箱）までが radius 以内の物のうち、
+ * いちばん近い物の grabbable ID を返す。無ければ null。
+ * 掴み始めの1回だけ呼ぶ（シーン全体をたどるので毎フレームは呼ばない）
+ */
+export function findTouchedGrabbableId(root: Object3D, point: Vector3, radius: number): string | null {
+  let bestId: string | null = null
+  let bestDistance = radius
+  root.traverse((object) => {
+    if (!isMesh(object) || !object.layers.isEnabled(LAYERS.GRABBABLE)) return
+    const geometry = object.geometry
+    if (!geometry.boundingBox) geometry.computeBoundingBox()
+    if (!geometry.boundingBox) return
+    object.updateWorldMatrix(true, false)
+    _box.copy(geometry.boundingBox).applyMatrix4(object.matrixWorld)
+    const distance = _box.distanceToPoint(point)
+    if (distance > bestDistance) return
+    const id = findGrabbableId(object)
+    if (!id) return
+    bestId = id
+    bestDistance = distance
+  })
+  return bestId
 }
