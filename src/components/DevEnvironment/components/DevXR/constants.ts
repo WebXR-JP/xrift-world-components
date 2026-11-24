@@ -9,6 +9,8 @@ export const XR_BUTTON = {
   GRIP: 1,
   /** 右の A・左の X */
   PRIMARY: 4,
+  /** 右の B・左の Y */
+  SECONDARY: 5,
 } as const
 
 /** スティックの軸（上と左が負） */

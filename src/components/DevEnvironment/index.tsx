@@ -8,6 +8,8 @@ import { ItemLoaderProvider } from '../../contexts/ItemLoaderContext'
 import { SeatProvider } from '../../contexts/SeatContext'
 import { SpawnPointProvider } from '../../contexts/SpawnPointContext'
 import { TeleportProvider } from '../../contexts/TeleportContext'
+import { ConfirmProvider } from '../../contexts/ConfirmContext'
+import { TextInputProvider, type TextInputContextValue } from '../../contexts/TextInputContext'
 import { UsersProvider, type UsersContextValue, type User } from '../../contexts/UsersContext'
 import { XRiftContext, type XRiftContextValue } from '../../contexts/XRiftContext'
 import type { PlayerMovement } from '../../types/movement'
@@ -39,6 +41,10 @@ import { PointerLockStatus } from './components/PointerLockStatus'
 import { ControlsHelp } from './components/ControlsHelp'
 import { createDevItemLoader } from './itemLoader'
 import { DevXRGrab } from './components/DevXR/DevXRGrab'
+import { createDevDialogStore } from './components/DevDialogs/store'
+import { ConfirmModal } from './components/DevDialogs/ConfirmModal'
+import { TextInputOverlay } from './components/DevDialogs/TextInputOverlay'
+import { VRConfirmPanel } from './components/DevDialogs/VRConfirmPanel'
 import { DevXRInput } from './components/DevXR/DevXRInput'
 import { EnterVRButton } from './components/DevXR/EnterVRButton'
 import type { DevVRInput } from './components/DevXR/types'
@@ -104,9 +110,23 @@ export function DevEnvironment({
   // ローカル掴みストア（<Grabbable> の登録先 & 開発プレビュー用 GrabSystem の状態）
   const [grabStore] = useState(createDevGrabStore)
   // 掴んでいる間はクリックが「使う」になるので、インタラクトしない（本番と同じ）
+  // VR（@react-three/xr）。エミュレーターは「VR に入る」を押したときに EnterVRButton が入れる
+  // （components/DevXR/emulator.ts）。offerSession を切って、エミュレーターの「Enter XR」を出さない
+  const [xrStore] = useState(() => createXRStore({ emulate: false, offerSession: false }))
+  // useConfirm() と TextInput の画面（本番と同じ見た目。ブラウザの confirm・prompt は VR では見えない）。
+  // 文字入力は本番と同じく、VR 中なら先に VR を抜けてから出す
+  const [dialogStore] = useState(() =>
+    createDevDialogStore({
+      beforeTextInput: async () => {
+        await xrStore.getState().session?.end()
+      },
+    }),
+  )
   // VR では持っている手のトリガーだけが「使う」で、もう片方の手ではインタラクトできる（本番と同じ）
   const canInteract = useCallback(
     (hand?: XRHandedness) => {
+      // 確認画面が開いている間は、後ろの物を押さない（レイは確認画面のボタンに使う）
+      if (dialogStore.getState().confirm) return false
       const { phase, vrHold, hand: heldHand } = grabStore.getState()
       if (phase !== 'holding') return true
       return vrHold != null && hand !== heldHand
@@ -119,10 +139,16 @@ export function DevEnvironment({
   // 外側の XRiftProvider に teleportImplementation を渡していても、DevEnvironment の中ではこちらが効く
   // （XRiftProvider は渡されなければ console.log だけの既定を入れるので、区別できない）
   const [teleportStore] = useState(createDevTeleportStore)
-  // VR（@react-three/xr）。エミュレーターは「VR に入る」を押したときに EnterVRButton が入れる
-  // （components/DevXR/emulator.ts）。offerSession を切って、エミュレーターの「Enter XR」を出さない
-  const [xrStore] = useState(() => createXRStore({ emulate: false, offerSession: false }))
   const xrOriginRef = useRef<Group>(null)
+  const isTextInputActive = useSyncExternalStore(
+    dialogStore.subscribe,
+    () => dialogStore.getState().textInput != null,
+    () => false,
+  )
+  const textInputValue = useMemo<TextInputContextValue>(
+    () => ({ requestTextInput: dialogStore.requestTextInput, isActive: isTextInputActive }),
+    [dialogStore, isTextInputActive],
+  )
   const isInVR = useSyncExternalStore(
     xrStore.subscribe,
     () => xrStore.getState().session != null,
@@ -241,26 +267,31 @@ export function DevEnvironment({
                     <SeatProvider implementation={seatStore.contextValue}>
                       <ItemLoaderProvider value={itemLoader}>
                         <TeleportProvider value={teleportStore.contextValue}>
-                          {/* 入力（スナップ回転を含む）を先に読むため、PhysicsPlayer より前に置く */}
-                          <DevXRInput
-                            inputRef={vrInputRef}
-                            originRef={xrOriginRef}
-                            canInteract={canInteract}
-                          />
-                          <PhysicsPlayer
-                            moveSpeed={moveSpeed}
-                            spawnPosition={spawnPosition}
-                            respawnThreshold={respawnThreshold}
-                            allowInfiniteJump={allowInfiniteJump}
-                            movementRef={localMovementRef}
-                            seatStore={seatStore}
-                            teleportStore={teleportStore}
-                            vrInputRef={vrInputRef}
-                            xrOriginRef={xrOriginRef}
-                          />
-                          <GrabSystem store={grabStore} />
-                          <DevXRGrab store={grabStore} />
-                          {children}
+                          <ConfirmProvider value={dialogStore.confirmContextValue}>
+                            <TextInputProvider value={textInputValue}>
+                              <VRConfirmPanel store={dialogStore} />
+                              {/* 入力（スナップ回転を含む）を先に読むため、PhysicsPlayer より前に置く */}
+                              <DevXRInput
+                                inputRef={vrInputRef}
+                                originRef={xrOriginRef}
+                                canInteract={canInteract}
+                              />
+                              <PhysicsPlayer
+                                moveSpeed={moveSpeed}
+                                spawnPosition={spawnPosition}
+                                respawnThreshold={respawnThreshold}
+                                allowInfiniteJump={allowInfiniteJump}
+                                movementRef={localMovementRef}
+                                seatStore={seatStore}
+                                teleportStore={teleportStore}
+                                vrInputRef={vrInputRef}
+                                xrOriginRef={xrOriginRef}
+                              />
+                              <GrabSystem store={grabStore} />
+                              <DevXRGrab store={grabStore} />
+                              {children}
+                            </TextInputProvider>
+                          </ConfirmProvider>
                         </TeleportProvider>
                       </ItemLoaderProvider>
                     </SeatProvider>
@@ -276,6 +307,8 @@ export function DevEnvironment({
       {!isInVR && <PointerLockStatus isLocked={isPointerLocked} />}
       <ControlsHelp />
       <EnterVRButton store={xrStore} />
+      <ConfirmModal store={dialogStore} hidden={isInVR} />
+      <TextInputOverlay store={dialogStore} />
     </div>
   )
 }
