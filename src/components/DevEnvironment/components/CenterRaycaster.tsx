@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type MutableRefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Raycaster, Vector2 } from 'three'
 import type { Object3D } from 'three'
@@ -10,11 +10,13 @@ interface Props {
   onHitChange: (hit: boolean) => void
   /** false を返す間はクリックしてもインタラクトしない（物を掴んでいる間はクリックが「使う」になる） */
   canInteract?: () => boolean
+  /** いまクロスヘアが当たっている物（スマホのインタラクトボタンが押すのに使う） */
+  hitRef?: MutableRefObject<Object3D | null>
 }
 
 const NDC_CENTER = new Vector2(0, 0)
 
-export function CenterRaycaster({ onHitChange, canInteract }: Props) {
+export function CenterRaycaster({ onHitChange, canInteract, hitRef }: Props) {
   const { camera, scene } = useThree()
   const raycasterRef = useRef(new Raycaster())
   const currentHitRef = useRef<Object3D | null>(null)
@@ -38,6 +40,7 @@ export function CenterRaycaster({ onHitChange, canInteract }: Props) {
     raycaster.setFromCamera(NDC_CENTER, camera)
     const hits = raycaster.intersectObjects(scene.children, true)
     currentHitRef.current = hits.length > 0 ? hits[0].object : null
+    if (hitRef) hitRef.current = currentHitRef.current
 
     const isHit = currentHitRef.current !== null
     if (isHit !== wasHitRef.current) {
