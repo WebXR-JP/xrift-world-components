@@ -155,6 +155,8 @@ export function DevEnvironment({
     () => false,
   )
   // 画面中央のクロスヘアのクリックは、VR 中は使わない（エミュレーターの操作パネルのクリックで物を押さない）
+  // VR の掴む操作も、確認画面が開いている間は止める
+  const canGrabByVR = useCallback(() => dialogStore.getState().confirm == null, [dialogStore])
   const canInteractByCrosshair = useCallback(
     () => xrStore.getState().session == null && canInteract(),
     [xrStore, canInteract],
@@ -288,7 +290,7 @@ export function DevEnvironment({
                                 xrOriginRef={xrOriginRef}
                               />
                               <GrabSystem store={grabStore} />
-                              <DevXRGrab store={grabStore} />
+                              <DevXRGrab store={grabStore} canGrab={canGrabByVR} />
                               {children}
                             </TextInputProvider>
                           </ConfirmProvider>

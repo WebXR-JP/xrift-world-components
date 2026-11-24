@@ -74,10 +74,16 @@ export function createDevDialogStore({ beforeTextInput }: Options = {}): DevDial
     })
 
   const requestTextInput = (request: TextInputRequest) => {
-    void (beforeTextInput?.() ?? Promise.resolve()).then(() => {
-      state.textInput?.onCancel?.()
-      setState({ textInput: request })
-    })
+    // VR を抜けるのに失敗しても入力欄は出す（入力できないまま止まらないように）
+    void Promise.resolve()
+      .then(() => beforeTextInput?.())
+      .catch((error: unknown) => {
+        console.warn('[DevEnvironment] 文字入力の前に VR を抜けられませんでした', error)
+      })
+      .then(() => {
+        state.textInput?.onCancel?.()
+        setState({ textInput: request })
+      })
   }
 
   return {

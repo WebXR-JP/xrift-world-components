@@ -22,6 +22,8 @@ import { CONTROLLER_POINTING_ANGLE, XR_AXIS, XR_BUTTON } from './constants'
 
 interface Props {
   store: DevGrabStore
+  /** false の間は掴まない（確認画面が開いている間など） */
+  canGrab: () => boolean
 }
 
 const HANDS: readonly DevGrabHand[] = ['left', 'right']
@@ -45,7 +47,7 @@ const _euler = new Euler()
  * - 右スティック上下: レイの先に浮かせている物を遠ざける・近づける
  * - VR を抜けたら持っている物を離す
  */
-export function DevXRGrab({ store }: Props) {
+export function DevXRGrab({ store, canGrab }: Props) {
   const session = useXR((s) => s.session)
   const scene = useThree((s) => s.scene)
   const left = useXRInputSourceState('controller', 'left')
@@ -147,7 +149,7 @@ export function DevXRGrab({ store }: Props) {
       )
       gripRef.current[hand] = isGrip
       const state = store.getState()
-      if (!wasGrip && isGrip && controller?.object && state.phase === 'idle') {
+      if (!wasGrip && isGrip && controller?.object && state.phase === 'idle' && canGrab()) {
         tryGrab(hand, controller.object)
       }
       if (wasGrip && !isGrip && state.vrHold && state.hand === hand) store.release()

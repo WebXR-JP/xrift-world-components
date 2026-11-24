@@ -39,6 +39,10 @@ export function VRConfirmPanel({ store }: Props) {
   const handleConfirm = useCallback(() => store.answerConfirm(true), [store])
 
   useFrame(() => {
+    // B は確認が無いフレームでも覚えておく（押したまま確認が開いたときに、すぐキャンセルしない）
+    const pressed = right?.inputSource.gamepad?.buttons[XR_BUTTON.SECONDARY]?.pressed ?? false
+    const wasPressed = bPressedRef.current
+    bPressedRef.current = pressed
     const group = groupRef.current
     if (!group || !request) return
     camera.getWorldPosition(_headPosition)
@@ -48,9 +52,7 @@ export function VRConfirmPanel({ store }: Props) {
     group.quaternion.copy(_headQuaternion)
 
     // 右コントローラーの B でキャンセル（押した瞬間だけ）
-    const pressed = right?.inputSource.gamepad?.buttons[XR_BUTTON.SECONDARY]?.pressed ?? false
-    if (pressed && !bPressedRef.current) store.answerConfirm(false)
-    bPressedRef.current = pressed
+    if (pressed && !wasPressed) store.answerConfirm(false)
   })
 
   if (!session || !request) return null

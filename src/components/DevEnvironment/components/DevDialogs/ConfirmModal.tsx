@@ -50,7 +50,8 @@ export function ConfirmModal({ store, hidden }: Props) {
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === 'Escape') store.answerConfirm(false)
-      if (event.key === 'Enter') store.answerConfirm(true)
+      // ボタンにフォーカスがあるときの Enter はそのボタンを押す（キャンセルの上で OK にしない）
+      if (event.key === 'Enter' && !(event.target instanceof HTMLButtonElement)) store.answerConfirm(true)
     },
     [store],
   )
