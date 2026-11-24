@@ -15,9 +15,9 @@ import { UsersProvider, type UsersContextValue, type User } from '../../contexts
 import { XRiftContext, type XRiftContextValue } from '../../contexts/XRiftContext'
 import type { PlayerMovement } from '../../types/movement'
 import type { AvatarHeight } from '../../types/avatar'
-import { PCFShadowMap, type Group, type Object3D } from 'three'
+import { PCFShadowMap, type Camera, type Group, type Object3D } from 'three'
 import type { Props } from './types'
-import { toThreeOutputBufferType } from './utils'
+import { invokeInteract, toThreeOutputBufferType } from './utils'
 import {
   DEFAULT_SPAWN_POSITION,
   DEFAULT_GRAVITY,
@@ -43,6 +43,9 @@ import { PointerLockStatus } from './components/PointerLockStatus'
 import { ControlsHelp } from './components/ControlsHelp'
 import { createDevItemLoader } from './itemLoader'
 import { DevXRGrab } from './components/DevXR/DevXRGrab'
+import { TouchControls } from './components/DevTouch/TouchControls'
+import { TouchLook } from './components/DevTouch/TouchLook'
+import { FINE_POINTER_QUERY } from './components/DevTouch/constants'
 import { createDevDialogStore } from './components/DevDialogs/store'
 import { createDevWorldStorage, createLocalStorageBackend } from './components/DevWorldStorage/store'
 import { ConfirmModal } from './components/DevDialogs/ConfirmModal'
@@ -79,6 +82,17 @@ function subscribePointerLock(listener: () => void): () => void {
   return () => {
     document.removeEventListener('pointerlockchange', listener)
   }
+}
+
+/** タッチの端末か（本番と同じく、マウスで細かく狙える端末でなければタッチ扱い） */
+function subscribeTouchMode(listener: () => void): () => void {
+  const query = window.matchMedia(FINE_POINTER_QUERY)
+  query.addEventListener('change', listener)
+  return () => query.removeEventListener('change', listener)
+}
+
+function getTouchModeSnapshot(): boolean {
+  return !window.matchMedia(FINE_POINTER_QUERY).matches
 }
 
 function getPointerLockSnapshot(): boolean {
@@ -166,9 +180,37 @@ export function DevEnvironment({
   // 画面中央のクロスヘアのクリックは、VR 中は使わない（エミュレーターの操作パネルのクリックで物を押さない）
   // VR の掴む操作も、確認画面が開いている間は止める
   const canGrabByVR = useCallback(() => dialogStore.getState().confirm == null, [dialogStore])
+  // スマホ（タッチの端末）の操作。本番と同じく、画面中央のクロスヘアで狙い、ボタンで押す・掴む
+  const isTouchMode = useSyncExternalStore(subscribeTouchMode, getTouchModeSnapshot, () => false)
+  const isTouchModeRef = useRef(isTouchMode)
+  useLayoutEffect(() => {
+    isTouchModeRef.current = isTouchMode
+  }, [isTouchMode])
+  const touchInputRef = useRef<DevVRInput>({ moveX: 0, moveY: 0, jump: false })
+  const crosshairHitRef = useRef<Object3D | null>(null)
+  const cameraRef = useRef<Camera | null>(null)
+  // スマホではタップがクロスヘアのクリック（mousedown）にもなるので、クリックでは押さない（ボタンで押す）
   const canInteractByCrosshair = useCallback(
-    () => xrStore.getState().session == null && canInteract(),
+    () => xrStore.getState().session == null && !isTouchModeRef.current && canInteract(),
     [xrStore, canInteract],
+  )
+  const handleTouchInteract = useCallback(() => {
+    if (canInteract()) invokeInteract(crosshairHitRef.current)
+  }, [canInteract])
+  const handleTouchGrabToggle = useCallback(() => {
+    const { phase, hoveredId } = grabStore.getState()
+    if (phase === 'holding') {
+      grabStore.release()
+      return
+    }
+    const camera = cameraRef.current
+    if (!hoveredId || !camera || dialogStore.getState().confirm) return
+    grabStore.grab(hoveredId, camera.position)
+  }, [grabStore, dialogStore])
+  // 掴める物を狙うのは、PC はポインターロック中、スマホは常に（本番と同じ）
+  const canAimGrab = useCallback(
+    () => document.pointerLockElement != null || isTouchModeRef.current,
+    [],
   )
   const vrInputRef = useRef<DevVRInput>({ moveX: 0, moveY: 0, jump: false })
   const isPointerLocked = useSyncExternalStore(
@@ -268,8 +310,13 @@ export function DevEnvironment({
         <XR store={xrStore}>
           <XROrigin ref={xrOriginRef} />
           {/* VR 中はマウスで視点を回さない（エミュレーターの操作パネルのクリックでロックを取りに行かない） */}
-        <PointerLockControls enabled={!isInVR} />
-          <CenterRaycaster onHitChange={handleHitChange} canInteract={canInteractByCrosshair} />
+        <PointerLockControls enabled={!isInVR && !isTouchMode} />
+          <CenterRaycaster
+            onHitChange={handleHitChange}
+            canInteract={canInteractByCrosshair}
+            hitRef={crosshairHitRef}
+          />
+          <TouchLook enabled={isTouchMode && !isInVR} cameraRef={cameraRef} />
           <Physics gravity={[0, -gravity, 0]} timeStep="vary">
             <XRiftContext.Provider value={xriftContextValue}>
               <SpawnPointProvider>
@@ -297,9 +344,10 @@ export function DevEnvironment({
                                   seatStore={seatStore}
                                   teleportStore={teleportStore}
                                   vrInputRef={vrInputRef}
+                                  touchInputRef={touchInputRef}
                                   xrOriginRef={xrOriginRef}
                                 />
-                                <GrabSystem store={grabStore} />
+                                <GrabSystem store={grabStore} canAim={canAimGrab} />
                                 <DevXRGrab store={grabStore} canGrab={canGrabByVR} />
                                 {children}
                               </TextInputProvider>
@@ -317,8 +365,17 @@ export function DevEnvironment({
       </Canvas>
       {/* VR 中は画面のクロスヘアとマウスロックの案内を出さない（エミュレーターの操作パネルと重なる） */}
       {!isInVR && <Crosshair active={isHit} />}
-      {!isInVR && <PointerLockStatus isLocked={isPointerLocked} />}
-      <ControlsHelp />
+      {!isInVR && !isTouchMode && <PointerLockStatus isLocked={isPointerLocked} />}
+      {!isTouchMode && <ControlsHelp />}
+      {isTouchMode && !isInVR && (
+        <TouchControls
+          inputRef={touchInputRef}
+          grabStore={grabStore}
+          isHit={isHit}
+          onInteract={handleTouchInteract}
+          onGrabToggle={handleTouchGrabToggle}
+        />
+      )}
       <EnterVRButton store={xrStore} />
       <ConfirmModal store={dialogStore} hidden={isInVR} />
       <TextInputOverlay store={dialogStore} />

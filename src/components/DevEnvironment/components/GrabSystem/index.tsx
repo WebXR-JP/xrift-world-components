@@ -15,12 +15,18 @@ interface Props {
   store: DevGrabStore
 }
 
+interface SystemProps {
+  store: DevGrabStore
+  /** 狙ってよいか（PC はポインターロック中、スマホは常に。本番と同じく画面中央のクロスヘアで狙う） */
+  canAim: () => boolean
+}
+
 const NDC_CENTER = new Vector2(0, 0)
 
 /**
  * 中央クロスヘアから掴める対象（GRABBABLE レイヤー）を狙うレイキャスター
  */
-function GrabRaycaster({ store }: Props) {
+function GrabRaycaster({ store, canAim }: SystemProps) {
   const camera = useThree((s) => s.camera)
   const scene = useThree((s) => s.scene)
   const raycasterRef = useRef(new Raycaster())
@@ -28,7 +34,7 @@ function GrabRaycaster({ store }: Props) {
 
   useFrame(() => {
     // 掴み中・ポインターロックなし → ホバーなし
-    if (store.getState().phase !== 'idle' || !document.pointerLockElement) {
+    if (store.getState().phase !== 'idle' || !canAim()) {
       store.setHovered(null)
       return
     }
@@ -137,10 +143,10 @@ function HeldObjectDriver({ store }: Props) {
  * <Grabbable> で囲まれた対象を中央クロスヘアで狙って掴み、視点前方に浮かせて運ぶ
  * （本番プラットフォームの GrabSystem と同じ操作感を開発プレビューで再現する）
  */
-export function GrabSystem({ store }: Props) {
+export function GrabSystem({ store, canAim }: SystemProps) {
   return (
     <>
-      <GrabRaycaster store={store} />
+      <GrabRaycaster store={store} canAim={canAim} />
       <HeldObjectDriver store={store} />
       <GrabInputHandler store={store} />
     </>

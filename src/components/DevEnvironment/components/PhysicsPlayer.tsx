@@ -55,6 +55,8 @@ interface Props {
   teleportStore: DevTeleportStore
   /** VR のコントローラーの入力（DevXRInput が毎フレーム書き込む） */
   vrInputRef: MutableRefObject<DevVRInput>
+  /** スマホのジョイスティック・ジャンプボタンの入力（TouchControls が書き込む） */
+  touchInputRef: MutableRefObject<DevVRInput>
   /** VR 中に足元へ置く XROrigin（体の位置に合わせて毎フレーム動かす） */
   xrOriginRef: RefObject<Group | null>
 }
@@ -73,6 +75,7 @@ export function PhysicsPlayer({
   seatStore,
   teleportStore,
   vrInputRef,
+  touchInputRef,
   xrOriginRef,
 }: Props) {
   const rigidBodyRef = useRef<RapierRigidBody>(null)
@@ -244,9 +247,10 @@ export function PhysicsPlayer({
 
       const keys = pressedKeysRef.current
       const vr = vrInputRef.current
+      const touch = touchInputRef.current
       const vrOrigin = getVROrigin()
       const spacePressed =
-        keys.has('Space') || keys.has(' ') || keys.has('KeyE') || keys.has('e') || vr.jump
+        keys.has('Space') || keys.has(' ') || keys.has('KeyE') || keys.has('e') || vr.jump || touch.jump
 
       // 着席した瞬間は押しっぱなしの Space を降車エッジとして拾わない
       if (prevSeatIdRef.current !== seatId) {
@@ -297,7 +301,10 @@ export function PhysicsPlayer({
       // delta は上限で丸める（タブ切り替え復帰時の大きな delta で乗り物が跳ばないように）
       const dt = Math.min(Math.max(delta, 0), DEV_MAX_FRAME_DELTA)
       const keyIntent = moveIntentFromKeys(keys)
-      const driveIntent = combineMoveIntent(-(keyIntent.z + vr.moveY), keyIntent.x + vr.moveX)
+      const driveIntent = combineMoveIntent(
+        -(keyIntent.z + vr.moveY + touch.moveY),
+        keyIntent.x + vr.moveX + touch.moveX,
+      )
       entry.onControlInput?.(toSeatControlInput({ x: driveIntent.strafe, z: -driveIntent.forward }), dt)
 
       // 座面の姿勢はこのフレームで1回だけ引く
@@ -376,7 +383,7 @@ export function PhysicsPlayer({
       }
       return true
     },
-    [seatStore, movementRef, leaveSeat, vrInputRef, getVROrigin, syncVROrigin],
+    [seatStore, movementRef, leaveSeat, vrInputRef, touchInputRef, getVROrigin, syncVROrigin],
   )
 
   // useTeleport() で預かった行き先へ体を動かす。
@@ -404,15 +411,18 @@ export function PhysicsPlayer({
 
     const keys = pressedKeysRef.current
     const vr = vrInputRef.current
+    const touch = touchInputRef.current
 
-    // --- 移動ベクトル算出（キーと VR の左スティックを足す） ---
+    // --- 移動ベクトル算出（キー・VR の左スティック・スマホのジョイスティックを足す） ---
     const intent = combineMoveIntent(
       (keys.has('KeyW') || keys.has('w') || keys.has('ArrowUp') ? 1 : 0) +
         (keys.has('KeyS') || keys.has('s') || keys.has('ArrowDown') ? -1 : 0) -
-        vr.moveY,
+        vr.moveY -
+        touch.moveY,
       (keys.has('KeyD') || keys.has('d') || keys.has('ArrowRight') ? 1 : 0) +
         (keys.has('KeyA') || keys.has('a') || keys.has('ArrowLeft') ? -1 : 0) +
-        vr.moveX,
+        vr.moveX +
+        touch.moveX,
     )
     const fwd = intent.forward
     const strafe = intent.strafe
@@ -452,7 +462,7 @@ export function PhysicsPlayer({
     // --- ジャンプ ---
     const currentVel = rb.linvel()
     const spacePressed =
-      keys.has('Space') || keys.has(' ') || keys.has('KeyE') || keys.has('e') || vr.jump
+      keys.has('Space') || keys.has(' ') || keys.has('KeyE') || keys.has('e') || vr.jump || touch.jump
     let vy = currentVel.y
 
     if (allowInfiniteJump) {
