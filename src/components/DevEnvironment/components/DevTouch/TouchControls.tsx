@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useSyncExternalStore } from 'react'
 import type { MouseEvent, MutableRefObject } from 'react'
 import type { DevVRInput } from '../DevXR/types'
 import type { DevGrabStore } from '../GrabSystem/store'
@@ -38,6 +38,16 @@ export function TouchControls({ inputRef, grabStore, isHit, onInteract, onGrabTo
     () => false,
   )
   const isGrabVisible = isHolding || isHovering
+
+  // 部品が消える（VR に入る・デバイスモードを外す）ときは、倒したまま・押したままの入力を残さない
+  useEffect(() => {
+    const input = inputRef.current
+    return () => {
+      input.moveX = 0
+      input.moveY = 0
+      input.jump = false
+    }
+  }, [inputRef])
 
   const handleJumpPress = useCallback(() => {
     inputRef.current.jump = true

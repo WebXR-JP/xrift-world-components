@@ -75,6 +75,7 @@ export function Joystick({ inputRef }: Props) {
       onPointerMove={handleMove}
       onPointerUp={handleUp}
       onPointerCancel={handleUp}
+      onLostPointerCapture={handleUp}
     >
       <div style={knobStyle(knob.x, knob.y)} />
     </div>
