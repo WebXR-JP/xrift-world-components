@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { useFrame } from '@react-three/fiber'
 import { RigidBody } from '@react-three/rapier'
@@ -7,6 +7,7 @@ import { SpawnPoint } from '../src/components/SpawnPoint'
 import { ScreenShareProvider, type ScreenShareContextValue } from '../src/contexts/ScreenShareContext'
 import { TextInput } from '../src/components/TextInput'
 import { useConfirm } from '../src/hooks/useConfirm'
+import { useWorldStorage } from '../src/hooks/useWorldStorage'
 import { Text } from '@react-three/drei'
 import { TestScene } from '../src/scenes/TestScene'
 import { useUsers } from '../src/contexts/UsersContext'
@@ -119,6 +120,31 @@ function TextInputBoard() {
   )
 }
 
+/** useWorldStorage の確認用（確認の柱のさらに右）。押すと共有の数を 1 増やす。リロードしても残る */
+function StorageCounter() {
+  const storage = useWorldStorage()
+  const [count, setCount] = useState<number | null>(null)
+  useEffect(() => {
+    void storage.shared.get('dev-counter').then((value) => setCount(typeof value === 'number' ? value : 0))
+  }, [storage])
+  const handleInteract = useCallback(() => {
+    void storage.shared.increment('dev-counter', 1).then(setCount)
+  }, [storage])
+  return (
+    <group position={[7.4, 0, 8]}>
+      <Interactable id="dev-storage-counter" onInteract={handleInteract} interactionText="数を増やす">
+        <mesh position={[0, 1, 0]}>
+          <boxGeometry args={[0.6, 2, 0.6]} />
+          <meshStandardMaterial color="#30a0e0" />
+        </mesh>
+      </Interactable>
+      <Text position={[0, 2.3, 0]} rotation={[0, Math.PI, 0]} fontSize={0.2} color="white">
+        {count === null ? '…' : `${count}`}
+      </Text>
+    </group>
+  )
+}
+
 /** dev 用の画面共有モック（getDisplayMedia で実際に画面共有できる） */
 function DevScreenShareProvider({ children }: { children: ReactNode }) {
   const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(null)
@@ -173,6 +199,7 @@ function App() {
             <TeleportButton />
             <ConfirmButton />
             <TextInputBoard />
+            <StorageCounter />
             <MovementDebugReader targetRef={debugRef} />
           </DevScreenShareProvider>
       </DevEnvironment>
