@@ -8,7 +8,7 @@ import {
   Vector4,
   WebGLRenderTarget,
 } from 'three'
-import { MIN_REFLECTION_TEXTURE_SIZE } from './constants'
+import { MIN_REFLECTION_TEXTURE_SIZE, REFLECTION_TEXTURE_SIZE_STEP } from './constants'
 import {
   applyThirdPersonLayers,
   fitReflectionCamera,
@@ -170,12 +170,19 @@ export class MirrorReflector extends Mesh<BufferGeometry, ShaderMaterial> {
         _viewport.z,
         _viewport.w,
       )
-      const drawWidth = screenSize
-        ? getReflectionTextureSize(screenSize.width, textureWidth, MIN_REFLECTION_TEXTURE_SIZE)
-        : textureWidth
-      const drawHeight = screenSize
-        ? getReflectionTextureSize(screenSize.height, textureHeight, MIN_REFLECTION_TEXTURE_SIZE)
-        : textureHeight
+      // 測れないとき（矩形の隅がカメラの後ろ）は、すぐ近くにいるので上限で描く
+      const drawWidth = getReflectionTextureSize(
+        screenSize ? screenSize.width : Number.POSITIVE_INFINITY,
+        textureWidth,
+        Math.min(MIN_REFLECTION_TEXTURE_SIZE, textureWidth),
+        REFLECTION_TEXTURE_SIZE_STEP,
+      )
+      const drawHeight = getReflectionTextureSize(
+        screenSize ? screenSize.height : Number.POSITIVE_INFINITY,
+        textureHeight,
+        Math.min(MIN_REFLECTION_TEXTURE_SIZE, textureHeight),
+        REFLECTION_TEXTURE_SIZE_STEP,
+      )
       renderTarget.viewport.set(0, 0, drawWidth, drawHeight)
       renderTarget.scissor.set(0, 0, drawWidth, drawHeight)
       material.uniforms.uvDrawn.value.set(

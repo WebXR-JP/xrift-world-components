@@ -282,20 +282,27 @@ describe('shouldUseReflectorBySize', () => {
 })
 
 describe('getReflectionTextureSize', () => {
-  it('画面上の大きさがテクスチャより小さければ、画面上の大きさ（切り上げ）にする', () => {
-    expect(getReflectionTextureSize(100.2, 512, 8)).toBe(101)
+  it('画面上の大きさがテクスチャより小さければ、画面上の大きさを刻みに切り上げる', () => {
+    expect(getReflectionTextureSize(100.2, 512, 16, 16)).toBe(112)
+    expect(getReflectionTextureSize(112, 512, 16, 16)).toBe(112)
+  })
+
+  it('少し動いただけでは大きさが変わらない', () => {
+    expect(getReflectionTextureSize(101, 512, 16, 16)).toBe(getReflectionTextureSize(110, 512, 16, 16))
   })
 
   it('テクスチャの大きさを超えない', () => {
-    expect(getReflectionTextureSize(2000, 512, 8)).toBe(512)
+    expect(getReflectionTextureSize(2000, 512, 16, 16)).toBe(512)
+    expect(getReflectionTextureSize(505, 508, 16, 16)).toBe(508)
   })
 
   it('下限を下回らない', () => {
-    expect(getReflectionTextureSize(2, 512, 8)).toBe(8)
+    expect(getReflectionTextureSize(2, 512, 16, 16)).toBe(16)
   })
 
-  it('テクスチャが下限より小さいときは、テクスチャの大きさにする', () => {
-    expect(getReflectionTextureSize(2, 4, 8)).toBe(4)
+  it('有限でない大きさ（測れない・計算が壊れた）のときは、テクスチャの大きさにする', () => {
+    expect(getReflectionTextureSize(Number.POSITIVE_INFINITY, 512, 16, 16)).toBe(512)
+    expect(getReflectionTextureSize(Number.NaN, 512, 16, 16)).toBe(512)
   })
 })
 
@@ -356,6 +363,23 @@ describe('getMirrorScreenSize', () => {
     // 小さい鏡なので、横はほぼ cos45° 倍・縦はほぼそのまま
     expect((oblique?.width ?? 0) / (front?.width ?? 1)).toBeCloseTo(Math.SQRT1_2, 1)
     expect((oblique?.height ?? 0) / (front?.height ?? 1)).toBeCloseTo(1, 1)
+  })
+
+  it('大きい鏡を斜めから見ると、辺の画面上の長さではなく、いちばん細かく映る手前の隅に合わせる', () => {
+    // 幅 3m の鏡の中心から 5m・70° の位置から、鏡の中心を向く
+    const angle = (70 * Math.PI) / 180
+    const viewer = createViewer(new Vector3(5 * Math.sin(angle), 0, 5 * Math.cos(angle)), angle)
+    const rect = fullRect(3, 2)
+    const size = getMirrorScreenSize(out(), viewer, new Matrix4(), rect, 1280, 720)
+
+    // 下の辺の画面上の長さ
+    const toScreen = (x: number, y: number) => {
+      const ndc = new Vector3(x, y, 0).project(viewer)
+      return new Vector3(ndc.x * 640, ndc.y * 360, 0)
+    }
+    const edgeLength = toScreen(rect.minX, rect.minY).distanceTo(toScreen(rect.maxX, rect.minY))
+    // 手前（+X 側）の隅は平均より細かく映るので、辺の長さより大きい値になる
+    expect(size?.width ?? 0).toBeGreaterThan(edgeLength * 1.3)
   })
 
   it('鏡が動かしてあっても同じ大きさになる', () => {

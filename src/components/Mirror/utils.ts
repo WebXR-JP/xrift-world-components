@@ -42,14 +42,22 @@ export function shouldUseReflectorBySize(
 /**
  * 反射の絵の 1 辺の大きさ[px]を決める。
  * 画面上の 1 画素に絵の 1 画素が当たれば十分なので、画面上の大きさまで下げる。
- * 上限はテクスチャの大きさ
+ * 上限はテクスチャの大きさ。
+ *
+ * 大きさは step 刻みに切り上げる。少し動いただけで大きさが変わると、絵の画素の格子が
+ * 毎フレームずれて映りが揺らいで見える。
+ *
+ * @param screenPixels 画面上の大きさ[px]。有限でないときは上限を返す
  */
 export function getReflectionTextureSize(
   screenPixels: number,
   textureSize: number,
   minSize: number,
+  step: number,
 ): number {
-  return Math.min(textureSize, Math.max(Math.min(minSize, textureSize), Math.ceil(screenPixels)))
+  if (!Number.isFinite(screenPixels)) return textureSize
+  const stepped = Math.ceil(screenPixels / step) * step
+  return Math.min(textureSize, Math.max(minSize, stepped))
 }
 
 /**
@@ -243,14 +251,37 @@ export interface ScreenSize {
 }
 
 const _viewInverse = new Matrix4()
-const _screenCorners = [new Vector3(), new Vector3(), new Vector3(), new Vector3()]
+const _screenCorner = new Vector3()
+const _screenNeighbor = new Vector3()
+/** 隅での細かさを測るために、辺に沿って進む割合 */
+const DENSITY_SAMPLE_RATIO = 0.01
+
+/** 鏡面のローカル XY の点を画面の位置[px]に写す。カメラの後ろなら false */
+function projectToScreen(
+  out: Vector3,
+  x: number,
+  y: number,
+  viewer: Camera,
+  mirrorMatrixWorld: Matrix4,
+  viewportWidth: number,
+  viewportHeight: number,
+): boolean {
+  out.set(x, y, 0).applyMatrix4(mirrorMatrixWorld).applyMatrix4(_viewInverse)
+  // カメラは -Z を向く
+  if (out.z >= 0) return false
+  out.applyMatrix4(viewer.projectionMatrix)
+  out.x *= viewportWidth / 2
+  out.y *= viewportHeight / 2
+  return true
+}
 
 /**
- * 鏡面の矩形が画面に占める大きさ[px]を求める。
+ * 鏡面の矩形を画面の細かさで描くのに必要な大きさ[px]を求める。
  *
- * 画面上で囲む範囲ではなく、矩形の横の辺・縦の辺が画面上でどれだけの長さかを返す
- * （上下・左右の辺の長いほう）。反射の絵の横・縦は矩形の横・縦にそのまま対応するので、
- * 絵に必要な画素数がこれで決まる。
+ * 反射の絵の横・縦は矩形の横・縦にそのまま対応し、画素は鏡面に対して均等に並ぶ。
+ * 一方、斜めから見た鏡は手前ほど画面上で大きく映る。辺の画面上の長さ（全体の平均）で
+ * 決めると手前が粗くなるので、四隅それぞれで「鏡面の長さあたりの画面の画素数」を測り、
+ * いちばん細かい隅に合わせる。正面から見ているときは、辺の画面上の長さと同じになる。
  *
  * @param out 結果の書き込み先
  * @param rect 鏡面のローカル XY での矩形
@@ -267,23 +298,56 @@ export function getMirrorScreenSize(
   viewportHeight: number,
 ): ScreenSize | null {
   _viewInverse.copy(viewer.matrixWorld).invert()
-  for (let i = 0; i < CORNER_SIGNS.length; i++) {
-    const [signX, signY] = CORNER_SIGNS[i]
-    const corner = _screenCorners[i]
-      .set(signX < 0 ? rect.minX : rect.maxX, signY < 0 ? rect.minY : rect.maxY, 0)
-      .applyMatrix4(mirrorMatrixWorld)
-      .applyMatrix4(_viewInverse)
-    // カメラは -Z を向く
-    if (corner.z >= 0) return null
-    corner.applyMatrix4(viewer.projectionMatrix)
-    corner.x *= viewportWidth / 2
-    corner.y *= viewportHeight / 2
+  let width = 0
+  let height = 0
+  for (const [signX, signY] of CORNER_SIGNS) {
+    const x = signX < 0 ? rect.minX : rect.maxX
+    const y = signY < 0 ? rect.minY : rect.maxY
+    // 隅から、向かいの隅のほうへ辺に沿って少しだけ進んだ点
+    const stepX = (signX < 0 ? rect.maxX - rect.minX : rect.minX - rect.maxX) * DENSITY_SAMPLE_RATIO
+    const stepY = (signY < 0 ? rect.maxY - rect.minY : rect.minY - rect.maxY) * DENSITY_SAMPLE_RATIO
+
+    if (!projectToScreen(_screenCorner, x, y, viewer, mirrorMatrixWorld, viewportWidth, viewportHeight))
+      return null
+
+    if (
+      !projectToScreen(
+        _screenNeighbor,
+        x + stepX,
+        y,
+        viewer,
+        mirrorMatrixWorld,
+        viewportWidth,
+        viewportHeight,
+      )
+    )
+      return null
+    width = Math.max(
+      width,
+      Math.hypot(_screenNeighbor.x - _screenCorner.x, _screenNeighbor.y - _screenCorner.y) /
+        DENSITY_SAMPLE_RATIO,
+    )
+
+    if (
+      !projectToScreen(
+        _screenNeighbor,
+        x,
+        y + stepY,
+        viewer,
+        mirrorMatrixWorld,
+        viewportWidth,
+        viewportHeight,
+      )
+    )
+      return null
+    height = Math.max(
+      height,
+      Math.hypot(_screenNeighbor.x - _screenCorner.x, _screenNeighbor.y - _screenCorner.y) /
+        DENSITY_SAMPLE_RATIO,
+    )
   }
 
-  // CORNER_SIGNS の並び: 左下・右下・左上・右上
-  const [bottomLeft, bottomRight, topLeft, topRight] = _screenCorners
-  const length = (a: Vector3, b: Vector3) => Math.hypot(a.x - b.x, a.y - b.y)
-  out.width = Math.max(length(bottomLeft, bottomRight), length(topLeft, topRight))
-  out.height = Math.max(length(bottomLeft, topLeft), length(bottomRight, topRight))
+  out.width = width
+  out.height = height
   return out
 }

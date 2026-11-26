@@ -59,6 +59,10 @@ export function Mirror({
   const reflectorRef = useRef<MirrorReflector | null>(null)
   const fallbackRef = useRef<Mesh | null>(null)
   const usingReflectorRef = useRef(true)
+  // 大きさ・距離それぞれの判定の結果。ヒステリシスの「現在の状態」を判定ごとに持つ
+  // （共有すると、片方の理由で擬似ミラーになっているだけで、もう片方まで戻りにくくなる）
+  const largeEnoughRef = useRef(true)
+  const nearEnoughRef = useRef(true)
   const gl = useThree((s) => s.gl)
   const fullRect = useMemo(
     () => ({ minX: -size[0] / 2, maxX: size[0] / 2, minY: -size[1] / 2, maxY: size[1] / 2 }),
@@ -107,6 +111,8 @@ export function Mirror({
     reflector.nestedFallback = fallbackMesh
 
     usingReflectorRef.current = true
+    largeEnoughRef.current = true
+    nearEnoughRef.current = true
 
     return () => {
       if (currentGroup) {
@@ -137,6 +143,9 @@ export function Mirror({
     const viewportWidth = xrEye ? xrEye.viewport.z : gl.getDrawingBufferSize(_bufferSize).x
     const viewportHeight = xrEye ? xrEye.viewport.w : gl.getDrawingBufferSize(_bufferSize).y
 
+    // 置いた直後は、まだ一度も描かれておらず行列が更新されていない
+    reflector.updateWorldMatrix(true, false)
+
     // 鏡の一部がカメラの後ろにあるときは測れない。すぐ近くにいるので反射を描く
     const screenSize = getMirrorScreenSize(
       _screenSize,
@@ -149,23 +158,27 @@ export function Mirror({
     const screenPixels = screenSize
       ? Math.max(screenSize.width, screenSize.height)
       : Number.POSITIVE_INFINITY
-    let useReflector = shouldUseReflectorBySize(
+    largeEnoughRef.current = shouldUseReflectorBySize(
       screenPixels,
       MIN_REFLECTION_SCREEN_PIXELS,
-      usingReflectorRef.current,
+      largeEnoughRef.current,
       SCREEN_SIZE_HYSTERESIS_RATIO,
     )
 
-    if (useReflector && lodDistance !== undefined) {
+    if (lodDistance === undefined) {
+      nearEnoughRef.current = true
+    } else {
       _cameraWorldPos.setFromMatrixPosition(viewer.matrixWorld)
       const distance = _cameraWorldPos.distanceTo(groupRef.current.getWorldPosition(_worldPos))
-      useReflector = shouldUseReflector(
+      nearEnoughRef.current = shouldUseReflector(
         distance,
         lodDistance,
-        usingReflectorRef.current,
+        nearEnoughRef.current,
         LOD_HYSTERESIS_RATIO,
       )
     }
+
+    const useReflector = largeEnoughRef.current && nearEnoughRef.current
 
     if (useReflector !== usingReflectorRef.current) {
       usingReflectorRef.current = useReflector

@@ -11,4 +11,10 @@ export const MIN_REFLECTION_SCREEN_PIXELS = 32
 export const SCREEN_SIZE_HYSTERESIS_RATIO = 1.25
 
 /** 反射の絵の 1 辺の下限[px] */
-export const MIN_REFLECTION_TEXTURE_SIZE = 8
+export const MIN_REFLECTION_TEXTURE_SIZE = 16
+
+/**
+ * 反射の絵の大きさを変える刻み[px]。
+ * 1px 刻みで毎フレーム変えると、絵の画素の格子が毎フレームずれて映りが揺らいで見える
+ */
+export const REFLECTION_TEXTURE_SIZE_STEP = 16
