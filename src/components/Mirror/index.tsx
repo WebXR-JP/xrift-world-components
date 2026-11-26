@@ -88,6 +88,8 @@ export function Mirror({
     fallbackMesh.visible = false
     currentGroup.add(fallbackMesh)
     fallbackRef.current = fallbackMesh
+    // 他の鏡の反射の中では、この擬似ミラーを代わりに映す
+    reflector.nestedFallback = fallbackMesh
 
     usingReflectorRef.current = true
 

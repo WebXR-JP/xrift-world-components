@@ -1,4 +1,4 @@
-import type { BufferGeometry, Camera, Scene, WebGLRenderer } from 'three'
+import type { BufferGeometry, Camera, Object3D, Scene, WebGLRenderer } from 'three'
 import {
   Color,
   HalfFloatType,
@@ -30,10 +30,14 @@ class ReflectionCamera extends PerspectiveCamera {
 
 /**
  * いずれかの鏡が反射を描いている最中か。
- * 反射の中に映る他の鏡は描き直さず、前に描いた絵のまま見せる（鏡どうしが互いを映して
- * 描く回数が枚数以上に増えるのを防ぐ）
+ * 反射の中に映る他の鏡は反射を描かない（鏡どうしが互いを映して、描く回数が枚数以上に
+ * 増えるのを防ぐ）
  */
 let isRenderingReflection = false
+
+/** いま存在する鏡面。反射を描く間、他の鏡を代わりの見た目に切り替えるために持つ */
+const liveReflectors = new Set<MirrorReflector>()
+const _swapped: MirrorReflector[] = []
 
 const vertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -90,6 +94,13 @@ export class MirrorReflector extends Mesh<BufferGeometry, ShaderMaterial> {
   private readonly renderTarget: WebGLRenderTarget
   private readonly reflectionCamera = new ReflectionCamera()
 
+  /**
+   * 他の鏡の反射の中に映るとき、この鏡面の代わりに見せるもの（同じ位置に置いた擬似ミラー）。
+   * 反射は描かないので、鏡面のままだと前に描いた絵（画面に入ったことが無ければ何も無い絵）が
+   * 出てしまう
+   */
+  nestedFallback: Object3D | null = null
+
   constructor(geometry: BufferGeometry, options: MirrorReflectorOptions) {
     const renderTarget = new WebGLRenderTarget(options.textureWidth, options.textureHeight, {
       samples: 0, // Meta Quest (Android Chrome) でのレンダリング不具合回避のため MSAA は無効
@@ -106,6 +117,7 @@ export class MirrorReflector extends Mesh<BufferGeometry, ShaderMaterial> {
     })
     super(geometry, material)
     this.renderTarget = renderTarget
+    liveReflectors.add(this)
 
     const { width, height } = options
     const reflectionCamera = this.reflectionCamera
@@ -122,6 +134,12 @@ export class MirrorReflector extends Mesh<BufferGeometry, ShaderMaterial> {
 
       this.visible = false
       isRenderingReflection = true
+      for (const other of liveReflectors) {
+        if (other === this || !other.visible || !other.nestedFallback) continue
+        other.visible = false
+        other.nestedFallback.visible = true
+        _swapped.push(other)
+      }
 
       const currentRenderTarget = renderer.getRenderTarget()
       const currentXrEnabled = renderer.xr.enabled
@@ -144,12 +162,18 @@ export class MirrorReflector extends Mesh<BufferGeometry, ShaderMaterial> {
       const viewport = (camera as Camera & { viewport?: Vector4 }).viewport
       if (viewport !== undefined) renderer.state.viewport(viewport)
 
+      for (const other of _swapped) {
+        other.visible = true
+        if (other.nestedFallback) other.nestedFallback.visible = false
+      }
+      _swapped.length = 0
       isRenderingReflection = false
       this.visible = true
     }
   }
 
   dispose(): void {
+    liveReflectors.delete(this)
     this.renderTarget.dispose()
     this.material.dispose()
   }
