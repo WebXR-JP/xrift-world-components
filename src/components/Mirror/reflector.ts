@@ -5,10 +5,15 @@ import {
   Mesh,
   PerspectiveCamera,
   ShaderMaterial,
-  type Vector4,
+  Vector4,
   WebGLRenderTarget,
 } from 'three'
-import { applyThirdPersonLayers, fitReflectionCamera } from './utils'
+import {
+  applyThirdPersonLayers,
+  fitReflectionCamera,
+  getVisibleMirrorRect,
+  type MirrorRect,
+} from './utils'
 
 interface MirrorReflectorOptions {
   /** 鏡面の幅（ローカル座標） */
@@ -39,7 +44,11 @@ let isRenderingReflection = false
 const liveReflectors = new Set<MirrorReflector>()
 const _swapped: MirrorReflector[] = []
 
+const _rect: MirrorRect = { minX: 0, maxX: 0, minY: 0, maxY: 0 }
+
 const vertexShader = /* glsl */ `
+  // 絵が写している範囲（鏡面の UV での左下 xy と大きさ zw）
+  uniform vec4 uvRect;
   varying vec2 vUv;
 
   #include <common>
@@ -47,7 +56,8 @@ const vertexShader = /* glsl */ `
 
   void main() {
     // 反射カメラは鏡を裏から見るので、絵は左右が逆になっている
-    vUv = vec2(1.0 - uv.x, uv.y);
+    vec2 rectUv = (uv - uvRect.xy) / uvRect.zw;
+    vUv = vec2(1.0 - rectUv.x, rectUv.y);
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
     #include <logdepthbuf_vertex>
@@ -85,8 +95,8 @@ const fragmentShader = /* glsl */ `
  * 鏡面。three の Reflector と違い、反射カメラの視錐台を鏡の枠に合わせる。
  *
  * Reflector は見ているカメラの画角まるごとを反射として描き、鏡に映る部分だけを使う。
- * こちらは鏡の枠に映る範囲だけを描くので、枠の外の物はカリングされ、
- * テクスチャの画素もすべて鏡面に使われる。
+ * こちらは鏡の枠のうち画面に見えている範囲だけを描くので、その外の物はカリングされ、
+ * テクスチャの画素もすべて画面に見えている鏡面に使われる。
  *
  * 鏡面は PlaneGeometry（ローカルの XY 平面・+Z が表）であること。
  */
@@ -111,6 +121,7 @@ export class MirrorReflector extends Mesh<BufferGeometry, ShaderMaterial> {
       uniforms: {
         color: { value: new Color(options.color) },
         tDiffuse: { value: renderTarget.texture },
+        uvRect: { value: new Vector4(0, 0, 1, 1) },
       },
       vertexShader,
       fragmentShader,
@@ -124,8 +135,18 @@ export class MirrorReflector extends Mesh<BufferGeometry, ShaderMaterial> {
 
     this.onBeforeRender = (renderer: WebGLRenderer, scene: Scene, camera: Camera) => {
       if (isRenderingReflection) return
+      // 鏡のうち画面に見えている範囲だけを描く（近づいて一部しか見えないときに粗くしない）
+      getVisibleMirrorRect(_rect, camera, this.matrixWorld, width, height)
       // 裏から見ているときは描かない
-      if (!fitReflectionCamera(reflectionCamera, camera, this.matrixWorld, width, height)) return
+      if (!fitReflectionCamera(reflectionCamera, camera, this.matrixWorld, _rect)) return
+      // VR では目ごとに範囲が違うので、描く直前に毎回書き込む
+      material.uniforms.uvRect.value.set(
+        _rect.minX / width + 0.5,
+        _rect.minY / height + 0.5,
+        (_rect.maxX - _rect.minX) / width,
+        (_rect.maxY - _rect.minY) / height,
+      )
+      material.uniformsNeedUpdate = true
 
       // 見ているカメラのレイヤーを引き継ぎ、三人称視点の構成にする（理由は utils.ts）。
       // VR では左右の目のサブカメラが渡ってくるので、目ごとに設定される

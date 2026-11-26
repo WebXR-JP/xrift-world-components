@@ -1,5 +1,5 @@
-import type { Camera, Layers, Matrix4, PerspectiveCamera } from 'three'
-import { Quaternion, Vector3 } from 'three'
+import type { Camera, Layers, PerspectiveCamera } from 'three'
+import { Matrix4, Quaternion, Vector3 } from 'three'
 import { LAYERS } from '../../constants/layers'
 
 /**
@@ -53,27 +53,107 @@ const CORNER_SIGNS = [
   [-1, 1],
   [1, 1],
 ] as const
+const _mirrorInverse = new Matrix4()
+const _localEye = new Vector3()
+const _localPoint = new Vector3()
+
+/** 鏡面のローカル XY での矩形 */
+export interface MirrorRect {
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+}
+
+/** 見えている範囲の外側に足す余白（範囲の辺に対する割合）。絵の端がにじまないようにする */
+const VISIBLE_RECT_PADDING = 0.02
 
 /**
- * 反射カメラを、鏡の枠にぴったり合う視錐台にする。
+ * 鏡面のうち、いま画面に見えている範囲を求める（鏡面のローカル XY）。
+ *
+ * 反射の絵はこの範囲だけを描けばよい。鏡に近づいて鏡の一部しか見えていないときに、
+ * 見えていない部分へテクスチャの画素を使わずに済み、近づいても映りが粗くならない。
+ *
+ * 画面の四隅を通る視線が鏡の平面に当たる点を囲む範囲を、鏡の枠で切り取る。
+ * 四隅の視線のどれかが鏡の平面に当たらない（鏡をほぼ真横から見ている・鏡に背を向けた
+ * 隅がある）ときは範囲が閉じないので、鏡の全面を返す。
+ *
+ * @param out 結果の書き込み先
+ */
+export function getVisibleMirrorRect(
+  out: MirrorRect,
+  viewer: Camera,
+  mirrorMatrixWorld: Matrix4,
+  width: number,
+  height: number,
+): MirrorRect {
+  out.minX = -width / 2
+  out.maxX = width / 2
+  out.minY = -height / 2
+  out.maxY = height / 2
+
+  _mirrorInverse.copy(mirrorMatrixWorld).invert()
+  _localEye.setFromMatrixPosition(viewer.matrixWorld).applyMatrix4(_mirrorInverse)
+  if (_localEye.z <= 0) return out
+
+  let minX = Number.POSITIVE_INFINITY
+  let maxX = Number.NEGATIVE_INFINITY
+  let minY = Number.POSITIVE_INFINITY
+  let maxY = Number.NEGATIVE_INFINITY
+  for (const [signX, signY] of CORNER_SIGNS) {
+    // 画面の隅を通る視線上の 1 点（鏡のローカル座標）
+    _localPoint
+      .set(signX, signY, 0.5)
+      .applyMatrix4(viewer.projectionMatrixInverse)
+      .applyMatrix4(viewer.matrixWorld)
+      .applyMatrix4(_mirrorInverse)
+    const dz = _localPoint.z - _localEye.z
+    // 鏡の平面へ向かっていない視線がある
+    if (dz >= -1e-6) return out
+    const t = -_localEye.z / dz
+    const x = _localEye.x + (_localPoint.x - _localEye.x) * t
+    const y = _localEye.y + (_localPoint.y - _localEye.y) * t
+    minX = Math.min(minX, x)
+    maxX = Math.max(maxX, x)
+    minY = Math.min(minY, y)
+    maxY = Math.max(maxY, y)
+  }
+
+  const padX = (maxX - minX) * VISIBLE_RECT_PADDING
+  const padY = (maxY - minY) * VISIBLE_RECT_PADDING
+  minX = Math.max(minX - padX, out.minX)
+  maxX = Math.min(maxX + padX, out.maxX)
+  minY = Math.max(minY - padY, out.minY)
+  maxY = Math.min(maxY + padY, out.maxY)
+  // 鏡が画面に入っていない（描かれないはずだが、念のため全面のままにする）
+  if (minX >= maxX || minY >= maxY) return out
+
+  out.minX = minX
+  out.maxX = maxX
+  out.minY = minY
+  out.maxY = maxY
+  return out
+}
+
+
+/**
+ * 反射カメラを、鏡面の矩形にぴったり合う視錐台にする。
  *
  * 見ている目を鏡面で折り返した位置にカメラを置き、鏡と同じ向き（裏から表を見る向き）にして、
- * 鏡の四隅を通る非対称の視錐台を張る。鏡に映る景色は「折り返した目から鏡の枠を窓として
+ * 矩形の四隅を通る非対称の視錐台を張る。鏡に映る景色は「折り返した目から鏡の枠を窓として
  * 見た景色」と同じなので、枠の外は描かなくてよい。near を鏡面に置くので、鏡より裏にある物は
  * 映らない。
  *
- * 描いた絵は鏡面のローカル XY にそのまま対応する（裏から見るので左右だけ逆）。
+ * 描いた絵は矩形にそのまま対応する（裏から見るので左右だけ逆）。
  *
- * @param width 鏡面の幅（ローカル座標）
- * @param height 鏡面の高さ（ローカル座標）
+ * @param rect 描く範囲（鏡面のローカル XY）。鏡の全面か、getVisibleMirrorRect の結果
  * @returns 目が鏡の裏にあって映す必要がないとき false
  */
 export function fitReflectionCamera(
   reflectionCamera: PerspectiveCamera,
   viewer: Camera,
   mirrorMatrixWorld: Matrix4,
-  width: number,
-  height: number,
+  rect: MirrorRect,
 ): boolean {
   mirrorMatrixWorld.decompose(_mirrorPosition, _mirrorQuaternion, _mirrorScale)
   _mirrorNormal.set(0, 0, 1).applyQuaternion(_mirrorQuaternion)
@@ -86,14 +166,14 @@ export function fitReflectionCamera(
   reflectionCamera.quaternion.copy(_mirrorQuaternion).multiply(_halfTurn)
   reflectionCamera.updateMatrixWorld()
 
-  // カメラから見た鏡の四隅の範囲。鏡面はカメラの正面 distance の位置にある
+  // カメラから見た矩形の四隅の範囲。鏡面はカメラの正面 distance の位置にある
   let left = Number.POSITIVE_INFINITY
   let right = Number.NEGATIVE_INFINITY
   let bottom = Number.POSITIVE_INFINITY
   let top = Number.NEGATIVE_INFINITY
   for (const [signX, signY] of CORNER_SIGNS) {
     _corner
-      .set((signX * width) / 2, (signY * height) / 2, 0)
+      .set(signX < 0 ? rect.minX : rect.maxX, signY < 0 ? rect.minY : rect.maxY, 0)
       .applyMatrix4(mirrorMatrixWorld)
       .applyMatrix4(reflectionCamera.matrixWorldInverse)
     left = Math.min(left, _corner.x)
