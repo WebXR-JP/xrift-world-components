@@ -1,11 +1,10 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
-import type { Camera, PerspectiveCamera } from 'three'
 import { Color, Group, Mesh, PlaneGeometry, ShaderMaterial, Vector3 } from 'three'
-import { Reflector } from 'three/addons/objects/Reflector.js'
 import { DEFAULT_LOD_DISTANCE, LOD_HYSTERESIS_RATIO } from './constants'
 import { MirrorProps } from './types'
-import { applyThirdPersonLayers, shouldUseReflector } from './utils'
+import { MirrorReflector } from './reflector'
+import { shouldUseReflector } from './utils'
 
 export type { MirrorProps } from './types'
 
@@ -46,7 +45,7 @@ export function Mirror({
   lodDistance = DEFAULT_LOD_DISTANCE,
 }: MirrorProps) {
   const groupRef = useRef<Group>(null)
-  const reflectorRef = useRef<Reflector | null>(null)
+  const reflectorRef = useRef<MirrorReflector | null>(null)
   const fallbackRef = useRef<Mesh | null>(null)
   const usingReflectorRef = useRef(true)
   const gl = useThree((s) => s.gl)
@@ -57,17 +56,17 @@ export function Mirror({
 
     const geometry = new PlaneGeometry(size[0], size[1])
 
-    // sizeの比率に応じてテクスチャサイズを計算
+    // 描いた絵は鏡面にそのまま貼られるので、テクスチャの縦横比を鏡面に合わせる
     const maxSize = Math.max(size[0], size[1])
     const textureWidth = Math.round((size[0] / maxSize) * textureResolution)
     const textureHeight = Math.round((size[1] / maxSize) * textureResolution)
 
-    const reflector = new Reflector(geometry, {
-      clipBias: 0.003,
+    const reflector = new MirrorReflector(geometry, {
+      width: size[0],
+      height: size[1],
       textureWidth,
       textureHeight,
       color,
-      multisample: 0, // Meta Quest (Android Chrome) でのレンダリング不具合回避のため無効化
     })
 
     reflector.position.set(0, 0, 0)
@@ -97,7 +96,7 @@ export function Mirror({
         currentGroup.remove(reflector)
         currentGroup.remove(fallbackMesh)
         geometry.dispose()
-        reflector.dispose?.()
+        reflector.dispose()
         fallbackGeometry.dispose()
         fallbackMaterial.dispose()
       }
@@ -106,9 +105,8 @@ export function Mirror({
     }
   }, [size[0], size[1], color, textureResolution, gl])
 
-  // LOD の切り替えと、リフレクションカメラを三人称視点のレイヤー構成にする処理。
-  // VRMFirstPerson のレイヤー設定により、メインカメラは一人称（頭部なしコピーを表示・
-  // 頭部込みの全身を非表示）になっているが、鏡には頭部込みの全身を映す必要があるため
+  // LOD の切り替え。
+  // 反射を描くカメラのレイヤー（鏡には頭部込みの全身を映す）は MirrorReflector が設定する
   useFrame(({ camera, gl }) => {
     const reflector = reflectorRef.current
     if (!reflector) return
@@ -135,34 +133,6 @@ export function Mirror({
         reflector.visible = useReflector
         fallback.visible = !useReflector
       }
-    }
-
-    if (!reflector.visible) return
-
-    // three r184+ ではリフレクション用カメラがメインカメラごとの clone に変わり、
-    // getReflectionCamera(camera) で取得する。clone はメインカメラのレイヤー設定
-    // （一人称 = FIRST_PERSON_ONLY 有効・THIRD_PERSON_ONLY 無効）を継承する。
-    // 鏡は三人称視点なので applyThirdPersonLayers で切り替える（理由は utils.ts）。
-    // 型定義にないため any 相当でキャストしてアクセスする。
-    const reflectorApi = reflector as unknown as {
-      camera?: PerspectiveCamera
-      getReflectionCamera?: (camera: Camera) => Camera
-    }
-    if (typeof reflectorApi.getReflectionCamera === 'function') {
-      if (gl.xr.isPresenting) {
-        // VR ではシーンが左右の目のサブカメラ（cameraL/cameraR）で個別に描画され、
-        // Reflector の onBeforeRender にもサブカメラが渡るため、WeakMap もサブカメラを
-        // キーに clone を保持する。ArrayCamera 本体（getCamera()）をキーにすると描画に
-        // 使われない clone を触るだけになるので、サブカメラごとに設定する。
-        for (const eyeCamera of gl.xr.getCamera().cameras) {
-          applyThirdPersonLayers(reflectorApi.getReflectionCamera(eyeCamera).layers)
-        }
-      } else {
-        applyThirdPersonLayers(reflectorApi.getReflectionCamera(camera).layers)
-      }
-    } else if (reflectorApi.camera) {
-      // three r183 以前: 単一の内部カメラ
-      applyThirdPersonLayers(reflectorApi.camera.layers)
     }
   })
 
