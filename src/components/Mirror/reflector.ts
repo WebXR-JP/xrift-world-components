@@ -8,11 +8,15 @@ import {
   Vector4,
   WebGLRenderTarget,
 } from 'three'
+import { MIN_REFLECTION_TEXTURE_SIZE } from './constants'
 import {
   applyThirdPersonLayers,
   fitReflectionCamera,
+  getMirrorScreenSize,
+  getReflectionTextureSize,
   getVisibleMirrorRect,
   type MirrorRect,
+  type ScreenSize,
 } from './utils'
 
 interface MirrorReflectorOptions {
@@ -45,6 +49,8 @@ const liveReflectors = new Set<MirrorReflector>()
 const _swapped: MirrorReflector[] = []
 
 const _rect: MirrorRect = { minX: 0, maxX: 0, minY: 0, maxY: 0 }
+const _screenSize: ScreenSize = { width: 0, height: 0 }
+const _viewport = new Vector4()
 
 const vertexShader = /* glsl */ `
   // 絵が写している範囲（鏡面の UV での左下 xy と大きさ zw）
@@ -68,6 +74,8 @@ const vertexShader = /* glsl */ `
 const fragmentShader = /* glsl */ `
   uniform vec3 color;
   uniform sampler2D tDiffuse;
+  // テクスチャのうち絵を描いた範囲（左下から。xy: 大きさ、zw: 読んでよい上限）
+  uniform vec4 uvDrawn;
   varying vec2 vUv;
 
   #include <logdepthbuf_pars_fragment>
@@ -83,7 +91,8 @@ const fragmentShader = /* glsl */ `
   void main() {
     #include <logdepthbuf_fragment>
 
-    vec4 base = texture2D(tDiffuse, vUv);
+    // 上限で止めて、描いた範囲の外（前に描いた絵が残っている）をにじませない
+    vec4 base = texture2D(tDiffuse, min(vUv * uvDrawn.xy, uvDrawn.zw));
     gl_FragColor = vec4(blendOverlay(base.rgb, color), 1.0);
 
     #include <tonemapping_fragment>
@@ -122,6 +131,7 @@ export class MirrorReflector extends Mesh<BufferGeometry, ShaderMaterial> {
         color: { value: new Color(options.color) },
         tDiffuse: { value: renderTarget.texture },
         uvRect: { value: new Vector4(0, 0, 1, 1) },
+        uvDrawn: { value: new Vector4(1, 1, 1, 1) },
       },
       vertexShader,
       fragmentShader,
@@ -130,7 +140,9 @@ export class MirrorReflector extends Mesh<BufferGeometry, ShaderMaterial> {
     this.renderTarget = renderTarget
     liveReflectors.add(this)
 
-    const { width, height } = options
+    const { width, height, textureWidth, textureHeight } = options
+    // 絵はテクスチャの左下の一部にだけ描く（大きさは毎回変わる）
+    renderTarget.scissorTest = true
     const reflectionCamera = this.reflectionCamera
 
     this.onBeforeRender = (renderer: WebGLRenderer, scene: Scene, camera: Camera) => {
@@ -145,6 +157,32 @@ export class MirrorReflector extends Mesh<BufferGeometry, ShaderMaterial> {
         _rect.minY / height + 0.5,
         (_rect.maxX - _rect.minX) / width,
         (_rect.maxY - _rect.minY) / height,
+      )
+
+      // 鏡が画面上で小さく見えているときは、その大きさまで絵を小さくする。
+      // テクスチャは作り直さず、左下の一部にだけ描く
+      renderer.getCurrentViewport(_viewport)
+      const screenSize = getMirrorScreenSize(
+        _screenSize,
+        camera,
+        this.matrixWorld,
+        _rect,
+        _viewport.z,
+        _viewport.w,
+      )
+      const drawWidth = screenSize
+        ? getReflectionTextureSize(screenSize.width, textureWidth, MIN_REFLECTION_TEXTURE_SIZE)
+        : textureWidth
+      const drawHeight = screenSize
+        ? getReflectionTextureSize(screenSize.height, textureHeight, MIN_REFLECTION_TEXTURE_SIZE)
+        : textureHeight
+      renderTarget.viewport.set(0, 0, drawWidth, drawHeight)
+      renderTarget.scissor.set(0, 0, drawWidth, drawHeight)
+      material.uniforms.uvDrawn.value.set(
+        drawWidth / textureWidth,
+        drawHeight / textureHeight,
+        (drawWidth - 0.5) / textureWidth,
+        (drawHeight - 0.5) / textureHeight,
       )
       material.uniformsNeedUpdate = true
 

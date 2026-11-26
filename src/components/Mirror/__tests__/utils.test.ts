@@ -4,9 +4,12 @@ import { LAYERS } from '../../../constants/layers'
 import {
   applyThirdPersonLayers,
   fitReflectionCamera,
+  getMirrorScreenSize,
+  getReflectionTextureSize,
   getVisibleMirrorRect,
   type MirrorRect,
   shouldUseReflector,
+  shouldUseReflectorBySize,
 } from '../utils'
 import { LOD_HYSTERESIS_RATIO } from '../constants'
 
@@ -259,5 +262,116 @@ describe('getVisibleMirrorRect', () => {
     const ndc = new Vector3(rect.maxX, rect.maxY, 0).project(reflectionCamera)
     expect(ndc.x).toBeCloseTo(-1, 5)
     expect(ndc.y).toBeCloseTo(1, 5)
+  })
+})
+
+describe('shouldUseReflectorBySize', () => {
+  it('反射を表示中は、下限以上なら反射のまま', () => {
+    expect(shouldUseReflectorBySize(32, 32, true, 1.25)).toBe(true)
+    expect(shouldUseReflectorBySize(31.9, 32, true, 1.25)).toBe(false)
+  })
+
+  it('擬似ミラーを表示中は、下限より少し大きくなるまで戻さない', () => {
+    expect(shouldUseReflectorBySize(35, 32, false, 1.25)).toBe(false)
+    expect(shouldUseReflectorBySize(40, 32, false, 1.25)).toBe(true)
+  })
+
+  it('大きさを測れないとき（無限大）は反射を描く', () => {
+    expect(shouldUseReflectorBySize(Number.POSITIVE_INFINITY, 32, false, 1.25)).toBe(true)
+  })
+})
+
+describe('getReflectionTextureSize', () => {
+  it('画面上の大きさがテクスチャより小さければ、画面上の大きさ（切り上げ）にする', () => {
+    expect(getReflectionTextureSize(100.2, 512, 8)).toBe(101)
+  })
+
+  it('テクスチャの大きさを超えない', () => {
+    expect(getReflectionTextureSize(2000, 512, 8)).toBe(512)
+  })
+
+  it('下限を下回らない', () => {
+    expect(getReflectionTextureSize(2, 512, 8)).toBe(8)
+  })
+
+  it('テクスチャが下限より小さいときは、テクスチャの大きさにする', () => {
+    expect(getReflectionTextureSize(2, 4, 8)).toBe(4)
+  })
+})
+
+describe('getMirrorScreenSize', () => {
+  const createViewer = (position: Vector3, rotationY = 0) => {
+    const viewer = new PerspectiveCamera(60, 16 / 9, 0.1, 1000)
+    viewer.position.copy(position)
+    viewer.rotation.y = rotationY
+    viewer.updateMatrixWorld()
+    return viewer
+  }
+  const out = () => ({ width: 0, height: 0 })
+  // 縦の画角 60°・高さ 720px の画面で、距離 1m にある 1m の長さ[px]
+  const pixelsPerMeterAt1m = 720 / 2 / Math.tan(Math.PI / 6)
+
+  it('正面から見た鏡は、距離に反比例した大きさになる', () => {
+    const viewer = createViewer(new Vector3(0, 0, 10))
+    const size = getMirrorScreenSize(out(), viewer, new Matrix4(), fullRect(3, 2), 1280, 720)
+    expect(size?.width).toBeCloseTo((3 * pixelsPerMeterAt1m) / 10, 3)
+    expect(size?.height).toBeCloseTo((2 * pixelsPerMeterAt1m) / 10, 3)
+  })
+
+  it('離れるほど小さくなる', () => {
+    const near = getMirrorScreenSize(
+      out(),
+      createViewer(new Vector3(0, 0, 5)),
+      new Matrix4(),
+      fullRect(3, 2),
+      1280,
+      720,
+    )
+    const far = getMirrorScreenSize(
+      out(),
+      createViewer(new Vector3(0, 0, 50)),
+      new Matrix4(),
+      fullRect(3, 2),
+      1280,
+      720,
+    )
+    expect(far?.width).toBeCloseTo((near?.width ?? 0) / 10, 3)
+  })
+
+  it('斜めから見ると、横だけが縮む', () => {
+    // 鏡の中心から 10m・45° の位置から、鏡の中心を向く
+    const viewer = createViewer(
+      new Vector3(10 * Math.SQRT1_2, 0, 10 * Math.SQRT1_2),
+      Math.PI / 4,
+    )
+    const front = getMirrorScreenSize(
+      out(),
+      createViewer(new Vector3(0, 0, 10)),
+      new Matrix4(),
+      fullRect(0.2, 0.2),
+      1280,
+      720,
+    )
+    const oblique = getMirrorScreenSize(out(), viewer, new Matrix4(), fullRect(0.2, 0.2), 1280, 720)
+    // 小さい鏡なので、横はほぼ cos45° 倍・縦はほぼそのまま
+    expect((oblique?.width ?? 0) / (front?.width ?? 1)).toBeCloseTo(Math.SQRT1_2, 1)
+    expect((oblique?.height ?? 0) / (front?.height ?? 1)).toBeCloseTo(1, 1)
+  })
+
+  it('鏡が動かしてあっても同じ大きさになる', () => {
+    const mirrorMatrixWorld = new Matrix4().compose(
+      new Vector3(-3, 1.5, 3),
+      new Quaternion().setFromEuler(new Euler(0, Math.PI / 2, 0)),
+      new Vector3(1, 1, 1),
+    )
+    const viewer = createViewer(new Vector3(7, 1.5, 3), Math.PI / 2)
+    const size = getMirrorScreenSize(out(), viewer, mirrorMatrixWorld, fullRect(3, 2), 1280, 720)
+    expect(size?.width).toBeCloseTo((3 * pixelsPerMeterAt1m) / 10, 3)
+  })
+
+  it('鏡の隅がカメラの後ろにあるときは null を返す', () => {
+    // 鏡のすぐ前で、鏡に沿って横を向いている
+    const viewer = createViewer(new Vector3(0, 0, 0.5), Math.PI / 2)
+    expect(getMirrorScreenSize(out(), viewer, new Matrix4(), fullRect(4, 4), 1280, 720)).toBeNull()
   })
 })

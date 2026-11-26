@@ -20,6 +20,39 @@ export function shouldUseReflector(
 }
 
 /**
+ * 画面上の大きさから、反射を描くべきかを判定する。
+ * ヒステリシスにより境界付近でのチラつきを防止する。
+ *
+ * - 現在 反射を表示中 → screenPixels < minPixels で擬似ミラーに切り替え
+ * - 現在 擬似ミラーを表示中 → screenPixels >= minPixels * hysteresisRatio で反射に戻る
+ *
+ * @param screenPixels 鏡が画面に占める大きさ[px]（長いほうの辺）
+ * @param hysteresisRatio 1 以上
+ */
+export function shouldUseReflectorBySize(
+  screenPixels: number,
+  minPixels: number,
+  currentlyUsingReflector: boolean,
+  hysteresisRatio: number,
+): boolean {
+  if (currentlyUsingReflector) return screenPixels >= minPixels
+  return screenPixels >= minPixels * hysteresisRatio
+}
+
+/**
+ * 反射の絵の 1 辺の大きさ[px]を決める。
+ * 画面上の 1 画素に絵の 1 画素が当たれば十分なので、画面上の大きさまで下げる。
+ * 上限はテクスチャの大きさ
+ */
+export function getReflectionTextureSize(
+  screenPixels: number,
+  textureSize: number,
+  minSize: number,
+): number {
+  return Math.min(textureSize, Math.max(Math.min(minSize, textureSize), Math.ceil(screenPixels)))
+}
+
+/**
  * 鏡のリフレクションカメラ用に、レイヤーを三人称視点の構成にする。
  *
  * リフレクションカメラはメインカメラの clone なので、一人称の構成
@@ -201,4 +234,56 @@ export function fitReflectionCamera(
   )
   reflectionCamera.projectionMatrixInverse.copy(reflectionCamera.projectionMatrix).invert()
   return true
+}
+
+/** 画面上の大きさ[px] */
+export interface ScreenSize {
+  width: number
+  height: number
+}
+
+const _viewInverse = new Matrix4()
+const _screenCorners = [new Vector3(), new Vector3(), new Vector3(), new Vector3()]
+
+/**
+ * 鏡面の矩形が画面に占める大きさ[px]を求める。
+ *
+ * 画面上で囲む範囲ではなく、矩形の横の辺・縦の辺が画面上でどれだけの長さかを返す
+ * （上下・左右の辺の長いほう）。反射の絵の横・縦は矩形の横・縦にそのまま対応するので、
+ * 絵に必要な画素数がこれで決まる。
+ *
+ * @param out 結果の書き込み先
+ * @param rect 鏡面のローカル XY での矩形
+ * @param viewportWidth 見ているカメラが描く範囲の幅[px]
+ * @param viewportHeight 同・高さ[px]
+ * @returns 矩形の隅がカメラの後ろにあって求められないとき null
+ */
+export function getMirrorScreenSize(
+  out: ScreenSize,
+  viewer: Camera,
+  mirrorMatrixWorld: Matrix4,
+  rect: MirrorRect,
+  viewportWidth: number,
+  viewportHeight: number,
+): ScreenSize | null {
+  _viewInverse.copy(viewer.matrixWorld).invert()
+  for (let i = 0; i < CORNER_SIGNS.length; i++) {
+    const [signX, signY] = CORNER_SIGNS[i]
+    const corner = _screenCorners[i]
+      .set(signX < 0 ? rect.minX : rect.maxX, signY < 0 ? rect.minY : rect.maxY, 0)
+      .applyMatrix4(mirrorMatrixWorld)
+      .applyMatrix4(_viewInverse)
+    // カメラは -Z を向く
+    if (corner.z >= 0) return null
+    corner.applyMatrix4(viewer.projectionMatrix)
+    corner.x *= viewportWidth / 2
+    corner.y *= viewportHeight / 2
+  }
+
+  // CORNER_SIGNS の並び: 左下・右下・左上・右上
+  const [bottomLeft, bottomRight, topLeft, topRight] = _screenCorners
+  const length = (a: Vector3, b: Vector3) => Math.hypot(a.x - b.x, a.y - b.y)
+  out.width = Math.max(length(bottomLeft, bottomRight), length(topLeft, topRight))
+  out.height = Math.max(length(bottomLeft, topLeft), length(bottomRight, topRight))
+  return out
 }

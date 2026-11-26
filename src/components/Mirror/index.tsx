@@ -1,15 +1,26 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
-import { Color, Group, Mesh, PlaneGeometry, ShaderMaterial, Vector3 } from 'three'
-import { DEFAULT_LOD_DISTANCE, LOD_HYSTERESIS_RATIO } from './constants'
+import { useEffect, useMemo, useRef } from 'react'
+import { Color, Group, Mesh, PlaneGeometry, ShaderMaterial, Vector2, Vector3 } from 'three'
+import {
+  LOD_HYSTERESIS_RATIO,
+  MIN_REFLECTION_SCREEN_PIXELS,
+  SCREEN_SIZE_HYSTERESIS_RATIO,
+} from './constants'
 import { MirrorProps } from './types'
 import { MirrorReflector } from './reflector'
-import { shouldUseReflector } from './utils'
+import {
+  getMirrorScreenSize,
+  type ScreenSize,
+  shouldUseReflector,
+  shouldUseReflectorBySize,
+} from './utils'
 
 export type { MirrorProps } from './types'
 
 const _worldPos = new Vector3()
 const _cameraWorldPos = new Vector3()
+const _bufferSize = new Vector2()
+const _screenSize: ScreenSize = { width: 0, height: 0 }
 
 const fallbackVertexShader = `
   varying vec3 vWorldNormal;
@@ -42,13 +53,17 @@ export function Mirror({
   size = [8, 5],
   color = 0xcccccc,
   textureResolution = 512,
-  lodDistance = DEFAULT_LOD_DISTANCE,
+  lodDistance,
 }: MirrorProps) {
   const groupRef = useRef<Group>(null)
   const reflectorRef = useRef<MirrorReflector | null>(null)
   const fallbackRef = useRef<Mesh | null>(null)
   const usingReflectorRef = useRef(true)
   const gl = useThree((s) => s.gl)
+  const fullRect = useMemo(
+    () => ({ minX: -size[0] / 2, maxX: size[0] / 2, minY: -size[1] / 2, maxY: size[1] / 2 }),
+    [size[0], size[1]],
+  )
 
   useEffect(() => {
     const currentGroup = groupRef.current
@@ -107,34 +122,55 @@ export function Mirror({
     }
   }, [size[0], size[1], color, textureResolution, gl])
 
-  // LOD の切り替え。
-  // 反射を描くカメラのレイヤー（鏡には頭部込みの全身を映す）は MirrorReflector が設定する
+  // 反射 ↔ 擬似ミラーの切り替え。
+  // 離れると反射の解像度は MirrorReflector が自動で下げるので、擬似ミラーにするのは
+  // 画面上で十分小さくなったときだけ（lodDistance の指定があれば、その距離でも切り替える）。
+  // 反射を描くカメラのレイヤー（鏡には頭部込みの全身を映す）も MirrorReflector が設定する
   useFrame(({ camera, gl }) => {
     const reflector = reflectorRef.current
-    if (!reflector) return
-
-    // VR モードでは XR カメラを使用
-    const activeCamera = gl.xr.isPresenting ? gl.xr.getCamera() : camera
-
-    // LOD: カメラと鏡の距離に応じて Reflector ↔ envMap を切り替え
     const fallback = fallbackRef.current
-    if (fallback && groupRef.current) {
-      _cameraWorldPos.setFromMatrixPosition(activeCamera.matrixWorld)
-      const distance = _cameraWorldPos.distanceTo(
-        groupRef.current.getWorldPosition(_worldPos),
-      )
-      const useReflector = shouldUseReflector(
+    if (!reflector || !fallback || !groupRef.current) return
+
+    // VR では片目のカメラで測る（描く範囲の大きさも片目ぶん）
+    const xrEye = gl.xr.isPresenting ? gl.xr.getCamera().cameras[0] : undefined
+    const viewer = xrEye ?? camera
+    const viewportWidth = xrEye ? xrEye.viewport.z : gl.getDrawingBufferSize(_bufferSize).x
+    const viewportHeight = xrEye ? xrEye.viewport.w : gl.getDrawingBufferSize(_bufferSize).y
+
+    // 鏡の一部がカメラの後ろにあるときは測れない。すぐ近くにいるので反射を描く
+    const screenSize = getMirrorScreenSize(
+      _screenSize,
+      viewer,
+      reflector.matrixWorld,
+      fullRect,
+      viewportWidth,
+      viewportHeight,
+    )
+    const screenPixels = screenSize
+      ? Math.max(screenSize.width, screenSize.height)
+      : Number.POSITIVE_INFINITY
+    let useReflector = shouldUseReflectorBySize(
+      screenPixels,
+      MIN_REFLECTION_SCREEN_PIXELS,
+      usingReflectorRef.current,
+      SCREEN_SIZE_HYSTERESIS_RATIO,
+    )
+
+    if (useReflector && lodDistance !== undefined) {
+      _cameraWorldPos.setFromMatrixPosition(viewer.matrixWorld)
+      const distance = _cameraWorldPos.distanceTo(groupRef.current.getWorldPosition(_worldPos))
+      useReflector = shouldUseReflector(
         distance,
         lodDistance,
         usingReflectorRef.current,
         LOD_HYSTERESIS_RATIO,
       )
+    }
 
-      if (useReflector !== usingReflectorRef.current) {
-        usingReflectorRef.current = useReflector
-        reflector.visible = useReflector
-        fallback.visible = !useReflector
-      }
+    if (useReflector !== usingReflectorRef.current) {
+      usingReflectorRef.current = useReflector
+      reflector.visible = useReflector
+      fallback.visible = !useReflector
     }
   })
 
